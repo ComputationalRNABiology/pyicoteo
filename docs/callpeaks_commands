@@ -1,0 +1,33 @@
+Comando utilizado para callpeaks de una sola instruccion
+
+time picos callpeaks bed/original_data/lane2_POL_5.bed turbomix_results/POL_5.pk 150 --control bed/original_data/lane1_POL_0.bed --control-format bed --annotation ../PR_Binding-Sites/Genome_annotations_hg18/regions_to_be_removed/FINAL_regions_to_be_removed.bed -f bed --discard chrY --correction 0.8 --round --height-limit 10
+
+Para ver si hay incosistencias por ficheros desordenados:
+
+awk '{if($2<=prev) print prev" "$1"\t"$2"\t"$3;prev=$3}' POL_5.pk
+
+Peaks threadsholds:
+chrX: 10
+chr13: 9
+chr12: 10
+chr11: 10
+chr10: 10
+chr17: 11
+chr16: 11
+chr15: 10
+chr14: 10
+chr19: 11
+chr18: 9
+chrM: 77
+chr22: 10
+chr20: 10
+chr21: 10
+chr7: 10
+chr6: 10
+chr5: 10
+chr4: 10
+chr3: 10
+chr2: 10
+chr1: 10
+chr9: 11
+chr8: 10
