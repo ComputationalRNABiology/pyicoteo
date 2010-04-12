@@ -19,6 +19,7 @@ Extend = 'extend'
 Subtract = 'subtract'
 RemoveChromosome = 'remove_chromosome'
 Split = 'split'
+Trim = 'trim'
 Cut = 'filter'
 Poisson = 'poisson'
 Convert = 'convert'
@@ -267,10 +268,8 @@ class Turbomix:
                  is_input_open=False, is_output_open=False, debug = False, rounding=False, tag_length = None, discarded_chromosomes = None,
                  control_path = None, control_format = PK, is_control_open = False, annotation_path = None, annotation_format = PK, 
                  is_annotation_open=False, span = 20, extension = 0, p_value = 0.05, height_limit = 20, correction_factor = 1, trim_percentage=0.15, no_sort=False,
-                 tolerated_duplicates=sys.maxint, threshold=None):
+                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None):
         self.__dict__.update(locals())
-        self.span = int(span)
-        self.trim_percentage=float(trim_percentage)
         self.is_sorted = False
         self.operations = []
         self.discarded_chromosomes = []
@@ -311,6 +310,7 @@ class Turbomix:
         self.do_subtract = False
         self.do_heuremove = False
         self.do_split = False
+        self.do_trim = False
         self.do_cut = False
         self.do_extend = False
         self.do_dupremove = False
@@ -459,6 +459,7 @@ class Turbomix:
         self.do_heuremove = (RemoveRegion in self.operations and self.annotation_path)
         self.do_poisson = Poisson in self.operations
         self.do_split = Split in self.operations
+        self.do_trim = Trim in self.operations
         self.do_cut = Cut in self.operations
         self.do_extend = Extend in self.operations and not self.sorted_by_picos #If the input was sorted by Pyicos, it was already extended before, so dont do it again
         self.do_discard = DiscardArtifacts in self.operations
@@ -842,8 +843,7 @@ class Turbomix:
 
             if self.do_subtract:
                 cluster = self.subtract(cluster)
-                subtracted_clusters = cluster.split(threshold=0)
-                for cluster in subtracted_clusters:
+                for cluster in cluster.split(threshold=0):
                     self._post_subtract_process_cluster(cluster, output)
             else:
                 self._post_subtract_process_cluster(cluster, output)
@@ -853,8 +853,11 @@ class Turbomix:
             self.poisson_retrieve_data(cluster)
 
         if not (cluster.is_artifact() and DiscardArtifacts in self.operations) and not NoWrite in self.operations:
+            if self.do_trim:
+                cluster.trim(self.trim_absolute)
+
             if self.do_split:
-                for subcluster in cluster.split(self.trim_percentage):
+                for subcluster in cluster.split(self.trim_percentage, self.trim_absolute):
                     self.extract_and_write(subcluster, output)
             else:
                 self.extract_and_write(cluster, output)

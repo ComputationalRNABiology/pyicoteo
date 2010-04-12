@@ -336,7 +336,6 @@ class TestCoreObjects(unittest.TestCase):
         r5_cluster.read_line('chr1    74953345        74953475        id:5184564      1000    -')
         r5_cluster.read_line('chr1    74953355        74953485        id:3920202      1000    +')"""
 
-
         """r5_cluster.read_line('chr1    74953648        74953778        id:994315       1000    +')
         r5_cluster.read_line('chr1    74953655        74953785        id:227378       1000    +')
         r5_cluster.read_line('chr1    74953655        74953785        id:227378       1000    +')
@@ -359,6 +358,11 @@ class TestCoreObjects(unittest.TestCase):
         r5_cluster.read_line('chr1    74953720        74953850        id:3496791      1000    -')
         r5_cluster.read_line('chr1    74953720        74953850        id:3496791      1000    -')"""
 
+    def test_trim(self):
+        cluster = Cluster(rounding=True)
+        cluster.read_line('chr21 1 10 1:1|1:2|3:5|1:1|1:4|1:3|2:1')
+        cluster.trim(3)
+        self.assertEqual(cluster.write_line(), 'chr21\t3\t8\t3:5|1:1|1:4|1:3\n')
 
     def test_eland_read_write(self):
         cluster = Cluster(read=ELAND, write=ELAND)

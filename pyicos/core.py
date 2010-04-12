@@ -508,6 +508,24 @@ class Cluster:
         new_peak.clear()
         new_peak.start=nucleotides+length
 
+
+    def _subtrim(self, threshold, end, left):
+        while len(self._levels) > 0:
+            if self._levels[end][1] < threshold:
+                if left:
+                    self.start+= self._levels[end][0]
+                else:
+                    self.end -= self._levels[end][0]
+                self._levels.pop(end)
+
+            else:
+                break
+    
+    def trim(self, threshold):
+        """Trims the cluster to a given threshold"""
+        self._subtrim(threshold, 0, True) #trim the left side of the cluster
+        self._subtrim(threshold, -1, False) #trim the right side of the cluster
+
     def split(self, percentage=0.05, threshold=None):
         """Returns the original cluster or several clusters if we find subclusters"""
         if threshold is None:
