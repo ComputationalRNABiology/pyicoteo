@@ -1,6 +1,6 @@
 import unittest
-from pyicos.core import Cluster, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG
-from pyicos.operations import Subtract, Extend, Turbomix, Cut, NoWrite, DiscardArtifacts, Poisson, Utils
+from pyicoslib.core import Cluster, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG
+from pyicoslib.operations import Subtract, Extend, Turbomix, Cut, NoWrite, DiscardArtifacts, Poisson, Utils
 import math
 
 class TestOperations(unittest.TestCase):

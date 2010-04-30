@@ -318,7 +318,7 @@ class Turbomix:
         #poisson stuff
         self.first_chr = True
         self._init_poisson()
-        self.poisson_results = {'basepair': defaultdict(), 'peakheight': defaultdict(), 'numreads': defaultdict() }
+        self.poisson_results = {'basepair': defaultdict(), 'clusterheight': defaultdict(), 'numreads': defaultdict() }
         self.maxheight_to_pvalue = {}
         #Operation flags
         self.do_poisson = False
@@ -338,7 +338,7 @@ class Turbomix:
             print 'cannot do Cut without Poisson or a fixed threshold\n'
             sys.exit(0)
         elif (Subtract in self.operations or Split in self.operations) and (self.write_format not in CLUSTER_FORMATS):
-            print 'Cant get the output as tag format (eland, bed) for Subtract, Split or Callpeaks commands, please use a cluster format (pk, wig...)\n'
+            print 'Cant get the output as tag format (eland, bed) for Subtract, Split or Callclusters commands, please use a cluster format (pk, wig...)\n'
             sys.exit(0)
         elif Extend in self.operations and self.read_format in CLUSTER_FORMATS:
             print '(Under development) Cant extend if the input is a clustered format ',
@@ -349,7 +349,7 @@ class Turbomix:
         self.genome_start = sys.maxint        
         self.genome_end = 0
         self.total_bp_with_reads = 0.
-        self.total_peaks = 0.
+        self.total_clusters = 0.
         self.total_reads = 0.
         self.acum_height = 0.
         self.absolute_max_height = 0
@@ -614,7 +614,7 @@ class Turbomix:
                 self.poisson_analysis(self.previous_chr)
                 print '\nCluster threadsholds for p-value %s:'%self.p_value
                 self.result_log.write('\nCluster threadsholds for p-value %s:\n'%self.p_value)
-                for chromosome, k in self.poisson_results["peakheight"].items():
+                for chromosome, k in self.poisson_results["clusterheight"].items():
                     print '%s: %s'%(chromosome, k)
                     self.result_log.write('%s: %s\n'%(chromosome, k))
 
@@ -772,12 +772,12 @@ class Turbomix:
         what nucleotides in the cluster are part of the DNA binding site.
  
         Peak analysis:
-        This analysis takes as a basic unit the "peak" profile and performs a poisson taking into account the height 
-        of the profile. This will help us to better know witch peaks are statistically significant and which are product of chromatine noise
+        This analysis takes as a basic unit the "cluster" profile and performs a poisson taking into account the height
+        of the profile. This will help us to better know witch clusters are statistically significant and which are product of chromatine noise
 
-        We do this by calculating the acumulated maximum height for all existing peaks and dividing it by the number of peaks. This gives us the average height of a peak. 
-        Given a mean and a   height k the poisson function gives us the probability p of one peak having a height k by chance. With this if we want, for example, 
-        to know what is the probability of getting a peak higher than k = 7, we accumulate the p-values for poisson(k"0..6", mean).
+        We do this by calculating the acumulated maximum height for all existing clusters and dividing it by the number of clusters. This gives us the average height of a cluster.
+        Given a mean and a   height k the poisson function gives us the probability p of one cluster having a height k by chance. With this if we want, for example,
+        to know what is the probability of getting a cluster higher than k = 7, we accumulate the p-values for poisson(k"0..6", mean).
         
         Number of reads analysis:
         We analize the number of reads of the cluster. Number of reads = sum(xi *yi ) / read_length
@@ -792,36 +792,36 @@ class Turbomix:
         self.result_log.write('Correction factor: %s\n\n'%(self.correction_factor))
         self.reads_per_bp =  self.total_bp_with_reads / (self.genome_end-self.genome_start)*self.correction_factor
         p_nucleotide = 1.
-        p_peak = 1.
+        p_cluster = 1.
         p_numreads = 1.
         k = 0
         self.result_log.write('k\tBasepair\tPeak_height\tNumreads\n')
         while ((self.absolute_max_numreads > k) or (self.absolute_max_height > k)) and k < self.height_limit:
             p_nucleotide -= Utils.poisson(k, self.reads_per_bp) #analisis nucleotide
-            p_peak -= Utils.poisson(k, self.acum_height/self.total_peaks) #analysis peak
-            p_numreads -= Utils.poisson(k, self.total_reads/self.total_peaks) #analysis numreads
+            p_cluster -= Utils.poisson(k, self.acum_height/self.total_clusters) #analysis cluster
+            p_numreads -= Utils.poisson(k, self.total_reads/self.total_clusters) #analysis numreads
             p_nucleotide = self._correct_bias(p_nucleotide)
-            p_peak = self._correct_bias(p_peak)
+            p_cluster = self._correct_bias(p_cluster)
             p_numreads = self._correct_bias(p_numreads)
-            self.result_log.write('%s\t%.8f\t%.8f\t%.8f\n'%(k, p_nucleotide, p_peak, p_numreads))
+            self.result_log.write('%s\t%.8f\t%.8f\t%.8f\n'%(k, p_nucleotide, p_cluster, p_numreads))
                 
             if chromosome not in self.poisson_results['basepair'].keys() and p_nucleotide < self.p_value:
                 self.poisson_results["basepair"][chromosome] = k
 
-            if chromosome not in self.poisson_results['peakheight'].keys() and p_peak < self.p_value:
-                self.poisson_results["peakheight"][chromosome] = k
+            if chromosome not in self.poisson_results['clusterheight'].keys() and p_cluster < self.p_value:
+                self.poisson_results["clusterheight"][chromosome] = k
             
             if chromosome not in self.poisson_results['numreads'].keys() and p_numreads < self.p_value:
                 self.poisson_results["numreads"][chromosome] = k
 
             if k not in self.maxheight_to_pvalue:
                 self.maxheight_to_pvalue[k] = {}
-            self.maxheight_to_pvalue[k][chromosome] = p_peak
+            self.maxheight_to_pvalue[k][chromosome] = p_cluster
             k+=1
 
     def poisson_retrieve_data(self, cluster):
         acum_numreads = 0.
-        self.total_peaks+=1
+        self.total_clusters+=1
         self.genome_start = min(self.genome_start, cluster.start)
         self.genome_end = max(self.genome_end, cluster.end) 
         for length, height in cluster:
@@ -830,12 +830,12 @@ class Turbomix:
             acum_numreads += length*height
             
         max_height = cluster.get_max_height()
-        #numreads per peak
+        #numreads per cluster
         numreads_in_cluster = acum_numreads/self.extension
         self.total_reads += numreads_in_cluster
         self.absolute_max_numreads = max(numreads_in_cluster, self.absolute_max_numreads)
         self.numreads_dict[int(numreads_in_cluster)] += 1
-        #maxheight per peak
+        #maxheight per cluster
         self.max_heights[max_height] += 1
         self.acum_height += max_height
         self.absolute_max_height = max(max_height, self.absolute_max_height)
@@ -906,7 +906,7 @@ class Turbomix:
                     if self.threshold:
                         thres = self.threshold
                     else:
-                        thres = self.poisson_results["peakheight"][cut_cluster.chromosome]
+                        thres = self.poisson_results["clusterheight"][cut_cluster.chromosome]
                         
                     if cut_cluster.is_significant(thres):
                         real_output.write(cut_cluster.write_line())
@@ -940,3 +940,58 @@ class Turbomix:
             region.add_tags(overlaping_clusters)
             for cluster in region.get_FDR_clusters():
                 real_output.write(cluster.write_line())
+
+
+    def strand_correlation(self):
+        positive_cluster = None
+        negative_cluster = None
+        self.analized_pairs = 0.
+        for line in sorted_pk:
+            cluster = Cluster(line, rounding = True)
+            if (cluster.get_max_height() > self.height_filter) and not cluster.has_duplicates(self.duplicate_limit):
+                    if cluster.strand == '+':
+                        positive_cluster = copy.deepcopy(cluster)#big positive cluster found
+                        self._start_analysis(positive_cluster, negative_cluster)
+                    else:
+                        negative_cluster = copy.deepcopy(cluster)#big negative cluster found
+                        self._start_analysis(positive_cluster, negative_cluster)
+
+        print 'FINAL DELTAS:'
+        data = []
+        for delta in range(self.min_delta, self.max_delta, self.delta_step):
+            if delta in self.delta_results:
+                self.delta_results[delta]=self.delta_results[delta]/self.analized_pairs
+                data.append(self.delta_results[delta])
+                self.log.write_line('Delta %s:%s'%(delta, self.delta_results[delta]))
+
+        try:
+            import matplotlib.pyplot
+            matplotlib.pyplot.plot(range(self.min_delta, self.max_delta), data)
+            matplotlib.pyplot.plot()
+            matplotlib.pyplot.savefig('%s%s.png'%(self.output_dir, os.path.basename(file_path)))
+            #matplotlib.pyplot.show()
+        except ImportError:
+            print 'you dont have matplotlib installed, therefore picos cant create the graphs'
+        except:
+            print 'cant print the plots, unknown error'
+
+
+    def _start_analysis(self, positive_cluster, negative_cluster):
+        if positive_cluster is not None and negative_cluster is not None:
+            if (abs(negative_cluster.start-positive_cluster.end) < self.max_delta or abs(positive_cluster.start-negative_cluster.end) < self.max_delta or positive_cluster.intersects(negative_cluster)) and positive_cluster.chr == negative_cluster.chr:
+                self.analized_pairs+=1
+                print 'Pair of clusters:'
+                print positive_cluster.line(), negative_cluster.line(),
+                for delta in range(self.min_delta, self.max_delta+1, self.delta_step):
+                    r_squared = self.analize_paired_clusters(positive_cluster, negative_cluster, delta)[0]**2
+                    if delta not in self.delta_results:
+                        self.delta_results[delta] = r_squared
+                    else:
+                        self.delta_results[delta] += r_squared
+                    #print 'Delta %s:%s'%(delta, result)
+
+
+
+
+
+

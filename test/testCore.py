@@ -1,5 +1,5 @@
 import unittest
-from pyicos.core import Cluster, DifferentChromosome, InvalidLine, Region, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, FIXED_WIG, VARIABLE_WIG
+from pyicoslib.core import Cluster, DifferentChromosome, InvalidLine, Region, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, FIXED_WIG, VARIABLE_WIG
 
 class TestCoreObjects(unittest.TestCase):
     def setUp(self):
