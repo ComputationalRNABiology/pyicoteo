@@ -6,8 +6,8 @@ setup(name='Pyicos',
       author=u'Juan Gonzalez_Vallinas',
       author_email='juanramon.gonzalezvallinas@upf.edu',
       url='http://regulatorygenomics.upf.edu/jramon',
-      packages = ['pyicos.lib'],
-      scripts = ['pyicos-utils'],
-      py_modules = ['pyicos.core', 'pyicos.operations', 'pyicos.parser']
+      packages = ['pyicoslib.lib'],
+      scripts = ['pyicos'],
+      py_modules = ['pyicoslib.core', 'pyicoslib.operations', 'pyicoslib.parser']
      )
 

@@ -1,5 +1,5 @@
 import unittest
-from pyicos.parser import PicosParser
+from pyicoslib.parser import PicosParser
 
 class TestParser(unittest.TestCase):
     
@@ -21,9 +21,10 @@ class TestParser(unittest.TestCase):
             self.fail('SystemExit exception expected')
 
 def suite():
-   suite = unittest.TestSuite()
-   suite.addTest(unittest.makeSuite(TestParser))
-   return suite
+
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestParser))
+    return suite
 
 
 if __name__ == '__main__':
