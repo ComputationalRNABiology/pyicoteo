@@ -771,7 +771,7 @@ class Turbomix:
         of read per nucleotides using an accumulated poisson. With this test we can infer more accurately 
         what nucleotides in the cluster are part of the DNA binding site.
  
-        Peak analysis:
+        cluster analysis:
         This analysis takes as a basic unit the "cluster" profile and performs a poisson taking into account the height
         of the profile. This will help us to better know witch clusters are statistically significant and which are product of chromatine noise
 
@@ -795,7 +795,7 @@ class Turbomix:
         p_cluster = 1.
         p_numreads = 1.
         k = 0
-        self.result_log.write('k\tBasepair\tPeak_height\tNumreads\n')
+        self.result_log.write('k\tBasepair\tcluster_height\tNumreads\n')
         while ((self.absolute_max_numreads > k) or (self.absolute_max_height > k)) and k < self.height_limit:
             p_nucleotide -= Utils.poisson(k, self.reads_per_bp) #analisis nucleotide
             p_cluster -= Utils.poisson(k, self.acum_height/self.total_clusters) #analysis cluster
@@ -942,19 +942,46 @@ class Turbomix:
                 real_output.write(cluster.write_line())
 
 
-    def strand_correlation(self):
-        positive_cluster = None
-        negative_cluster = None
+
+    def strand_correlation(self, file_path):
+        #create temp stranded pk file
+        positive_cluster = Cluster()
+        negative_cluster = Cluster()
+        positive_reads_cache = [] #we are trying to hold to the previous cluster
+        positive_count = 0
+        negative_count = 0
+        read_threshold = 4
         self.analized_pairs = 0.
-        for line in sorted_pk:
-            cluster = Cluster(line, rounding = True)
-            if (cluster.get_max_height() > self.height_filter) and not cluster.has_duplicates(self.duplicate_limit):
-                    if cluster.strand == '+':
-                        positive_cluster = copy.deepcopy(cluster)#big positive cluster found
-                        self._start_analysis(positive_cluster, negative_cluster)
-                    else:
-                        negative_cluster = copy.deepcopy(cluster)#big negative cluster found
-                        self._start_analysis(positive_cluster, negative_cluster)
+        for line in file(file_path):
+            line_read = Cluster(read=self.input_format)
+            cluster.read_line(line)
+            if cluster.strand == '+':
+                if positive_cluster.is_empty():
+                    positive_cluster = line_read.copy_cluster()
+                    positive_count = 1
+                elif positive_cluster.intersects(read_line):
+                    positive_cluster += line_read
+                    positive_count += 1
+                else:
+                    positive_reads_cache.append(read_line.copy_cluster())
+
+            else:
+                if negative_cluster.is_empty() or not negative_cluster.intersects(line_read):
+                    if positive_count > read_threshold and negative_count > read_threshold: #if we have big clusters, correlate them
+                        self._correlate_clusters(positive_cluster, negative_cluster)
+                    negative_cluster = line_read.copy_cluster() 
+                    negative_count = 1
+                else:
+                    negative_cluster += line_read
+                    negative_count += 1
+                
+                while (positive_cluster.end - negative_cluster.start) < self.max_delta: # if the negative clusters are too far behind, empty the positive cluster
+                    positive_cluster.clear()
+                    if positive_cluster_cache:
+                        positive_cluster = positive_cluster_cache.pop() 
+                        positive_cluster_count = 1
+
+
 
         print 'FINAL DELTAS:'
         data = []
@@ -976,21 +1003,43 @@ class Turbomix:
             print 'cant print the plots, unknown error'
 
 
-    def _start_analysis(self, positive_cluster, negative_cluster):
-        if positive_cluster is not None and negative_cluster is not None:
-            if (abs(negative_cluster.start-positive_cluster.end) < self.max_delta or abs(positive_cluster.start-negative_cluster.end) < self.max_delta or positive_cluster.intersects(negative_cluster)) and positive_cluster.chr == negative_cluster.chr:
-                self.analized_pairs+=1
-                print 'Pair of clusters:'
-                print positive_cluster.line(), negative_cluster.line(),
-                for delta in range(self.min_delta, self.max_delta+1, self.delta_step):
-                    r_squared = self.analize_paired_clusters(positive_cluster, negative_cluster, delta)[0]**2
-                    if delta not in self.delta_results:
-                        self.delta_results[delta] = r_squared
-                    else:
-                        self.delta_results[delta] += r_squared
-                    #print 'Delta %s:%s'%(delta, result)
+    def _correlate_clusters(self, positive_cluster, negative_cluster):
+        if (abs(negative_cluster.start-positive_cluster.end) < self.max_delta or abs(positive_cluster.start-negative_cluster.end) < self.max_delta or positive_cluster.intersects(negative_cluster)) and positive_cluster.chromosome == negative_cluster.chromosome:
+            self.analized_pairs+=1
+            print 'Pair of clusters:'
+            print positive_cluster.write_line(), negative_cluster.write_line(),
+            for delta in range(self.min_delta, self.max_delta+1, self.delta_step):
+                r_squared = self.analize_paired_clusters(positive_cluster, negative_cluster, delta)[0]**2
+                if delta not in self.delta_results:
+                    self.delta_results[delta] = r_squared
+                else:
+                    self.delta_results[delta] += r_squared
+                #print 'Delta %s:%s'%(delta, result)
 
 
+    def analize_paired_clusters(self, positive_cluster, positive_cluster, delta):       
+        positive_array = []
+        negative_array = [] 
+        #delta correction
+        corrected_positive_start = positive_cluster.start + delta
+        #add zeros at the start of the earliest cluster
+        if corrected_positive_start > negative_cluster.start:
+            self.__add_zeros(positive_array, corrected_positive_start - negative_cluster.start)
+        elif negative_cluster.start > corrected_positive_start:  
+            self.__add_zeros(negative_array, negative_cluster.start - corrected_positive_start)
+        #add the values of the clusters
+        positive_array.extend(positive_cluster.get_heights())
+        negative_array.extend(negative_cluster.get_heights())
+        #add the zeros at the end of the shortest array
+        if len(positive_array) > len(negative_array):
+            self.__add_zeros(negative_array, len(positive_array) - len(negative_array))
+        elif len(positive_array) < len(negative_array):
+            self.__add_zeros(positive_array, len(negative_array) - len(positive_array))
+        
+        return lib.scipy.stats.stats.pearsonr(negative_array, positive_array)
+    
+
+        
 
 
 
