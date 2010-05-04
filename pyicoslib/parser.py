@@ -17,9 +17,9 @@ import sys
 
 from lib import argparse
 from operations import (Turbomix, Extend, Poisson, RemoveRegion, RemoveChromosome, Normalize, Subtract, Trim,
-                        Split, Cut, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR)
+                        Split, Cut, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation)
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.8.1'
+__version__ = '0.8.4'
 
 class PicosParser:
     def new_subparser(self, *args):
@@ -98,9 +98,9 @@ class PicosParser:
         normalize.add_argument('--normalize',action='store_true', default=False, help='Normalize to the control before subtracting')
 
         trim_percentage = self.new_subparser()
-        trim_percentage.add_argument('--trim-per', default=0.05, help='Fraction of the cluster height below which the peak is trimmed. Example: For a cluster of height 40, if the flag is 0.05, 40*0.05=2. Every cluster will be trimmed to that height. A position of height 1 is always considered insignificant, no matter what the cluster height is. [Default %(default)s]', type=float)
+        trim_percentage.add_argument('--trim-proportion', default=0.05, help='Fraction of the cluster height below which the peak is trimmed. Example: For a cluster of height 40, if the flag is 0.05, 40*0.05=2. Every cluster will be trimmed to that height. A position of height 1 is always considered insignificant, no matter what the cluster height is. [Default %(default)s]', type=float)
         trim_absolute = self.new_subparser()
-        trim_absolute.add_argument('--trim-abs', help='The height threshold used to split or trim the clusters.', type=int)
+        trim_absolute.add_argument('--trim-absolute', help='The height threshold used to split or trim the clusters.', type=int)
 
         discard = self.new_subparser()
         discard.add_argument('--discard', help='Discard the reads that have this particular tag. Example: --discard chr1 will discard all reads with chr1 as tag. You can specify multiple tags to discard using the following notation --discard chr1:chr2:tagN')
@@ -131,9 +131,10 @@ class PicosParser:
         #extend operation
         subparsers.add_parser('extend', help='Extend the reads of a file to the desired length (we currently support only bed and eland files for this operation)', parents=[parserinput,  output, output_flags, frag_size, round, label, span])
         #poisson analysis
-        subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.', parents=[parserinput, output, frag_size, pvalue, height, correction])
+        subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.',
+                              parents=[parserinput, output, frag_size, pvalue, height, correction])
         #cut operations
-        subparsers.add_parser('cut', help="""Analyze the significance of accumulated reads in the file using the poisson distribution and generate the resulting profiles, in wig or pk formats""",
+        subparsers.add_parser('filter', help="""Analyze the significance of accumulated reads in the file using the poisson distribution and generate the resulting profiles, in wig or pk formats""",
                               parents=[parserinput, output, frag_size, output_flags, round, pvalue, height, correction, threshold])
         #modfdr analysis
         subparsers.add_parser('modfdr', help="""Use the modified FDR method to determine what clusters are significant in an specific region. Output in a clustered format only.""",
@@ -141,10 +142,20 @@ class PicosParser:
         #remove operation
         subparsers.add_parser('remove', help='Removes regions that overlap with another the coordinates in the "black list" file.',
                               parents=[parserinput, output_flags, region, region_format, output])
-        
+        #strcorr operation
+        parser_correlation = subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
+                              parents=[parserinput, output])
+        parser_correlation.add_argument('-x','--max-delta',type=int, default=200, help='Maximum delta [Default %(default)s]')
+        parser_correlation.add_argument('-m','--min-delta',type=int, default=0, help='Minimum delta [Default %(default)s]')
+        parser_correlation.add_argument('-t','--height-filter',type=int, default=15, help='Height to filter the peaks [Default %(default)s]')
+        parser_correlation.add_argument('-s','--delta-step',type=int, default=1, help='The step of the delta values to test [Default %(default)s]')
+
+
         parser.set_defaults(discard = None, output=None, control=None, label = 'noname', output_format=PK, open_output =False,  rounding = False,
                             control_format=None, region=None, region_format = BED, open_region = False,
-                            frag_size = None, tag_length = None, span=40, p_value=0.01, height_limit=100, correction=1, no_subtract = False, normalize = False,                      trim_per=0.05,open_control=False, no_sort=False, duplicates=4, threshold=None, trim_abs=7)
+                            frag_size = None, tag_length = None, span=40, p_value=0.01, height_limit=100, correction=1, no_subtract = False, normalize = False,
+                            trim_percentage=0.05,open_control=False, no_sort=False, duplicates=4, threshold=None, trim_absolute=7,
+                            max_delta=200, min_delta=0, height_filter=15, delta_step=1)
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the input format
             args.control_format = args.input_format
@@ -152,7 +163,8 @@ class PicosParser:
         turbomix = Turbomix(args.input, args.output, args.input_format, args.output_format, args.label, args.open_input, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
-                            args.trim_per, args.no_sort, args.duplicates, args.threshold, args.trim_abs)
+                            args.trim_percentage, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
+                            args.min_delta, args.height_filter, args.delta_step)
 
         #if sys.argv[1] == 'convert': No need for this.
         if sys.argv[1] == 'subtract':
@@ -166,10 +178,13 @@ class PicosParser:
         elif sys.argv[1] == 'extend':
             turbomix.operations = [Extend]
 
+        elif sys.argv[1] == 'strcorr':
+            turbomix.operations = [StrandCorrelation, NoWrite]
+
         elif sys.argv[1] == 'poisson':
             turbomix.operations = [Poisson, NoWrite]
 
-        elif sys.argv[1] == 'cut':
+        elif sys.argv[1] == 'filter':
             turbomix.operations = [Poisson, Cut]
 
         elif sys.argv[1] == 'remove':
@@ -222,8 +237,6 @@ class PicosParser:
     parser_correlation.add_argument('-x','--max-delta',type=int, default=200, help='Maximum delta [Default %(default)s]')
     parser_correlation.add_argument('-t','--height-filter',type=int, default=15, help='Height to filter the peaks [Default %(default)s]')
     parser_correlation.add_argument('-s','--delta-step',type=int, default=1, help='The step of the delta values to test [Default %(default)s]')
-    parser_correlation.add_argument('-d','--duplicates-discard',type=int, default=0,help='Clusters with a lot of duplicates tend to be artifacts. This threadshold will discard clusters that have more than X reads starting in the same position. If 0, no filter is applied.[Default %(default)s]')
-    parser_correlation.add_argument('-n','--skip-short',action='store_true', default=False, help='If your files are already shorted by chromosome and position, skip the shorting step. Be careful, if your files are not shorted, the correlation will be biased. [Default %(default)s]')
 
 
 elif sys.argv[1] == 'correlate': #We have to revisit this operation. Guiancarlo, the code on this operation might interest you, you can find it at statistics.py

@@ -112,7 +112,7 @@ class BedReader(Reader):
         if len(line) > 3:
             cluster.name = line[3]
         else:
-            cluster.name = 'picos'
+            cluster.name = 'pyicos'
 
     def _add_score(self, cluster, line):
         if len(line) > 4:
@@ -127,6 +127,7 @@ class BedReader(Reader):
             cluster.strand = ''
 
     def read_line(self, cluster, line):
+        cluster.read_count += 1
         try:
             if self.cached:
                 line = line.split()
@@ -166,6 +167,7 @@ class BedReader(Reader):
 
 class WigReader(Reader):
     def read_line(self, cluster, line):
+        cluster.read_count = None
         try:
             line = line.split()
             if cluster.is_empty():
@@ -179,10 +181,12 @@ class WigReader(Reader):
 
 class ElandReader(Reader):
     qualityFilter = re.compile(r'chr\w{1,2}.fa')
+    
     #sort_func = lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
     def read_line(self, cluster, line):
         if line is not None and line != '\n':
             try:
+                cluster.read_count += 1
                 if cluster.is_empty():
                     line = line.split()
                     cluster.name = line[0]
@@ -209,6 +213,7 @@ class ElandReader(Reader):
 
 class PkReader(Reader):
     def read_line(self, cluster, line):
+        cluster.read_count = None
         if line is not None and line != '\n':
             if not cluster.is_empty():
                 self._add_line_to_cluster(line, cluster)
@@ -419,6 +424,7 @@ class Cluster:
         self.tag_length = tag_length
         self.sequence = sequence
         self._tag_cache = []
+        self.read_count = 0
 
     def is_singleton(self):
         if self.is_empty():
@@ -455,6 +461,7 @@ class Cluster:
         self._tag_cache = []
         self.strand = ''
         self.score = 0
+        self.read_count = 0
 
     def __len__(self):
         return self.end-self.start+1
@@ -487,6 +494,7 @@ class Cluster:
             ret_cluster.normalize_factor = self.normalize_factor
             ret_cluster.tag_length = self.tag_length
             ret_cluster.sequence = self.sequence
+            ret_cluster.read_count = self.read_count
             return ret_cluster
 
     #TODO raise 'there is no strand' error
@@ -515,13 +523,13 @@ class Cluster:
                 #print 'Estoy atascado', self.start, self.end, self._levels
                 pass
 
-    def __subsplit(self, new_peak, clusters, nucleotides, length):
+    def __subsplit(self, new_cluster, clusters, nucleotides, length):
         """sub method of split"""
-        new_peak.chromosome=self.chromosome
-        new_peak._recalculate_end()
-        clusters.append(new_peak.copy_cluster())
-        new_peak.clear()
-        new_peak.start=nucleotides+length
+        new_cluster.chromosome=self.chromosome
+        new_cluster._recalculate_end()
+        clusters.append(new_cluster.copy_cluster())
+        new_cluster.clear()
+        new_cluster.start=nucleotides+length
 
 
     def _subtrim(self, threshold, end, left):
@@ -548,29 +556,29 @@ class Cluster:
             if threshold < 1: #or at least 1 nucleotide
                 threshold = 1
 
-        nucleotides=0	# to calculate the start of the new peak
-        new_peak = self.copy_cluster()
-        new_peak.clear()
-        new_peak.start = self.start
+        nucleotides=0	# to calculate the start of the new cluster
+        new_cluster = self.copy_cluster()
+        new_cluster.clear()
+        new_cluster.start = self.start
         nucleotides = self.start
         clusters = []
         for length, height in self:
             if height<=threshold:
-                if new_peak.is_empty():
-                    new_peak.start=nucleotides+length # trim insignificant beginning of a peak
+                if new_cluster.is_empty():
+                    new_cluster.start=nucleotides+length # trim insignificant beginning of a cluster
                 else:
-                    self.__subsplit(new_peak, clusters, nucleotides, length)
+                    self.__subsplit(new_cluster, clusters, nucleotides, length)
             else:
-                new_peak.add_level(length, height) # add significant parts to the profile
+                new_cluster.add_level(length, height) # add significant parts to the profile
             nucleotides+=length
 
-        if not new_peak.is_empty():
-           self.__subsplit(new_peak, clusters, nucleotides, length)
+        if not new_cluster.is_empty():
+           self.__subsplit(new_cluster, clusters, nucleotides, length)
 
         return clusters
 
     def is_artifact(self, condition = 0.3):
-        """Returns True if the peak is considered an artifact.
+        """Returns True if the cluster is considered an artifact.
            It is considered an artifact if its shorter than 100 nucleotides,
            or the maximum height length is more than 30% of the cluster (block cluster)"""
         if len(self) < 100:
@@ -584,7 +592,7 @@ class Cluster:
         return max_len/len(self) > condition
 
     def is_significant(self, threshold):
-        """Returns True if the peak is significant provided a threshold, otherwise False"""
+        """Returns True if the cluster is significant provided a threshold, otherwise False"""
         return threshold <= self.get_max_height()
 
     def intersects(self, other):
@@ -748,6 +756,8 @@ class Cluster:
         Adds the levels of 2 selfs, activating the + operator for this type of object results = self + self2
         """
         result = self.copy_cluster()
+        if result.read_count and other.read_count:
+            result.read_count += other.read_count #if both clusters have a read count, add it
         other_acum_levels = 0
         #add zeros so both selfs have equal length and every level is added
         if other.end > result.end:

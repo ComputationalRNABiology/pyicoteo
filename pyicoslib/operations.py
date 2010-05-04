@@ -43,6 +43,7 @@ DiscardArtifacts = 'discard'
 RemoveRegion = 'remove'
 RemoveDuplicates = 'remove_duplicates'
 ModFDR = 'modfdr'
+StrandCorrelation = 'strcorr'
 
 class OperationFailed(Exception):
     pass
@@ -283,7 +284,7 @@ class Turbomix:
                  is_input_open=False, is_output_open=False, debug = False, rounding=False, tag_length = None, discarded_chromosomes = None,
                  control_path = None, control_format = PK, is_control_open = False, annotation_path = None, annotation_format = PK, 
                  is_annotation_open=False, span = 20, extension = 0, p_value = 0.05, height_limit = 20, correction_factor = 1, trim_percentage=0.15, no_sort=False,
-                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None):
+                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1):
         self.__dict__.update(locals())
         self.is_sorted = False
         self.operations = []
@@ -335,13 +336,17 @@ class Turbomix:
     def i_cant_do(self):
         """Quits and exists if exits if the combination of non possible operations"""
         if Cut in self.operations and Poisson not in self.operations and not self.threshold:
-            print 'cannot do Cut without Poisson or a fixed threshold\n'
+            print "Can't do Cut without Poisson or a fixed threshold\n"
             sys.exit(0)
         elif (Subtract in self.operations or Split in self.operations) and (self.write_format not in CLUSTER_FORMATS):
             print 'Cant get the output as tag format (eland, bed) for Subtract, Split or Callclusters commands, please use a cluster format (pk, wig...)\n'
             sys.exit(0)
         elif Extend in self.operations and self.read_format in CLUSTER_FORMATS:
-            print '(Under development) Cant extend if the input is a clustered format ',
+            print "Can't extend if the input is a clustered format ",
+            print CLUSTER_FORMATS
+            sys.exit(0)
+        elif StrandCorrelation in self.operations and self.read_format in CLUSTER_FORMATS:
+            print "Can't perform strand correlation operation if the input is a clustered format ",
             print CLUSTER_FORMATS
             sys.exit(0)
     
@@ -406,16 +411,20 @@ class Turbomix:
             print 'Split'
 
         if Extend in self.operations:
-            self.result_log.write('Remove Artifacts\n')
-            print 'Remove Artifacts'
-            
+            self.result_log.write('Extend\n')
+            print 'Extend'
+
+        if DiscardArtifacts in self.operations:
+            self.result_log.write('Discard Artifacts\n')
+            print 'Discard Artifacts'
+
         if self.do_poisson:
             self.result_log.write('Poisson\n')
             print 'Poisson'
 
         if self.do_cut:
-            self.result_log.write('Cut\n')
-            print 'Cut'
+            self.result_log.write('Filter\n')
+            print 'Filter'
 
 
         self.result_log.write('Date finished: %s'%datetime.now())
@@ -589,7 +598,7 @@ class Turbomix:
             self.cluster.clear()
             self.cluster_aux.clear()
             self.result_log = file('%s/pyicos_report_%s.txt'%(os.path.dirname(os.path.abspath(self.output_path)), os.path.basename(self.current_input_path)), 'wb')
-            self.result_log.write('PYICOS analysis report\n')
+            self.result_log.write('Pyicos analysis report\n')
             self.result_log.write('----------------------\n\n')
             self.result_log.write('Date run: %s\n'%datetime.now())
             self.result_log.write('Input file: %s\n'%self.current_input_path)
@@ -601,6 +610,10 @@ class Turbomix:
 
             self.start_operation_message()
             self.decide_sort(input_path, control_path)
+
+            if StrandCorrelation in self.operations:
+                self.strand_correlation()
+
             if Normalize in self.operations:
                 self.normalize()
 
@@ -942,46 +955,44 @@ class Turbomix:
                 real_output.write(cluster.write_line())
 
 
-
-    def strand_correlation(self, file_path):
-        #create temp stranded pk file
+    def strand_correlation(self):
+        self.delta_results = dict()
+        self.best_delta = -1
         positive_cluster = Cluster()
         negative_cluster = Cluster()
-        positive_reads_cache = [] #we are trying to hold to the previous cluster
-        positive_count = 0
-        negative_count = 0
+        positive_cluster_cache = [] #we are trying to hold to the previous cluster
         read_threshold = 4
         self.analized_pairs = 0.
-        for line in file(file_path):
-            line_read = Cluster(read=self.input_format)
-            cluster.read_line(line)
-            if cluster.strand == '+':
+        for line in file(self.current_input_path):
+            line_read = Cluster(read=self.read_format)
+            line_read.read_line(line)
+            if line_read.strand == '+':
                 if positive_cluster.is_empty():
                     positive_cluster = line_read.copy_cluster()
-                    positive_count = 1
-                elif positive_cluster.intersects(read_line):
+                elif positive_cluster.intersects(line_read):
                     positive_cluster += line_read
-                    positive_count += 1
                 else:
-                    positive_reads_cache.append(read_line.copy_cluster())
+                    if not positive_cluster_cache:
+                        positive_cluster_cache.append(line_read.copy_cluster())
+                    elif line_read.intersects(positive_cluster_cache[0]):
+                        positive_cluster_cache[0] += line_read
+                    else:
+                        positive_cluster_cache.append(line_read.copy_cluster())
 
             else:
                 if negative_cluster.is_empty() or not negative_cluster.intersects(line_read):
-                    if positive_count > read_threshold and negative_count > read_threshold: #if we have big clusters, correlate them
+                    if positive_cluster.read_count > read_threshold and negative_cluster.read_count > read_threshold: #if we have big clusters, correlate them
                         self._correlate_clusters(positive_cluster, negative_cluster)
                     negative_cluster = line_read.copy_cluster() 
-                    negative_count = 1
                 else:
                     negative_cluster += line_read
-                    negative_count += 1
-                
-                while (positive_cluster.end - negative_cluster.start) < self.max_delta: # if the negative clusters are too far behind, empty the positive cluster
+                #advance in the positive cluster cache if its too far behind
+                while (positive_cluster.end - negative_cluster.start) < self.max_delta or positive_cluster.chromosome < negative_cluster.chromosome: # if the negative clusters are too far behind, empty the positive cluster
                     positive_cluster.clear()
                     if positive_cluster_cache:
                         positive_cluster = positive_cluster_cache.pop() 
-                        positive_cluster_count = 1
-
-
+                    else:
+                        break
 
         print 'FINAL DELTAS:'
         data = []
@@ -989,18 +1000,17 @@ class Turbomix:
             if delta in self.delta_results:
                 self.delta_results[delta]=self.delta_results[delta]/self.analized_pairs
                 data.append(self.delta_results[delta])
-                self.log.write_line('Delta %s:%s'%(delta, self.delta_results[delta]))
+                print 'Delta %s:%s'%(delta, self.delta_results[delta])
 
         try:
             import matplotlib.pyplot
             matplotlib.pyplot.plot(range(self.min_delta, self.max_delta), data)
             matplotlib.pyplot.plot()
-            matplotlib.pyplot.savefig('%s%s.png'%(self.output_dir, os.path.basename(file_path)))
-            #matplotlib.pyplot.show()
+            matplotlib.pyplot.savefig('%s.png'%os.path.basename(self.current_input_path))
+            matplotlib.pyplot.show()
         except ImportError:
             print 'you dont have matplotlib installed, therefore picos cant create the graphs'
-        except:
-            print 'cant print the plots, unknown error'
+
 
 
     def _correlate_clusters(self, positive_cluster, negative_cluster):
@@ -1009,7 +1019,7 @@ class Turbomix:
             print 'Pair of clusters:'
             print positive_cluster.write_line(), negative_cluster.write_line(),
             for delta in range(self.min_delta, self.max_delta+1, self.delta_step):
-                r_squared = self.analize_paired_clusters(positive_cluster, negative_cluster, delta)[0]**2
+                r_squared = self._analize_paired_clusters(positive_cluster, negative_cluster, delta)[0]**2
                 if delta not in self.delta_results:
                     self.delta_results[delta] = r_squared
                 else:
@@ -1017,7 +1027,8 @@ class Turbomix:
                 #print 'Delta %s:%s'%(delta, result)
 
 
-    def analize_paired_clusters(self, positive_cluster, positive_cluster, delta):       
+    def _analize_paired_clusters(self, positive_cluster, negative_cluster, delta):
+        from scipy.stats.stats import pearsonr
         positive_array = []
         negative_array = [] 
         #delta correction
@@ -1035,12 +1046,13 @@ class Turbomix:
             self.__add_zeros(negative_array, len(positive_array) - len(negative_array))
         elif len(positive_array) < len(negative_array):
             self.__add_zeros(positive_array, len(negative_array) - len(positive_array))
-        
-        return lib.scipy.stats.stats.pearsonr(negative_array, positive_array)
+        return pearsonr(negative_array, positive_array)
     
 
         
-
+    def __add_zeros(self, array, num_zeros):
+        for i in range(0, num_zeros):
+            array.append(0)
 
 
 

@@ -196,7 +196,8 @@ class CorrelationAnalysis(Analysis):
         for i in range(0, num_zeros):
             array.append(0)
     
-    def analize_paired_peaks(self, positive_peak, negative_peak, delta):       
+    def analize_paired_peaks(self, positive_peak, negative_peak, delta):
+        from scipy.stats.stats import pearsonr
         positive_array = []
         negative_array = [] 
         #delta correction
@@ -215,7 +216,7 @@ class CorrelationAnalysis(Analysis):
         elif len(positive_array) < len(negative_array):
             self.__add_zeros(positive_array, len(negative_array) - len(positive_array))
         
-        return lib.scipy.stats.stats.pearsonr(negative_array, positive_array)
+        return pearsonr(negative_array, positive_array)
     
     def set_parameters(self, min_delta=40, max_delta=200, delta_step=2, height_filter=15, duplicate_limit = 20, no_short=False):
         self.min_delta = min_delta
