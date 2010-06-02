@@ -30,8 +30,8 @@ BED = 'bed'
 WIG = 'bed_wig'
 VARIABLE_WIG = 'variable_wig'
 FIXED_WIG = 'fixed_wig'
-PK = 'pk'
-SPK = 'spk'
+PK = 'bedpk'
+SPK = 'bedspk'
 
 CLUSTER_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG, PK, SPK)
 WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
@@ -66,7 +66,7 @@ class DifferentChromosome(Exception):
 #   READERS                       #
 ###################################
 class ReaderFactory:
-    def create_reader(self, format, half_open=False, cached=False):
+    def create_reader(self, format, half_open=False, cached=True):
         if format == BED:
             return BedReader(format, half_open, cached)
         elif format == PK or format == SPK:
@@ -163,7 +163,7 @@ class BedReader(Reader):
                     cluster.add_level(cluster.end-cluster.start+1, cluster.normalize_factor)
 
         except ValueError:
-            raise 
+            raise
 
 class WigReader(Reader):
     def read_line(self, cluster, line):
@@ -176,7 +176,7 @@ class WigReader(Reader):
 
             cluster.add_level(int(line[2])-int(line[1])-self.correction+1, float(line[3])*cluster.normalize_factor)
             cluster._recalculate_end()
-        except:
+        except ValueError:
             raise InvalidLine
 
 class ElandReader(Reader):
@@ -204,7 +204,9 @@ class ElandReader(Reader):
                 else:
                     self._add_line_to_cluster(line, cluster)
 
-            except:
+            except ValueError:
+                raise InvalidLine
+            except IndexError:
                 raise InvalidLine
 
     def eland_quality_filter(self, line):
@@ -213,26 +215,29 @@ class ElandReader(Reader):
 
 class PkReader(Reader):
     def read_line(self, cluster, line):
-        cluster.read_count = None
-        if line is not None and line != '\n':
-            if not cluster.is_empty():
-                self._add_line_to_cluster(line, cluster)
-            else:
-                line = line.split()
-                if line[0] == 'track':
-                    raise InvalidLine
-                cluster.chromosome = line[0]
-                cluster.start = int(line[1])+self.correction
-                for item in line[3].split('|'):
-                    temp = item.split(':')
-                    cluster.add_level(int(temp[0]), float(temp[1])*cluster.normalize_factor) #normalizing in execution time
-
-                if len(line) > 4:
-                    cluster.strand = line[4]
+        try:
+            cluster.read_count = None
+            if line is not None and line != '\n':
+                if not cluster.is_empty():
+                    self._add_line_to_cluster(line, cluster)
                 else:
-                    cluster.strand = ""
+                    line = line.split()
+                    if line[0] == 'track':
+                        raise InvalidLine
+                    cluster.chromosome = line[0]
+                    cluster.start = int(line[1])+self.correction
+                    for item in line[3].split('|'):
+                        temp = item.split(':')
+                        cluster.add_level(int(temp[0]), float(temp[1])*cluster.normalize_factor) #normalizing in execution time
 
-                cluster._recalculate_end()
+                    if len(line) > 4:
+                        cluster.strand = line[4]
+                    else:
+                        cluster.strand = ""
+
+                    cluster._recalculate_end()
+        except ValueError:
+            raise InvalidLine
 
 
 ##################################
@@ -289,7 +294,7 @@ class BedWriter(Writer):
         else:
             if not cluster.is_singleton():
                 lines = ''
-                split_tags = cluster.split(threshold=0)
+                split_tags = cluster.absolute_split(0)
                 for tag in split_tags:
                     tags = cluster.decompose()
                     for tag in tags:
@@ -402,9 +407,10 @@ class Cluster:
     It can be added, compared, subtracted to other cluster objects. Several interesting properties can be extracted from it.
     """
     def __init__(self, chromosome='', start=0, end=-1, strand='', name='noname', score=0, rounding = False,
-                 read=PK, write=PK, read_half_open=False, write_half_open=False, normalize_factor=1., tag_length=None, sequence=None, span=20, cached=False):
+                 read=PK, write=PK, read_half_open=False, write_half_open=False, normalize_factor=1., tag_length=None, sequence=None, span=20, cached=False, verbose=False):
         """If you want the object to operate with integers instead
         of floats, set the rounding flag to True."""
+        self.verbose = verbose
         self.chromosome = chromosome
         self.start = int(start)
         self.end = int(end)
@@ -418,7 +424,7 @@ class Cluster:
         self.rounding = rounding
         self.normalize_factor = normalize_factor
         self.score = score
-        self.read_as(read, read_half_open, cached)
+        self.read_as(read, read_half_open)
         self.write_as(write, write_half_open, span)
 
         self.tag_length = tag_length
@@ -427,6 +433,8 @@ class Cluster:
         self.read_count = 0
 
     def is_singleton(self):
+        if self._tag_cache:
+            self._flush_tag_cache()
         if self.is_empty():
             return False
 
@@ -443,7 +451,7 @@ class Cluster:
         else:
             return True
 
-    def read_as(self, format, half_open=False, cached=False):
+    def read_as(self, format, half_open=False, cached=True):
         f = ReaderFactory()
         self.reader = f.create_reader(format, half_open, cached)
 
@@ -485,7 +493,7 @@ class Cluster:
             for length, height in self:
                 ret_cluster.add_level(length, height)
             ret_cluster.chromosome = self.chromosome
-            ret_cluster.read_as(self.reader.format, self.reader.half_open, self.reader.cached)
+            ret_cluster.read_as(self.reader.format, self.reader.half_open)
             ret_cluster.write_as(self.writer.format, self.writer.half_open, self.writer.span)
             ret_cluster.score = self.score
             ret_cluster.name = self.name
@@ -495,6 +503,7 @@ class Cluster:
             ret_cluster.tag_length = self.tag_length
             ret_cluster.sequence = self.sequence
             ret_cluster.read_count = self.read_count
+            ret_cluster.verbose = self.verbose
             return ret_cluster
 
     #TODO raise 'there is no strand' error
@@ -511,7 +520,7 @@ class Cluster:
                     previous_start = self.start
                     self.start = self.end - extension + 1
                     self._levels[0][0] += previous_start - self.start
-                    if self.start < 1:
+                    if self.start < 1 and self.verbose:
                         print 'Extending the line invalidates the read. Discarding ', self.chromosome, self.start, self.end
                         self.clear()
                 else:
@@ -522,15 +531,6 @@ class Cluster:
             except IndexError:
                 #print 'Estoy atascado', self.start, self.end, self._levels
                 pass
-
-    def __subsplit(self, new_cluster, clusters, nucleotides, length):
-        """sub method of split"""
-        new_cluster.chromosome=self.chromosome
-        new_cluster._recalculate_end()
-        clusters.append(new_cluster.copy_cluster())
-        new_cluster.clear()
-        new_cluster.start=nucleotides+length
-
 
     def _subtrim(self, threshold, end, left):
         while len(self._levels) > 0:
@@ -549,14 +549,86 @@ class Cluster:
         self._subtrim(threshold, 0, True) #trim the left side of the cluster
         self._subtrim(threshold, -1, False) #trim the right side of the cluster
 
-    def split(self, percentage=0.05, threshold=None):
+    def split(self, percentage=0.05):
+        """
+        Scans each cluster position from start to end and looks for local maxima x and local minima y.
+        Given two consecutive local maxima x_{i} and x_{i+1} we define the smallest of them as x_{min}.
+        For every y_{j} between two local maxima, the condition for splitting the cluster at y is defined as follows:
+
+        y_{j}\leq x_{min}(1-t)
+
+        Where t is a proportion threshold between 0 and 1. By default t=0.05, meaning that by default clusters will be split if the "gap"
+        in between has a signal 5% smaller than the smaller local maxima.
+        """
+        prev_height = -sys.maxint
+        prev_local_maxima = None
+        new_cluster = self.copy_cluster()
+        new_cluster.clear()
+        new_cluster.start = self.start
+        new_cluster.chromosome = self.chromosome
+        clusters = []
+        thresholds = []
+        thresholds.append(-sys.maxint)
+        local_threshold = sys.maxint
+        going_up = True
+        #get the local maxima
+        for length, height in self:
+            if height < prev_height: # we are going down
+                if going_up: #if we were going up previously, we found a local maxima
+                    if prev_local_maxima:
+                        local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
+                        thresholds.append(local_threshold)
+                    prev_local_maxima = prev_height
+                going_up = False
+            else:
+                going_up = True
+
+            prev_height = height
+
+        thresholds.append(-sys.maxint)
+        prev_height = -sys.maxint
+        maxima_count = 0
+        nucleotides = self.start
+        going_up = True
+        #split using the local maxima threshold information
+        for length, height in self:
+            if height < prev_height: 
+                if going_up: #previous was a maxima
+                    maxima_count += 1
+                going_up = False
+            else:
+                going_up = True
+
+            if height <= thresholds[maxima_count]:
+                if not new_cluster.is_empty():
+                    self.__subsplit(new_cluster, clusters, nucleotides, length)
+                new_cluster.start=nucleotides+length
+            else:
+                 new_cluster.add_level(length, height) # add significant parts to the profile
+
+            prev_height = height
+            nucleotides += length
+
+        if not new_cluster.is_empty():
+           self.__subsplit(new_cluster, clusters, nucleotides, length)
+
+        return clusters
+
+    def __subsplit(self, new_cluster, clusters, nucleotides, length):
+        """sub method of split"""
+        new_cluster.chromosome=self.chromosome
+        new_cluster._recalculate_end()
+        clusters.append(new_cluster.copy_cluster())
+        new_cluster.clear()
+        new_cluster.start=nucleotides+length
+
+    def absolute_split(self, threshold):
         """Returns the original cluster or several clusters if we find subclusters"""
         if threshold is None:
             threshold=float(self.get_max_height())*percentage
             if threshold < 1: #or at least 1 nucleotide
                 threshold = 1
 
-        nucleotides=0	# to calculate the start of the new cluster
         new_cluster = self.copy_cluster()
         new_cluster.clear()
         new_cluster.start = self.start
@@ -671,6 +743,9 @@ class Cluster:
         return tags
 
     def __sub__(self, other):
+        if other._tag_cache:
+            other._flush_tag_cache()
+
         result = self.copy_cluster()
         if result.chromosome == other.chromosome:
             other_acum_levels = 0
@@ -755,6 +830,9 @@ class Cluster:
         """
         Adds the levels of 2 selfs, activating the + operator for this type of object results = self + self2
         """
+        if other._tag_cache:
+            other._flush_tag_cache()
+            
         result = self.copy_cluster()
         if result.read_count and other.read_count:
             result.read_count += other.read_count #if both clusters have a read count, add it
@@ -840,7 +918,6 @@ class Cluster:
         self._tag_cache = []
         self._clean_levels()
         
-
 
     def get_heights(self):
         """returns all the heights in an array"""
@@ -976,7 +1053,6 @@ class Region:
         #Get the mean and the variance for the random iterations and calculate the FDR
         found = False
         significant_height = sys.maxint
-        print max_height
         for h in xrange(1, max_height+1):
             random_mean = Pr_of_h[h]/repeats
             random_variance = 0
@@ -985,7 +1061,6 @@ class Region:
                 random_variance += (random_variances[h][i]-random_mean)**2
             random_variance = math.sqrt(random_variance/repeats)
             FDR = random_mean+random_variance/h_prob
-            print FDR
             if FDR < p_value:
                 if not found: #If a p-value smaller than the target is reached, stop the calculations and print the result
                     significant_height = h
@@ -1041,20 +1116,20 @@ class Region:
             print 'Invalid tag!!!'
         self._create_clusters()
 
-    '''def _create_clusters(self):
+    def _create_clusters(self):
         """Creates the Cluster objects that will hold the profile of the region."""
         self.clusters = []
         self.tags.sort(key=lambda x: (x.start, x.end))
         if self.tags:
             #get the first tag
-            self.clusters.append(Cluster(read=BED, cached=True))
+            self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True))
 
             for i in xrange(0, len(self.tags)):
                 if self.clusters[-1].overlap(self.tags[i]) > 0 or self.clusters[-1].is_empty():
                     self.clusters[-1].read_line(self.tags[i].write_line())
                 else:
-                    self.clusters.append(Cluster(read=BED, cached=True))
-    '''
+                    self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True))
+    """
     def _create_clusters(self):
         self.clusters = []
         self.tags.sort(key=lambda x: (x.start, x.end))
@@ -1067,7 +1142,7 @@ class Region:
                 self.clusters.pop(i+1)
             else:
                 i += 1
-
+    """
 
 
     def percentage_covered(self):
