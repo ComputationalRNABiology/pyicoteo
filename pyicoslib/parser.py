@@ -16,28 +16,46 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 
 from lib import argparse
+import ConfigParser
 from operations import (Turbomix, Extend, Poisson, RemoveRegion, RemoveChromosome, Normalize, Subtract, Trim,
                         Split, Cut, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation)
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.8.4'
+__version__ = '0.8.5'
 
 class PicosParser:
+
+    def config_section_map(self, section, config_file):
+        dict1 = {}
+        options = config_file.options(section)
+        for option in options:
+            try:
+                dict1[option] = config_file.get(section, option)
+                if dict1[option] == -1:
+                    DebugPrint("skip: %s" % option)
+            except:
+                print("exception on %s!" % option)
+                dict1[option] = None
+        return dict1
+
+
     def new_subparser(self, *args):
         return argparse.ArgumentParser(add_help=False)
 
-    def __init__(self):
+    def create_parser(self):
         read_formats = str(READ_FORMATS)
         write_formats = str(WRITE_FORMATS)
         parser = argparse.ArgumentParser(version=__version__)
         subparsers = parser.add_subparsers(help='The operation you want to perform. Note that some operations imply previous automatic operations.')
         #parent parsers
-        parserinput = self.new_subparser()
-        parserinput.add_argument('input', help='The input file or directory. ')
-        parserinput.add_argument('-o','--open-input', action='store_true', default=False, help='Defines if the input is half-open or closed notation. [Default %(default)s]')
-        parserinput.add_argument( '-f','--input-format',default='pk', help="""The format the input file is written as.
+        basic_parser = self.new_subparser()
+        basic_parser.add_argument('input', help='The input file or directory. ')
+        basic_parser.add_argument('-o','--open-input', action='store_true', default=False, help='Defines if the input is half-open or closed notation. [Default %(default)s]')
+        basic_parser.add_argument( '-f','--input-format',default='pk', help="""The format the input file is written as.
                                  The options are %s. [Default pk]"""%read_formats)
-        parserinput.add_argument('--debug', action='store_true', default=False)
-        parserinput.add_argument('--no-sort',action='store_true', default=False, help='force skip the sorting step. WARNING: Working with unsorted files will outcome in unexpected results')
+        basic_parser.add_argument('--debug', action='store_true', default=False)
+        basic_parser.add_argument('--no-sort',action='store_true', default=False,
+                                  help='Force skip the sorting step. WARNING: Use only if you know what you are doing. Processing unsorted files assuming they are will outcome in erroneous results')
+        basic_parser.add_argument('--silent' ,action='store_false', default=True, dest='verbose', help='Force skip the sorting step. WARNING: Working with unsorted files will outcome in unexpected results')
 
         output = self.new_subparser()
         output.add_argument('output', help='The output file or directory')
@@ -108,66 +126,114 @@ class PicosParser:
         threshold = self.new_subparser()
         threshold.add_argument('--threshold', help='The height threshold used to cut', type=int)
 
+        correlation_flags = self.new_subparser()
+        correlation_flags.add_argument('-x','--max-delta',type=int, default=500, help='Maximum delta [Default %(default)s]')
+        correlation_flags.add_argument('-m','--min-delta',type=int, default=0, help='Minimum delta [Default %(default)s]')
+        correlation_flags.add_argument('-t','--height-filter',type=int, default=15, help='Height to filter the peaks [Default %(default)s]')
+        correlation_flags.add_argument('-s','--delta-step',type=int, default=1, help='The step of the delta values to test [Default %(default)s]')
 
+        protocol_name = self.new_subparser()
+        protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
         #callpeaks operation
-        subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.', parents=[parserinput, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_percentage])
+        subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.', parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_percentage])
         #convert operation
-        subparsers.add_parser('convert', help='Convert a file to another file type.', parents=[parserinput,  output, output_flags, round, label, tag_length, span, optional_frag_size])
+        subparsers.add_parser('convert', help='Convert a file to another file type.', parents=[basic_parser,  output, output_flags, round, label, tag_length, span, optional_frag_size])
         #remove chr operation
-        parser_chremove = subparsers.add_parser('tagremove', help='Remove all lines that have the specified from the file.', parents=[parserinput, output, output_flags, round, label])
+        parser_chremove = subparsers.add_parser('labelremove', help='Remove all lines that have the specified label(s).', parents=[basic_parser, output, output_flags, round, label])
         parser_chremove.add_argument('discard', help='The tag name (or names) as it appears in the file. Example1: chr1 Example2: chrX:chr3:mytag:myothertag')
         #subtract operation
-        subparsers.add_parser('subtract', help='Subtract two pk files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[parserinput, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label])
+        subparsers.add_parser('subtract', help='Subtract two pk files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[basic_parser, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label])
         #split operation
-        subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[parserinput, output, output_flags, round, trim_percentage, trim_absolute, label])
+        subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[basic_parser, output, output_flags, round, trim_percentage, trim_absolute, label])
         #trim operation
-        subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[parserinput, output, output_flags, round, trim_absolute, label])
+        subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[basic_parser, output, output_flags, round, trim_absolute, label])
         #discard operation
-        subparsers.add_parser('discard', help='Discards artifacts from a file. Only accepts pk or wig as output.', parents=[parserinput, output, output_flags, round, span, label])
+        subparsers.add_parser('discard', help='Discards artifacts from a file. Only accepts pk or wig as output.', parents=[basic_parser, output, output_flags, round, span, label])
         #remove duplicates operation
-        #subparsers.add_parser('remduplicates', help='Removes the duplicated reads in a file. It doesnt accept pk or wig as input. (under development)', parents=[parserinput, output, output_flags, tolerated_duplicates, round, span, label])
+        #subparsers.add_parser('remduplicates', help='Removes the duplicated reads in a file. It doesnt accept pk or wig as input. (under development)', parents=[basic_parser, output, output_flags, tolerated_duplicates, round, span, label])
         #normalize operation
-        subparsers.add_parser('normalize', help='Normalize a pk file respect of the control.', parents=[parserinput, control, control_format, output, output_flags, open_control, round, label, span])
+        subparsers.add_parser('normalize', help='Normalize a pk file respect of the control.', parents=[basic_parser, control, control_format, output, output_flags, open_control, round, label, span])
         #extend operation
-        subparsers.add_parser('extend', help='Extend the reads of a file to the desired length (we currently support only bed and eland files for this operation)', parents=[parserinput,  output, output_flags, frag_size, round, label, span])
+        subparsers.add_parser('extend', help='Extend the reads of a file to the desired length (we currently support only bed and eland files for this operation)', parents=[basic_parser,  output, output_flags, frag_size, round, label, span])
         #poisson analysis
         subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.',
-                              parents=[parserinput, output, frag_size, pvalue, height, correction])
+                              parents=[basic_parser, output_flags, frag_size, pvalue, height, correction])
         #cut operations
         subparsers.add_parser('filter', help="""Analyze the significance of accumulated reads in the file using the poisson distribution and generate the resulting profiles, in wig or pk formats""",
-                              parents=[parserinput, output, frag_size, output_flags, round, pvalue, height, correction, threshold])
+                              parents=[basic_parser, output, frag_size, output_flags, round, pvalue, height, correction, threshold])
         #modfdr analysis
         subparsers.add_parser('modfdr', help="""Use the modified FDR method to determine what clusters are significant in an specific region. Output in a clustered format only.""",
-                              parents=[parserinput, region, output, output_flags, round])
+                              parents=[basic_parser, region, output, output_flags, round])
         #remove operation
         subparsers.add_parser('remove', help='Removes regions that overlap with another the coordinates in the "black list" file.',
-                              parents=[parserinput, output_flags, region, region_format, output])
+                              parents=[basic_parser, output_flags, region, region_format, output])
         #strcorr operation
-        parser_correlation = subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
-                              parents=[parserinput, output])
-        parser_correlation.add_argument('-x','--max-delta',type=int, default=200, help='Maximum delta [Default %(default)s]')
-        parser_correlation.add_argument('-m','--min-delta',type=int, default=0, help='Minimum delta [Default %(default)s]')
-        parser_correlation.add_argument('-t','--height-filter',type=int, default=15, help='Height to filter the peaks [Default %(default)s]')
-        parser_correlation.add_argument('-s','--delta-step',type=int, default=1, help='The step of the delta values to test [Default %(default)s]')
+        subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
+                              parents=[basic_parser, output_flags, correlation_flags])
+        #strcorr operation
+        subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
+        return parser
 
 
-        parser.set_defaults(discard = None, output=None, control=None, label = 'noname', output_format=PK, open_output =False,  rounding = False,
-                            control_format=None, region=None, region_format = BED, open_region = False,
+    def _get_config_option(self, config, name, default):
+        try:
+            return config.getint("Pyicotrocol", name)
+        except ConfigParser.NoOptionError:
+            return default
+
+    def __init__(self):
+        parser = self.create_parser()
+        parser.set_defaults(input='', input_format=PK, open_input=False, debug=False, discard = None, output='', control='', label = 'noname', output_format=PK,
+                            open_output =False,  rounding = False, control_format=None, region=None, region_format = BED, open_region = False,
                             frag_size = None, tag_length = None, span=40, p_value=0.01, height_limit=100, correction=1, no_subtract = False, normalize = False,
-                            trim_percentage=0.05,open_control=False, no_sort=False, duplicates=4, threshold=None, trim_absolute=7,
-                            max_delta=200, min_delta=0, height_filter=15, delta_step=1)
+                            trim_percentage=0.05,open_control=False, no_sort=False, duplicates=4, threshold=None, trim_absolute=None,
+                            max_delta=500, min_delta=0, height_filter=15, delta_step=1, verbose=True)
+
+
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the input format
             args.control_format = args.input_format
-        
+
+        #Add any parameters found in the config file. Override them with anything found in the args later
+        if sys.argv[1] == 'protocol':
+            config = ConfigParser.ConfigParser()
+            config.read(args.protocol_name)
+            section = self.config_section_map("Pyicotrocol", config)
+            for key, value in section.items(): #this works fine for all string values
+                args.__dict__[key] = value
+                
+            args.frag_size = self._get_config_option(config, "extension", args.frag_size, 'int')
+            args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
+            args.rounding = self._get_config_option(config, "round", args.rounding, 'bool')
+            args.open_region = self._get_config_option(config, "open_region", args.open_region, 'bool')
+            args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
+            args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
+            args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
+
+
         turbomix = Turbomix(args.input, args.output, args.input_format, args.output_format, args.label, args.open_input, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_percentage, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
-                            args.min_delta, args.height_filter, args.delta_step)
+                            args.min_delta, args.height_filter, args.delta_step, args.verbose)
 
-        #if sys.argv[1] == 'convert': No need for this.
-        if sys.argv[1] == 'subtract':
+
+
+
+
+        if sys.argv[1] == 'protocol':
+            operations = section['operations'].split(',')
+            for operation in operations:
+                operation = operation.strip()
+            turbomix.operations.extend(operations)
+            for operation in turbomix.operations:
+                print operation
+                
+        elif sys.argv[1] == 'convert':
+            if args.frag_size:
+                turbomix.operations = [Extend]
+
+        elif sys.argv[1] == 'subtract':
             turbomix.operations = [Subtract]
             if args.normalize:
                 turbomix.operations.append(Normalize)
@@ -217,6 +283,8 @@ class PicosParser:
                 if not args.no_subtract:
                     turbomix.operations.append(Subtract)
 
+        
+        #parameters are set, now try running
         try:
             turbomix.run()
 
@@ -230,18 +298,4 @@ class PicosParser:
                 print 'Operation Failed.'
 
 
-"""
-    #correlation analysis
-    parser_correlation = subparsers.add_parser('correlate', help='Correlate the reads in an stranded pk file (spk) using Pearson Correlation Coefficient, looking for the point where + and - reads collide', parents=[input, output])
-    parser_correlation.add_argument('-m','--min-delta',type=int, default=0, help='Minimum delta [Default %(default)s]')
-    parser_correlation.add_argument('-x','--max-delta',type=int, default=200, help='Maximum delta [Default %(default)s]')
-    parser_correlation.add_argument('-t','--height-filter',type=int, default=15, help='Height to filter the peaks [Default %(default)s]')
-    parser_correlation.add_argument('-s','--delta-step',type=int, default=1, help='The step of the delta values to test [Default %(default)s]')
 
-
-elif sys.argv[1] == 'correlate': #We have to revisit this operation. Guiancarlo, the code on this operation might interest you, you can find it at statistics.py
-    from statistics import CorrelationAnalysis
-    cor_analizer = CorrelationAnalysis(args.input, args.output)
-    cor_analizer.set_parameters(args.min_delta, args.max_delta, args.delta_step, args.height_filter, args.duplicates_discard, args.skip_short)
-    cor_analizer.run()
-"""

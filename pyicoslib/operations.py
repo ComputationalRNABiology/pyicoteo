@@ -70,6 +70,16 @@ class Utils:
         except OverflowError:
             return 0
 
+    @staticmethod
+    def list_available_formats():
+        print 'Formats Pyicos can read:'
+        for format in READ_FORMATS:
+            print format
+        print '\nFormats Pyicos can write:'
+        for format in WRITE_FORMATS:
+            print format
+        sys.exit(0)
+
     class BigSort:
         """
         This class can sort huge files without loading them fully into memory.
@@ -96,7 +106,6 @@ class Utils:
                     input_file.seek(currentPos)
                     validLine = True
                 except:
-                    print 'Skipping header line...'
                     count += 1
 
         def filter_chunk(self, chunk):
@@ -255,7 +264,7 @@ class SortedFileClusterReader:
         except InvalidLine:
             if self.invalid_count > self.invalid_limit:
                 print
-                self.logger.error('Limit of invalid lines: Check the input, control, and annotation formats, probably the error is in there. Pyicos by default expects pk files, except for annotation files, witch are bed files')
+                self.logger.error('Limit of invalid lines: Check the input, control, and annotation file formats, probably the error is in there. Pyicos by default expects bedpk files, except for annotation files, witch are bed files')
                 print
                 raise OperationFailed
             else:
@@ -284,7 +293,7 @@ class Turbomix:
                  is_input_open=False, is_output_open=False, debug = False, rounding=False, tag_length = None, discarded_chromosomes = None,
                  control_path = None, control_format = PK, is_control_open = False, annotation_path = None, annotation_format = PK, 
                  is_annotation_open=False, span = 20, extension = 0, p_value = 0.05, height_limit = 20, correction_factor = 1, trim_percentage=0.15, no_sort=False,
-                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1):
+                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False):
         self.__dict__.update(locals())
         self.is_sorted = False
         self.operations = []
@@ -309,13 +318,8 @@ class Turbomix:
             self.control_cluster = Cluster(read=control_format, read_half_open = is_control_open)
             self.control_preprocessor = Utils.BigSort(control_format, is_control_open, extension, 'control')
         except ConversionNotSupported:
-            print '\nThe reading "%s" and writing "%s" is not supported. \n\nFormats Pyicos can read:'%(self.read_format, self.write_format)
-            for format in READ_FORMATS:
-                print format
-            print '\nFormats Pyicos can write:'
-            for format in WRITE_FORMATS:
-                print format
-            sys.exit(0)
+            print '\nThe reading "%s" and writing "%s" is not supported. \n\n'%(self.read_format, self.write_format)
+            Utils.list_available_formats()
         #poisson stuff
         self.first_chr = True
         self._init_poisson()
@@ -384,66 +388,69 @@ class Turbomix:
             cluster.extend(self.extension)
 
     def success_message(self, output_path):
-        print 'Success!\n'
-        print 'Summary of operations:'
         self.result_log.write('\nSummary of operations:\n----------------\n')
-        if self.read_format != self.write_format and not NoWrite in self.operations:
-            print 'Convert from %s to %s.'%(self.read_format, self.write_format)
+        if self.verbose:
+            print 'Success!\n'
+            print 'Summary of operations:'
+        
+            if self.read_format != self.write_format and not NoWrite in self.operations:
+                print 'Convert from %s to %s.'%(self.read_format, self.write_format)
 
         if Extend in self.operations:
             self.result_log.write('Extend\n')
-            print 'Extend'
+            if self.verbose: print 'Extend'
 
         if self.do_subtract:
             self.result_log.write('Subtract\n')
-            print 'Subtract'
+            if self.verbose: print 'Subtract'
 
         if self.discarded_chromosomes:
             self.result_log.write('Discard tags: %s\n'%self.discarded_chromosomes)
-            print 'Discard tags: %s'%self.discarded_chromosomes
+            if self.verbose: print 'Discard tags: %s'%self.discarded_chromosomes
 
         if self.do_heuremove:
             self.result_log.write('Heuristic Remove from %s\n'%self.annotation_path)
-            print 'Heuristic Remove from %s'%self.annotation_path
+            if self.verbose: print 'Heuristic Remove from %s'%self.annotation_path
 
         if self.do_split:
             self.result_log.write('Split\n')
-            print 'Split'
+            if self.verbose: print 'Split'
 
         if Extend in self.operations:
             self.result_log.write('Extend\n')
-            print 'Extend'
+            if self.verbose: print 'Extend'
 
         if DiscardArtifacts in self.operations:
             self.result_log.write('Discard Artifacts\n')
-            print 'Discard Artifacts'
+            if self.verbose: print 'Discard Artifacts'
 
         if self.do_poisson:
             self.result_log.write('Poisson\n')
-            print 'Poisson'
+            if self.verbose: print 'Poisson'
 
         if self.do_cut:
             self.result_log.write('Filter\n')
-            print 'Filter'
+            if self.verbose: print 'Filter'
 
 
         self.result_log.write('Date finished: %s'%datetime.now())
         
-        if not NoWrite in self.operations:
+        if not NoWrite in self.operations and self.verbose:
             print 'Output at: %s'%(output_path)
 
     def start_operation_message(self):
-        if self.read_format != self.write_format:
-            print 'Converting file %s from %s to %s...'%(self.current_input_path, self.read_format, self.write_format)
-        else:
-            print 'Reading file %s as a %s file...'%(self.current_input_path, self.read_format)
+        if self.verbose:
+            if self.read_format != self.write_format:
+                print 'Converting file %s from %s to %s...'%(self.current_input_path, self.read_format, self.write_format)
+            else:
+                print 'Reading file %s as a %s file...'%(self.current_input_path, self.read_format)
 
-        if self.current_control_path:
-            print 'Control file:%s'%self.current_control_path
-            if Normalize in self.operations:
-                print 'The file %s will be normalized to match %s'%(self.current_input_path, self.current_control_path)
-            if Subtract in self.operations:
-                print 'The file %s will be substracted from %s'%(self.current_control_path, self.current_input_path)
+            if self.current_control_path:
+                print 'Control file:%s'%self.current_control_path
+                if Normalize in self.operations:
+                    print 'The file %s will be normalized to match %s'%(self.current_input_path, self.current_control_path)
+                if Subtract in self.operations:
+                    print 'The file %s will be substracted from %s'%(self.current_control_path, self.current_input_path)
 
     def get_normalize_factor(self, input, control):
         ret = self.numcells(control, self.control_format)/self.numcells(input, self.read_format)
@@ -471,11 +478,12 @@ class Turbomix:
         except InvalidLine:
             if self.invalid_count > self.invalid_limit:
                 print
-                self.logger.error('Limit of invalid lines: Check the input, control, and annotation formats, probably the error is in there. Pyicos by default expects pk files, except for annotation files, witch are bed files')
+                self.logger.error('Limit of invalid lines: Incorrect file format? Check the input, control, and annotation formats, probably the error is in there. Pyicos by default expects bedpk files, or regular bed files for the annotation files.')
                 print
+                Utils.list_available_formats()
                 raise OperationFailed
             else:
-                print "Skipping invalid (%s) line: %s"%(cluster.reader.format, line),
+                if self.verbose: print "Skipping invalid (%s) line: %s"%(cluster.reader.format, line),
                 self.invalid_count += 1
 
     def run(self):
@@ -488,8 +496,8 @@ class Turbomix:
         self.do_extend = Extend in self.operations and not self.sorted_by_picos #If the input was sorted by Pyicos, it was already extended before, so dont do it again
         self.do_discard = DiscardArtifacts in self.operations
         self.do_dupremove = RemoveDuplicates in self.operations
-        print
-        print '\nPyicos running...'
+        if self.verbose:
+            print '\n\nPyicos running...'
         if not self.control_path:
             self.process_all_files_recursive(self.input_path, self.output_path)
         else:
@@ -565,24 +573,25 @@ class Turbomix:
 
     def decide_sort(self, input_path, control_path=None):
         """Decide if the files need to be sorted or not."""
-        if (not self.read_format in CLUSTER_FORMATS and self.write_format in CLUSTER_FORMATS) or self.do_subtract or self.do_heuremove or self.do_dupremove:
+        if (not self.read_format in CLUSTER_FORMATS and self.write_format in CLUSTER_FORMATS) or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations:
             if self.no_sort:
-                print 'Input sort skipped'
+                if self.verbose:
+                    print 'Input sort skipped'
                 self.sorted_input_file = file(input_path)
                 self.current_input_path = self.sorted_input_file.name
             else:
-                print 'Sorting input file...'
+                if self.verbose: print 'Sorting input file...'
                 self.is_sorted = True
                 self.sorted_input_file = self.input_preprocessor.sort(input_path, None, self.get_lambda_func(self.read_format), filter=(self.read_format == ELAND or Extend in self.operations))
                 self.current_input_path = self.sorted_input_file.name
 
             if self.do_subtract:
                 if self.no_sort:
-                    print 'Control sort skipped'
+                    if self.verbose: print 'Control sort skipped'
                     self.sorted_control_file = file(control_path)
                     self.current_control_path = self.sorted_control_file.name
                 else:
-                    print 'Sorting control file...'
+                    if self.verbose: print 'Sorting control file...'
                     self.sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format), filter=(self.control_format == ELAND or Extend in self.operations))
                     self.current_control_path = self.sorted_control_file.name
 
@@ -620,9 +629,9 @@ class Turbomix:
             if self.do_cut: #if we cut, we will round later
                 self.cluster.rounding = False
                 self.cluster_aux.rounding = False
-       
-            self.process_file()
 
+            self.process_file()
+            
             if self.do_poisson: #operate with the last chromosome and print the threadholds
                 self.poisson_analysis(self.previous_chr)
                 print '\nCluster threadsholds for p-value %s:'%self.p_value
@@ -635,7 +644,7 @@ class Turbomix:
                 self.cut()
 
             if ModFDR in self.operations:
-              self.modfdr()
+                self.modfdr()
 
             self.success_message(output_path)
 
@@ -643,13 +652,15 @@ class Turbomix:
             try:
                 if not self.no_sort:
                     os.remove(self.sorted_input_file.name)
-                    print 'Temporary file %s removed'%self.sorted_input_file.name
+                    if self.verbose:
+                        print 'Temporary file %s removed'%self.sorted_input_file.name
             except AttributeError, OSError:
                 pass
             try:
                 if not self.no_sort:
                     os.remove(self.sorted_control_file.name)
-                    print 'Temporary file %s removed'%self.sorted_control_file.name
+                    if self.verbose:
+                        print 'Temporary file %s removed'%self.sorted_control_file.name
             except AttributeError, OSError:
                 pass
  
@@ -686,6 +697,7 @@ class Turbomix:
     def process_file(self):
         if NoWrite in self.operations:
             output = None
+            self.write_format = self.read_format #There is no conversion needed
         else:
             output = file(self.current_output_path, 'wb')
         input = file(self.current_input_path, 'rb')
@@ -694,7 +706,7 @@ class Turbomix:
             output.write('track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.experiment_name)
 
         if self.write_format in CLUSTER_FORMATS:
-            if not self.read_format in CLUSTER_FORMATS:
+            if not self.read_format in CLUSTER_FORMATS and self.verbose:
                 print 'Clustering reads...'
             self._to_cluster_conversion(input, output)
         else:
@@ -857,21 +869,20 @@ class Turbomix:
         if cluster.chromosome not in self.discarded_chromosomes and not cluster.is_empty():
             if self.previous_chr != cluster.chromosome: #A new chromosome has been detected
                 linecache.clearcache() #new chromosome, no need for the cache anymore
-                if self.is_sorted:
-                    print 'Processing %s...'%cluster.chromosome
-
+                if self.is_sorted and self.verbose:
+                    print '%s...'%cluster.chromosome,
+                    sys.stdout.flush()
                 if self.do_poisson and not self.first_chr:
                     self.poisson_analysis(self.previous_chr)
                     self._init_poisson()
                 self.previous_chr = cluster.chromosome
-                
                 if self.write_format == VARIABLE_WIG:
                     output.write('variableStep\tchrom=%s\tspan=%s\n'%(self.previous_chr, self.span))
                 self.first_chr = False
 
             if self.do_subtract:
                 cluster = self.subtract(cluster)
-                for cluster in cluster.split(threshold=0):
+                for cluster in cluster.absolute_split(threshold=0):
                     self._post_subtract_process_cluster(cluster, output)
             else:
                 self._post_subtract_process_cluster(cluster, output)
@@ -885,7 +896,7 @@ class Turbomix:
                 cluster.trim(self.trim_absolute)
 
             if self.do_split:
-                for subcluster in cluster.split(self.trim_percentage, self.trim_absolute):
+                for subcluster in cluster.split(self.trim_percentage): #TODO incluir self.trim_absolute!
                     self.extract_and_write(subcluster, output)
             else:
                 self.extract_and_write(cluster, output)
@@ -942,13 +953,10 @@ class Turbomix:
         real_output = file(self.current_output_path, 'w+')
         unfiltered_output = file('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
         for region_line in file(self.annotation_path):
-            print region_line
             split_region_line = region_line.split()
             region = Region(split_region_line[1], split_region_line[2], chromosome=split_region_line[0])
             overlaping_clusters = cluster_reader.get_overlaping_clusters(region, overlap=0.000001)
-            print overlaping_clusters
             for cluster in overlaping_clusters:
-                print cluster.write_line()
                 unfiltered_output.write(cluster.write_line())
             region.add_tags(overlaping_clusters)
             for cluster in region.get_FDR_clusters():
@@ -961,33 +969,32 @@ class Turbomix:
         positive_cluster = Cluster()
         negative_cluster = Cluster()
         positive_cluster_cache = [] #we are trying to hold to the previous cluster
-        read_threshold = 4
         self.analized_pairs = 0.
         for line in file(self.current_input_path):
             line_read = Cluster(read=self.read_format)
             line_read.read_line(line)
             if line_read.strand == '+':
-                if positive_cluster.is_empty():
+                if  positive_cluster.intersects(line_read):
+                     positive_cluster += line_read
+                elif positive_cluster.is_empty() or positive_cluster.is_artifact():
                     positive_cluster = line_read.copy_cluster()
-                elif positive_cluster.intersects(line_read):
-                    positive_cluster += line_read
+                elif not positive_cluster_cache:
+                    positive_cluster_cache.append(line_read.copy_cluster())
+                elif line_read.intersects(positive_cluster_cache[0]):
+                    positive_cluster_cache[0] += line_read
                 else:
-                    if not positive_cluster_cache:
-                        positive_cluster_cache.append(line_read.copy_cluster())
-                    elif line_read.intersects(positive_cluster_cache[0]):
-                        positive_cluster_cache[0] += line_read
-                    else:
-                        positive_cluster_cache.append(line_read.copy_cluster())
+                    positive_cluster_cache.append(line_read.copy_cluster())
 
             else:
                 if negative_cluster.is_empty() or not negative_cluster.intersects(line_read):
-                    if positive_cluster.read_count > read_threshold and negative_cluster.read_count > read_threshold: #if we have big clusters, correlate them
+                    if positive_cluster.get_max_height() > self.height_filter and negative_cluster.get_max_height() > self.height_filter: #if we have big clusters, correlate them
                         self._correlate_clusters(positive_cluster, negative_cluster)
-                    negative_cluster = line_read.copy_cluster() 
+                    negative_cluster = line_read.copy_cluster() #after correlating, select the next cluster
                 else:
                     negative_cluster += line_read
                 #advance in the positive cluster cache if its too far behind
-                while (positive_cluster.end - negative_cluster.start) < self.max_delta or positive_cluster.chromosome < negative_cluster.chromosome: # if the negative clusters are too far behind, empty the positive cluster
+                distance = negative_cluster.start-positive_cluster.start
+                while distance > self.max_delta or positive_cluster.chromosome < negative_cluster.chromosome: # if the negative clusters are too far behind, empty the positive cluster
                     positive_cluster.clear()
                     if positive_cluster_cache:
                         positive_cluster = positive_cluster_cache.pop() 
@@ -1009,12 +1016,13 @@ class Turbomix:
             matplotlib.pyplot.savefig('%s.png'%os.path.basename(self.current_input_path))
             matplotlib.pyplot.show()
         except ImportError:
-            print 'you dont have matplotlib installed, therefore picos cant create the graphs'
+            print 'ImportError: Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation.'
 
 
 
     def _correlate_clusters(self, positive_cluster, negative_cluster):
-        if (abs(negative_cluster.start-positive_cluster.end) < self.max_delta or abs(positive_cluster.start-negative_cluster.end) < self.max_delta or positive_cluster.intersects(negative_cluster)) and positive_cluster.chromosome == negative_cluster.chromosome:
+        distance = negative_cluster.start-positive_cluster.start
+        if (distance < self.max_delta and distance > self.min_delta) and positive_cluster.chromosome == negative_cluster.chromosome:
             self.analized_pairs+=1
             print 'Pair of clusters:'
             print positive_cluster.write_line(), negative_cluster.write_line(),

@@ -15,13 +15,11 @@ class TestCoreObjects(unittest.TestCase):
         self.cluster2 = Cluster(rounding=True, read=PK)
 
     def test_cached_cluster(self):
-        cached = Cluster(read=BED, cached=True)
-        normal = Cluster(read=BED)
+        cached = Cluster(read=BED, cached=True, rounding=True)
         for i in xrange(0, 200):
             cached.read_line('chr1 %s %s hola 666 +'%(i, i+99))
 
-        print cached.write_line()
-
+        self.assertEqual(cached.write_line(), 'chr1\t0\t298\t1:1|1:2|1:3|1:4|1:5|1:6|1:7|1:8|1:9|1:10|1:11|1:12|1:13|1:14|1:15|1:16|1:17|1:18|1:19|1:20|1:21|1:22|1:23|1:24|1:25|1:26|1:27|1:28|1:29|1:30|1:31|1:32|1:33|1:34|1:35|1:36|1:37|1:38|1:39|1:40|1:41|1:42|1:43|1:44|1:45|1:46|1:47|1:48|1:49|1:50|1:51|1:52|1:53|1:54|1:55|1:56|1:57|1:58|1:59|1:60|1:61|1:62|1:63|1:64|1:65|1:66|1:67|1:68|1:69|1:70|1:71|1:72|1:73|1:74|1:75|1:76|1:77|1:78|1:79|1:80|1:81|1:82|1:83|1:84|1:85|1:86|1:87|1:88|1:89|1:90|1:91|1:92|1:93|1:94|1:95|1:96|1:97|1:98|1:99|101:100|1:99|1:98|1:97|1:96|1:95|1:94|1:93|1:92|1:91|1:90|1:89|1:88|1:87|1:86|1:85|1:84|1:83|1:82|1:81|1:80|1:79|1:78|1:77|1:76|1:75|1:74|1:73|1:72|1:71|1:70|1:69|1:68|1:67|1:66|1:65|1:64|1:63|1:62|1:61|1:60|1:59|1:58|1:57|1:56|1:55|1:54|1:53|1:52|1:51|1:50|1:49|1:48|1:47|1:46|1:45|1:44|1:43|1:42|1:41|1:40|1:39|1:38|1:37|1:36|1:35|1:34|1:33|1:32|1:31|1:30|1:29|1:28|1:27|1:26|1:25|1:24|1:23|1:22|1:21|1:20|1:19|1:18|1:17|1:16|1:15|1:14|1:13|1:12|1:11|1:10|1:9|1:8|1:7|1:6|1:5|1:4|1:3|1:2|1:1\n')
 
     #####################   REGION TESTS           ############################
     def test_FDR(self):
@@ -88,7 +86,7 @@ class TestCoreObjects(unittest.TestCase):
     def test_split_subtract_result(self):
         sub_result = Cluster(write_half_open=True, cached=True)
         sub_result.read_line('chr4 1 300 20:1|40:0|20:3|20:0.3|10:-6|80:1|10:0')
-        clusters = sub_result.split(threshold=0)
+        clusters = sub_result.absolute_split(threshold=0)
         result = []
         result.append('chr4\t0\t20\t20:1.00\n')
         result.append('chr4\t60\t100\t20:3.00|20:0.30\n')
@@ -389,11 +387,15 @@ class TestCoreObjects(unittest.TestCase):
     #####################   END CONVERSION TESTS   ############################################
 
 
-    def test_add_disordered(self):
+    """
+    Adding disordered is no longer a feature
+        def test_add_disordered(self):
         cluster = Cluster(read=BED)
         cluster.read_line('chr1 101 150')
         cluster.read_line('chr1 50 200')
         self.assertEqual(cluster.write_line(), 'chr1\t50\t200\t51:1.00|50:2.00|50:1.00\n')
+        """
+
 
     def test_get_max_height_pos(self):
         cluster = Cluster(rounding=True, read=PK, write=PK)
@@ -436,36 +438,24 @@ class TestCoreObjects(unittest.TestCase):
         cluster2.read_line('chr1 5 50 100:1')
         self.assertTrue(cluster.intersects(cluster2))
 
-    def test_split2(self):
-        "Esto esta bien"
-        og_cluster = Cluster()
-        og_cluster.read_line('chr1    74953341        74953850        5:0.68|10:1.52|6:3.20|52:4.04|19:5.04|8:4.20|15:3.20|15:4.88|5:4.04|10:3.20|6:1.52|67:0.68|12:2.36|15:3.36|15:1.68|19:2.52|29:3.36|7:4.20|4:7.56|4:9.24|5:11.76|5:13.44|13:15.12|2:15.96|4:14.28|28:15.96|10:19.32|19:18.48|29:17.64|7:16.80|4:12.44|4:10.76|5:8.24|5:6.56|13:4.88|6:4.04|28:2.36')
-        #for cluster in og_cluster.split(0.05):
-        #    print cluster.write_line()
-
 
     def test_bug_is_artifact(self):
         cluster = Cluster(rounding=True)
         cluster.read_line('chr1  10505760  10505928   8:4|3:5|5:6|8:8|2:10|1:11|5:12|3:15|2:16|2:16|3:18|7:20|3:19|57:20|21:19|8:15|3:14|5:13|8:11|2:9|1:8|5:7|3:4|2:3|2:3')
         self.assertTrue(cluster.is_artifact(0.3))
 
-    def test_bug_split(self):
-        cluster = Cluster(rounding=True, read=PK, write=PK)
-        cluster.read_line('chr1        1        111        5:100|10:0.2|5:1|10:5|5:7|5:8|10:0.7|5:1|5:4|10:0.8|5:0.7|10:2|5:3|5:8|10:6|6:2')
-        subs = cluster.split(0.15)
-        for sub in subs:
-            self.assertEqual(sub.write_line(), 'chr1\t1\t5\t5:100\n')
 
     def test_split(self):
-        double_cluster = Cluster(read=PK, write=PK, rounding=True)
-        double_cluster.read_line('chr1        1        111        5:0.1|10:0.2|5:1|10:5|5:7|5:8|10:0.7|5:1|5:4|10:0.8|5:0.7|10:2|5:3|5:8|10:6|6:2')
-        results = double_cluster.split(0.10)
-        correct_clusters = [Cluster(read=PK, write=PK, rounding=True), Cluster(read=PK, write=PK, rounding=True), Cluster(read=PK, write=PK, rounding=True)]
-        correct_clusters[0].read_line('chr1     21      40      10:5|5:7|5:8')
-        correct_clusters[1].read_line('chr1    56      60      5:4')
-        correct_clusters[2].read_line('chr1    76      111     10:2|5:3|5:8|10:6|6:2')
+        double_cluster = Cluster(rounding=True)
+        double_cluster.read_line('chr1  100  215  5:1|10:5|5:7|5:80|5:1|5:40|15:1|10:2|5:3|5:8|10:6|10:5|10:4|10:3|6:2')
+        results = double_cluster.split(0.01)
+        correct_clusters = [Cluster(rounding=True), Cluster(rounding=True), Cluster(rounding=True)]
+        correct_clusters[0].read_line('chr1    100      125      5:1|10:5|5:7|5:80')
+        correct_clusters[1].read_line('chr1    130      134      5:40')
+        correct_clusters[2].read_line('chr1    165      215     5:8|10:6|10:5|10:4|10:3|6:2')
         for i in range (0,len(correct_clusters)):
             self.assertEqual(results[i].write_line(), correct_clusters[i].write_line())
+
 
     def test_is_artifact(self):
         artifact = Cluster(read=PK, write=PK, rounding=True)
@@ -524,7 +514,7 @@ class TestCoreObjects(unittest.TestCase):
     def test_extreme_split(self):
         cluster = Cluster()
         cluster.read_line('chr3 1 35 20:5|20:0|30:4')
-        clusters = cluster.split(threshold=0)
+        clusters = cluster.absolute_split(threshold=0)
         self.assertEqual(len(clusters), 2)
 
     def test_is_singleton(self):
@@ -653,8 +643,8 @@ class TestCoreObjects(unittest.TestCase):
         cluster =  Cluster(read=BED)
         cluster.read_line('chr1 1 20000 666 hola +')
         cluster.read_line('chr1 1 20000 666 hola +')
-        cluster.read_line('chr1 1001 20000 666 hola +')
         cluster.read_line('chr1 1 20000 666 hola +')
+        cluster.read_line('chr1 1001 20000 666 hola +')
         self.assertEqual(cluster.write_line(), 'chr1\t1\t20000\t1000:3.00|19000:4.00\n')
 
 
