@@ -71,6 +71,73 @@ class Utils:
             return 0
 
     @staticmethod
+    def pearson(list_one, list_two):
+        """
+        Accepts paired lists and returns a number between -1 and 1,
+        known as Pearson's r, that indicates of how closely correlated
+        the two datasets are.
+        A score of close to one indicates a high positive correlation.
+        That means that X tends to be big when Y is big.
+        A score close to negative one indicates a high negative correlation.
+        That means X tends to be small when Y is big.
+        A score close to zero indicates little correlation between the two
+        datasets.
+        This script is cobbled together from a variety of sources, linked
+        in the sources section below.
+        h3. Example usage
+        >> import calculate
+        >> calculate.pearson([6,5,2], [2,5,6])
+        -0.8461538461538467
+
+        h3. A Warning
+
+        Correlation does not equal causation. Just because the two
+        datasets are closely related doesn't not mean that one causes
+        the other to be the way it is.
+
+        h3. Sources
+        http://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient
+        http://davidmlane.com/hyperstat/A56626.html
+        http://www.cmh.edu/stats/definitions/correlation.htm
+        http://www.amazon.com/Programming-Collective-Intelligence-Building-Applications/dp/0596529325
+        """
+        if len(list_one) != len(list_two):
+            raise ValueError('The two lists you provided do not have the name number \
+            of entries. Pearson\'s r can only be calculated with paired data.')
+
+        n = len(list_one)
+
+        # Convert all of the data to floats
+        list_one = map(float, list_one)
+        list_two = map(float, list_two)
+
+        # Add up the total for each
+        sum_one = sum(list_one)
+        sum_two = sum(list_two)
+
+        # Sum the squares of each
+        sum_of_squares_one = sum([pow(i, 2) for i in list_one])
+        sum_of_squares_two = sum([pow(i, 2) for i in list_two])
+
+        # Sum up the product of each element multiplied against its pair
+        product_sum = sum([item_one * item_two for item_one, item_two in zip(list_one, list_two)])
+
+        # Use the raw materials above to assemble the equation
+        pearson_numerator = product_sum - (sum_one * sum_two / n)
+        pearson_denominator = math.sqrt((sum_of_squares_one - pow(sum_one,2) / n) * (sum_of_squares_two - pow(sum_two,2) / n))
+
+        # To avoid avoid dividing by zero,
+        # catch it early on and drop out
+        if pearson_denominator == 0:
+            return 0
+
+        # Divide the equation to return the r value
+        r = pearson_numerator / pearson_denominator
+        return r
+
+
+
+    @staticmethod
     def list_available_formats():
         print 'Formats Pyicos can read:'
         for format in READ_FORMATS:
@@ -85,7 +152,7 @@ class Utils:
         This class can sort huge files without loading them fully into memory.
         Based on a recipe by Tomasz Bieruta found at http://code.activestate.com/recipes/415581/
 
-        NOTE: This class is becoming a preprocessing class for the signal. This is a good thing, I think! But its not
+        NOTE: This class is becoming a preprocessing module. This is a good thing, I think! But its not
         only a sorting class then. We have to think about renaming it, or extracting functionality from it...
         """
         def __init__(self, file_format=None, read_half_open=False, extension=0, id=0):
@@ -1001,14 +1068,20 @@ class Turbomix:
                     else:
                         break
 
-        print 'FINAL DELTAS:'
+        #print 'FINAL DELTAS:'
         data = []
+        max_delta = 0
+        max_corr = -1
         for delta in range(self.min_delta, self.max_delta, self.delta_step):
             if delta in self.delta_results:
                 self.delta_results[delta]=self.delta_results[delta]/self.analized_pairs
                 data.append(self.delta_results[delta])
-                print 'Delta %s:%s'%(delta, self.delta_results[delta])
-
+                if self.delta_results[delta] > max_corr:
+                    max_delta = delta
+                    max_corr = self.delta_results[delta]
+                #print 'Delta %s:%s'%(delta, self.delta_results[delta])
+        print 'Correlation test result: Extension =%s nucleotides'%(max_delta+36)
+        self.extension = max_delta+36
         try:
             import matplotlib.pyplot
             matplotlib.pyplot.plot(range(self.min_delta, self.max_delta), data)
@@ -1016,7 +1089,7 @@ class Turbomix:
             matplotlib.pyplot.savefig('%s.png'%os.path.basename(self.current_input_path))
             matplotlib.pyplot.show()
         except ImportError:
-            print 'ImportError: Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation.'
+            print 'WARNING: Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library.'
 
 
 
@@ -1024,10 +1097,10 @@ class Turbomix:
         distance = negative_cluster.start-positive_cluster.start
         if (distance < self.max_delta and distance > self.min_delta) and positive_cluster.chromosome == negative_cluster.chromosome:
             self.analized_pairs+=1
-            print 'Pair of clusters:'
-            print positive_cluster.write_line(), negative_cluster.write_line(),
+            #print 'Pair of clusters:'
+            #print positive_cluster.write_line(), negative_cluster.write_line(),
             for delta in range(self.min_delta, self.max_delta+1, self.delta_step):
-                r_squared = self._analize_paired_clusters(positive_cluster, negative_cluster, delta)[0]**2
+                r_squared = self._analize_paired_clusters(positive_cluster, negative_cluster, delta)**2
                 if delta not in self.delta_results:
                     self.delta_results[delta] = r_squared
                 else:
@@ -1035,8 +1108,9 @@ class Turbomix:
                 #print 'Delta %s:%s'%(delta, result)
 
 
+    
     def _analize_paired_clusters(self, positive_cluster, negative_cluster, delta):
-        from scipy.stats.stats import pearsonr
+        #from scipy.stats.stats import pearsonr Abandoned scipy
         positive_array = []
         negative_array = [] 
         #delta correction
@@ -1054,7 +1128,8 @@ class Turbomix:
             self.__add_zeros(negative_array, len(positive_array) - len(negative_array))
         elif len(positive_array) < len(negative_array):
             self.__add_zeros(positive_array, len(negative_array) - len(positive_array))
-        return pearsonr(negative_array, positive_array)
+        return Utils.pearson(negative_array, positive_array)
+
     
 
         
