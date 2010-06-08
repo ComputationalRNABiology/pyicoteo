@@ -129,7 +129,7 @@ class PicosParser:
         correlation_flags = self.new_subparser()
         correlation_flags.add_argument('-x','--max-delta',type=int, default=500, help='Maximum delta [Default %(default)s]')
         correlation_flags.add_argument('-m','--min-delta',type=int, default=0, help='Minimum delta [Default %(default)s]')
-        correlation_flags.add_argument('-t','--height-filter',type=int, default=15, help='Height to filter the peaks [Default %(default)s]')
+        correlation_flags.add_argument('-t','--height-filter',type=int, default=8, help='Height to filter the peaks [Default %(default)s]')
         correlation_flags.add_argument('-s','--delta-step',type=int, default=1, help='The step of the delta values to test [Default %(default)s]')
 
         protocol_name = self.new_subparser()
@@ -187,7 +187,7 @@ class PicosParser:
                             open_output =False,  rounding = False, control_format=None, region=None, region_format = BED, open_region = False,
                             frag_size = None, tag_length = None, span=40, p_value=0.01, height_limit=100, correction=1, no_subtract = False, normalize = False,
                             trim_percentage=0.05,open_control=False, no_sort=False, duplicates=4, threshold=None, trim_absolute=None,
-                            max_delta=500, min_delta=0, height_filter=15, delta_step=1, verbose=True)
+                            max_delta=500, min_delta=0, height_filter=8, delta_step=1, verbose=True)
 
 
         args = parser.parse_args()
@@ -209,7 +209,6 @@ class PicosParser:
             args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
             args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
             args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
-
 
         turbomix = Turbomix(args.input, args.output, args.input_format, args.output_format, args.label, args.open_input, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
