@@ -135,8 +135,6 @@ class Utils:
         r = pearson_numerator / pearson_denominator
         return r
 
-
-
     @staticmethod
     def list_available_formats():
         print 'Formats Pyicos can read:'
@@ -381,12 +379,14 @@ class Turbomix:
             self.input_preprocessor = Utils.BigSort(read_format, is_input_open, extension, 'input')
             self.cluster = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span)
             self.cluster_aux = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span)
-            self.cluster_duplicate = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span)
             self.control_cluster = Cluster(read=control_format, read_half_open = is_control_open)
             self.control_preprocessor = Utils.BigSort(control_format, is_control_open, extension, 'control')
         except ConversionNotSupported:
             print '\nThe reading "%s" and writing "%s" is not supported. \n\n'%(self.read_format, self.write_format)
             Utils.list_available_formats()
+        #duplicates flag
+        self.previous_tag_id = ''
+        self.duplicates_found = 0
         #poisson stuff
         self.first_chr = True
         self._init_poisson()
@@ -464,8 +464,8 @@ class Turbomix:
                 print 'Convert from %s to %s.'%(self.read_format, self.write_format)
 
         if Extend in self.operations:
-            self.result_log.write('Extend\n')
-            if self.verbose: print 'Extend'
+            self.result_log.write('Extend to %s\n'%self.extension)
+            if self.verbose: print 'Extend to %s'%self.extension
 
         if self.do_subtract:
             self.result_log.write('Subtract\n')
@@ -483,10 +483,6 @@ class Turbomix:
             self.result_log.write('Split\n')
             if self.verbose: print 'Split'
 
-        if Extend in self.operations:
-            self.result_log.write('Extend\n')
-            if self.verbose: print 'Extend'
-
         if DiscardArtifacts in self.operations:
             self.result_log.write('Discard Artifacts\n')
             if self.verbose: print 'Discard Artifacts'
@@ -499,6 +495,9 @@ class Turbomix:
             self.result_log.write('Filter\n')
             if self.verbose: print 'Filter'
 
+        if self.do_dupremove:
+            self.result_log.write('Removed %s duplicates\n'%self.duplicates_found)
+            if self.verbose: print 'Removed %s duplicates, allowing only up to %s'%(self.duplicates_found, self.tolerated_duplicates)
 
         self.result_log.write('Date finished: %s'%datetime.now())
         
@@ -630,13 +629,17 @@ class Turbomix:
         if self.write_format == SPK:
             if format == ELAND:
                 return lambda x:(x.split()[6],x.split()[8],int(x.split()[7]),len(x.split()[1]))
+            elif self.do_dupremove:
+                return lambda x:(x.split()[0],x.split()[5],int(x.split()[1]),int(x.split()[2]), x.split()[3])
             else:
                 return lambda x:(x.split()[0],x.split()[5],int(x.split()[1]),int(x.split()[2]))
         else:
             if format == ELAND:
                 return lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
-            else:
+            elif self.do_dupremove:
                 return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]))
+            else:
+                return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]), x.split()[3])
 
     def decide_sort(self, input_path, control_path=None):
         """Decide if the files need to be sorted or not."""
@@ -836,14 +839,14 @@ class Turbomix:
         return cluster
 
     def remove_duplicates(self, cluster):
-        """Removes the duplicates found in the input file (under development)"""
-        if cluster == self.cluster_duplicate and not cluster.is_empty():
+        """Removes the duplicates found in the input file"""
+        if cluster.name == self.previous_tag_id and not cluster.is_empty():
             self.identical_reads+=1
             if self.identical_reads > self.tolerated_duplicates:
-                #print 'Duplicate number %s discarded: %s'%(self.duplicates_found, cluster.write_line())
+                self.duplicates_found += 1
                 cluster.clear()
         else:
-            self.cluster_duplicate = cluster.copy_cluster()
+            self.previous_tag_id = cluster.name
             self.identical_reads = 1
 
         return cluster
@@ -1092,7 +1095,6 @@ class Turbomix:
             print 'WARNING: Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library.'
 
 
-
     def _correlate_clusters(self, positive_cluster, negative_cluster):
         distance = negative_cluster.start-positive_cluster.start
         if (distance < self.max_delta and distance > self.min_delta) and positive_cluster.chromosome == negative_cluster.chromosome:
@@ -1108,7 +1110,6 @@ class Turbomix:
                 #print 'Delta %s:%s'%(delta, result)
 
 
-    
     def _analize_paired_clusters(self, positive_cluster, negative_cluster, delta):
         #from scipy.stats.stats import pearsonr Abandoned scipy
         positive_array = []
@@ -1131,8 +1132,6 @@ class Turbomix:
         return Utils.pearson(negative_array, positive_array)
 
     
-
-        
     def __add_zeros(self, array, num_zeros):
         for i in range(0, num_zeros):
             array.append(0)

@@ -56,11 +56,11 @@ class TestOperations(unittest.TestCase):
 
         self.notsubtracted_path = self.files_dir + 'test_notsubtracted.bed'
         self.notsubtracted_file = open(self.notsubtracted_path,'w+')
-        self.notsubtracted_file.write("chr1\t1\t100\t0\tnoname\t+\n")
-        self.notsubtracted_file.write("chr1\t1\t100\t0\tnoname\t+\n")
-        self.notsubtracted_file.write("chr1\t1\t100\t0\tnoname\t+\n")
-        self.notsubtracted_file.write("chr1\t1\t100\t0\tnoname\t+\n")
-        self.notsubtracted_file.write("chr2\t1\t100\t0\tnoname\t+\n")
+        self.notsubtracted_file.write("chr1\t1\t100\t0\t200\t+\n")
+        self.notsubtracted_file.write("chr1\t1\t100\t0\t200\t+\n")
+        self.notsubtracted_file.write("chr1\t1\t100\t0\t200\t+\n")
+        self.notsubtracted_file.write("chr1\t1\t100\t0\t200\t+\n")
+        self.notsubtracted_file.write("chr2\t1\t100\t0\t210\t+\n")
         #self.notsubtracted_file.write("chr3\t1\t100\t0\tnoname\t+\n")
         self.notsubtracted_file.write("chrX\t101\t200\t0\tnoname\t+\n")
         self.notsubtracted_file.write("chrX\t101\t200\t0\tnoname\t+\n")
