@@ -92,8 +92,8 @@ class PicosParser:
         pvalue = self.new_subparser()
         pvalue.add_argument('--p-value',type=float, default=0.01, help='The p-value we consider to be significant in our statistical test. [Default %(default)s]')
 
-        #tolerated_duplicates =self.new_subparser()
-        #tolerated_duplicates.add_argument('--duplicates',type=int, default=4, help='The number of duplicates we accept as valid. ()[Default %(default)s]')
+        tolerated_duplicates =self.new_subparser()
+        tolerated_duplicates.add_argument('--duplicates',type=int, default=3, help='The number of duplicates we accept as valid. ()[Default %(default)s]')
 
         height = self.new_subparser()
         height.add_argument('--height-limit',type=int, default=100,help='The cluster height limit Pyicos will analize too. Every cluster that goes up the threshold will have a p-value of 0, therefore considered significant. This parameter is here just for speed purposes, raise it you think that you peak threashold will be over 100 (Almost impossible, but you never know. There is people with crazy data out there.) [Default %(default)s]')
@@ -150,7 +150,7 @@ class PicosParser:
         #discard operation
         subparsers.add_parser('discard', help='Discards artifacts from a file. Only accepts pk or wig as output.', parents=[basic_parser, output, output_flags, round, span, label])
         #remove duplicates operation
-        #subparsers.add_parser('remduplicates', help='Removes the duplicated reads in a file. It doesnt accept pk or wig as input. (under development)', parents=[basic_parser, output, output_flags, tolerated_duplicates, round, span, label])
+        subparsers.add_parser('remduplicates', help='Removes the duplicated reads in a file. Only accepts tag files (bed, eland)', parents=[basic_parser, output, output_flags, tolerated_duplicates, round, span, label])
         #normalize operation
         subparsers.add_parser('normalize', help='Normalize a pk file respect of the control.', parents=[basic_parser, control, control_format, output, output_flags, open_control, round, label, span])
         #extend operation
@@ -174,19 +174,12 @@ class PicosParser:
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
         return parser
 
-
-    def _get_config_option(self, config, name, default):
-        try:
-            return config.getint("Pyicotrocol", name)
-        except ConfigParser.NoOptionError:
-            return default
-
     def __init__(self):
         parser = self.create_parser()
-        parser.set_defaults(input='', input_format=PK, open_input=False, debug=False, discard = None, output='', control='', label = 'noname', output_format=PK,
-                            open_output =False,  rounding = False, control_format=None, region=None, region_format = BED, open_region = False,
-                            frag_size = None, tag_length = None, span=40, p_value=0.01, height_limit=100, correction=1, no_subtract = False, normalize = False,
-                            trim_percentage=0.05,open_control=False, no_sort=False, duplicates=4, threshold=None, trim_absolute=None,
+        parser.set_defaults(input='', input_format=PK, open_input=False, debug=False, discard=0, output='', control='', label = 'noname', output_format=PK,
+                            open_output =False, rounding=False, control_format=PK, region='', region_format=BED, open_region = False,
+                            frag_size = 0, tag_length = 0, span=40, p_value=0.01, height_limit=100, correction=1, no_subtract = False, normalize = False,
+                            trim_percentage=0.05,open_control=False, no_sort=False, duplicates=3, threshold=0, trim_absolute=0,
                             max_delta=500, min_delta=0, height_filter=8, delta_step=1, verbose=True)
 
 
@@ -200,15 +193,20 @@ class PicosParser:
             config.read(args.protocol_name)
             section = self.config_section_map("Pyicotrocol", config)
             for key, value in section.items(): #this works fine for all string values
-                args.__dict__[key] = value
-                
-            args.frag_size = self._get_config_option(config, "extension", args.frag_size, 'int')
-            args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
-            args.rounding = self._get_config_option(config, "round", args.rounding, 'bool')
-            args.open_region = self._get_config_option(config, "open_region", args.open_region, 'bool')
-            args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
-            args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
-            args.open_output = self._get_config_option(config, "open_output", args.open_output, 'bool')
+                try:
+                    t = type(parser._defaults[key])
+                    if t == int:
+                        args.__dict__[key] = config.getint("Pyicotrocol", key)
+                    elif t == float:
+                        args.__dict__[key] = config.getfloat("Pyicotrocol", key)
+                    elif t == bool:
+                        args.__dict__[key] = config.getboolean("Pyicotrocol", key)
+                    elif t == str:
+                        args.__dict__[key] = config.get("Pyicotrocol", key)
+
+                except KeyError:
+                    if key != 'operations':
+                        print 'Parameter %s is not a Pyicos parameter'%key
 
         turbomix = Turbomix(args.input, args.output, args.input_format, args.output_format, args.label, args.open_input, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
@@ -217,16 +215,10 @@ class PicosParser:
                             args.min_delta, args.height_filter, args.delta_step, args.verbose)
 
 
-
-
-
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
             for operation in operations:
-                operation = operation.strip()
-            turbomix.operations.extend(operations)
-            for operation in turbomix.operations:
-                print operation
+                turbomix.operations.append(operation.strip())
                 
         elif sys.argv[1] == 'convert':
             if args.frag_size:
