@@ -637,9 +637,9 @@ class Turbomix:
             if format == ELAND:
                 return lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
             elif self.do_dupremove:
-                return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]))
-            else:
                 return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]), x.split()[3])
+            else:
+                return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]))
 
     def decide_sort(self, input_path, control_path=None):
         """Decide if the files need to be sorted or not."""
