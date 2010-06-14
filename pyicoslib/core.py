@@ -163,7 +163,7 @@ class BedReader(Reader):
                     cluster.add_level(cluster.end-cluster.start+1, cluster.normalize_factor)
 
         except ValueError:
-            raise
+            raise InvalidLine
 
 class WigReader(Reader):
     def read_line(self, cluster, line):
