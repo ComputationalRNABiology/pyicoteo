@@ -355,7 +355,7 @@ class VariableWigWriter(Writer):
 class PkWriter(Writer):
     def _format_line(self, cluster, start, acum_length, profile):
         if self.format == PK:
-            return '%s\t%s\t%s\t%s\n'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile)
+            return '%s\t%s\t%s\t%s\t%s\t%s\t%s\n'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, cluster.get_max_height(), cluster.get_max_height_pos(), cluster.get_area())
         else: #Its SPK
             return '%s\t%s\t%s\t%s\t%s\t%s\n'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, cluster.score, cluster.strand)
 
@@ -807,20 +807,39 @@ class Cluster:
         return max_height
 
     def get_max_height_pos(self):
-        """
+	# changed by Sonja (to Juanra's idea)
+	"""
         Returns the position where the maximum height is located.
-        This position will be the middle of the level analyzed
+        The central positions of the first and the last maximum are calculated.
+	The max_height_pos will be in the middle of these two positions.
         """
         max_height = 0
-        acum_length = 0
-        pos = self.start
+        
+	acum_length = 0
+	first_max = 0
+	last_max = 0
         for length, height in self:
             acum_length += length
-            if height > max_height:
+            if int(height) > int(max_height):
                 max_height = height
-                pos = self.start + acum_length - length/2 - 1
+                first_max = self.start + acum_length - length/2 - 1
+	    if int(height) == int(max_height):	
+		last_max = self.start + acum_length - length/2 - 1
 
-        return pos
+	pos = (first_max + last_max)/2
+        return pos 
+ 
+
+    def get_area(self):
+	# added by Sonja
+        """
+        Returns the area of the peak
+        """
+        sum_area = 0
+        for length, height in self:
+            sum_area += length*height
+
+        return sum_area
 
     def add_level(self, length, height):
         self._levels.append([int(length), float(height)])
