@@ -116,7 +116,7 @@ class PicosParser:
         normalize.add_argument('--normalize',action='store_true', default=False, help='Normalize to the control before subtracting')
 
         trim_percentage = self.new_subparser()
-        trim_percentage.add_argument('--trim-proportion', default=0.05, help='Fraction of the cluster height below which the peak is trimmed. Example: For a cluster of height 40, if the flag is 0.05, 40*0.05=2. Every cluster will be trimmed to that height. A position of height 1 is always considered insignificant, no matter what the cluster height is. [Default %(default)s]', type=float)
+        trim_percentage.add_argument('--trim-proportion', default=0.25, help='Fraction of the cluster height below which the peak is trimmed. Example: For a cluster of height 40, if the flag is 0.05, 40*0.05=2. Every cluster will be trimmed to that height. A position of height 1 is always considered insignificant, no matter what the cluster height is. [Default %(default)s]', type=float)
         trim_absolute = self.new_subparser()
         trim_absolute.add_argument('--trim-absolute', help='The height threshold used to split or trim the clusters.', type=int)
 
@@ -179,7 +179,7 @@ class PicosParser:
         parser.set_defaults(input='', input_format=PK, open_input=False, debug=False, discard=0, output='', control='', label = 'noname', output_format=PK,
                             open_output =False, rounding=False, control_format=PK, region='', region_format=BED, open_region = False,
                             frag_size = 0, tag_length = 0, span=40, p_value=0.01, height_limit=100, correction=1, no_subtract = False, normalize = False,
-                            trim_percentage=0.05,open_control=False, no_sort=False, duplicates=3, threshold=0, trim_absolute=0,
+                            trim_percentage=0.25,open_control=False, no_sort=False, duplicates=3, threshold=0, trim_absolute=0,
                             max_delta=500, min_delta=0, height_filter=8, delta_step=1, verbose=True)
 
 
