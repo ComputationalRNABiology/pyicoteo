@@ -811,20 +811,20 @@ class Cluster:
 	"""
         Returns the position where the maximum height is located.
         The central positions of the first and the last maximum are calculated.
-	The max_height_pos will be in the middle of these two positions.
+        The max_height_pos will be in the middle of these two positions.
         """
         max_height = 0
         
-	acum_length = 0
-	first_max = 0
-	last_max = 0
+        acum_length = 0
+        first_max = 0
+        last_max = 0
         for length, height in self:
             acum_length += length
             if int(height) > int(max_height):
                 max_height = height
                 first_max = self.start + acum_length - length/2 - 1
 	    if int(height) == int(max_height):	
-		last_max = self.start + acum_length - length/2 - 1
+                last_max = self.start + acum_length - length/2 - 1
 
 	pos = (first_max + last_max)/2
         return pos 
