@@ -826,7 +826,7 @@ class Cluster:
 	    if int(height) == int(max_height):	
                 last_max = self.start + acum_length - length/2 - 1
 
-	pos = (first_max + last_max)/2
+        pos = (first_max + last_max)/2
         return pos 
  
 
