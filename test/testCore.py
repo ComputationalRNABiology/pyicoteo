@@ -19,7 +19,7 @@ class TestCoreObjects(unittest.TestCase):
         for i in xrange(0, 200):
             cached.read_line('chr1 %s %s hola 666 +'%(i, i+99))
 
-        self.assertEqual(cached.write_line(), 'chr1\t0\t298\t1:1|1:2|1:3|1:4|1:5|1:6|1:7|1:8|1:9|1:10|1:11|1:12|1:13|1:14|1:15|1:16|1:17|1:18|1:19|1:20|1:21|1:22|1:23|1:24|1:25|1:26|1:27|1:28|1:29|1:30|1:31|1:32|1:33|1:34|1:35|1:36|1:37|1:38|1:39|1:40|1:41|1:42|1:43|1:44|1:45|1:46|1:47|1:48|1:49|1:50|1:51|1:52|1:53|1:54|1:55|1:56|1:57|1:58|1:59|1:60|1:61|1:62|1:63|1:64|1:65|1:66|1:67|1:68|1:69|1:70|1:71|1:72|1:73|1:74|1:75|1:76|1:77|1:78|1:79|1:80|1:81|1:82|1:83|1:84|1:85|1:86|1:87|1:88|1:89|1:90|1:91|1:92|1:93|1:94|1:95|1:96|1:97|1:98|1:99|101:100|1:99|1:98|1:97|1:96|1:95|1:94|1:93|1:92|1:91|1:90|1:89|1:88|1:87|1:86|1:85|1:84|1:83|1:82|1:81|1:80|1:79|1:78|1:77|1:76|1:75|1:74|1:73|1:72|1:71|1:70|1:69|1:68|1:67|1:66|1:65|1:64|1:63|1:62|1:61|1:60|1:59|1:58|1:57|1:56|1:55|1:54|1:53|1:52|1:51|1:50|1:49|1:48|1:47|1:46|1:45|1:44|1:43|1:42|1:41|1:40|1:39|1:38|1:37|1:36|1:35|1:34|1:33|1:32|1:31|1:30|1:29|1:28|1:27|1:26|1:25|1:24|1:23|1:22|1:21|1:20|1:19|1:18|1:17|1:16|1:15|1:14|1:13|1:12|1:11|1:10|1:9|1:8|1:7|1:6|1:5|1:4|1:3|1:2|1:1\n')
+        self.assertEqual(cached.write_line(), 'chr1\t0\t298\t1:1|1:2|1:3|1:4|1:5|1:6|1:7|1:8|1:9|1:10|1:11|1:12|1:13|1:14|1:15|1:16|1:17|1:18|1:19|1:20|1:21|1:22|1:23|1:24|1:25|1:26|1:27|1:28|1:29|1:30|1:31|1:32|1:33|1:34|1:35|1:36|1:37|1:38|1:39|1:40|1:41|1:42|1:43|1:44|1:45|1:46|1:47|1:48|1:49|1:50|1:51|1:52|1:53|1:54|1:55|1:56|1:57|1:58|1:59|1:60|1:61|1:62|1:63|1:64|1:65|1:66|1:67|1:68|1:69|1:70|1:71|1:72|1:73|1:74|1:75|1:76|1:77|1:78|1:79|1:80|1:81|1:82|1:83|1:84|1:85|1:86|1:87|1:88|1:89|1:90|1:91|1:92|1:93|1:94|1:95|1:96|1:97|1:98|1:99|101:100|1:99|1:98|1:97|1:96|1:95|1:94|1:93|1:92|1:91|1:90|1:89|1:88|1:87|1:86|1:85|1:84|1:83|1:82|1:81|1:80|1:79|1:78|1:77|1:76|1:75|1:74|1:73|1:72|1:71|1:70|1:69|1:68|1:67|1:66|1:65|1:64|1:63|1:62|1:61|1:60|1:59|1:58|1:57|1:56|1:55|1:54|1:53|1:52|1:51|1:50|1:49|1:48|1:47|1:46|1:45|1:44|1:43|1:42|1:41|1:40|1:39|1:38|1:37|1:36|1:35|1:34|1:33|1:32|1:31|1:30|1:29|1:28|1:27|1:26|1:25|1:24|1:23|1:22|1:21|1:20|1:19|1:18|1:17|1:16|1:15|1:14|1:13|1:12|1:11|1:10|1:9|1:8|1:7|1:6|1:5|1:4|1:3|1:2|1:1\t100\t.\t149\t20000\n')
 
     #####################   REGION TESTS           ############################
     def test_FDR(self):
@@ -83,14 +83,15 @@ class TestCoreObjects(unittest.TestCase):
         #print cluster.write_line()
         return cluster
 
+
     def test_split_subtract_result(self):
         sub_result = Cluster(write_half_open=True, cached=True)
         sub_result.read_line('chr4 1 300 20:1|40:0|20:3|20:0.3|10:-6|80:1|10:0')
         clusters = sub_result.absolute_split(threshold=0)
         result = []
-        result.append('chr4\t0\t20\t20:1.00\n')
-        result.append('chr4\t60\t100\t20:3.00|20:0.30\n')
-        result.append('chr4\t110\t190\t80:1.00\n')
+        result.append('chr4\t0\t20\t20:1.00\t1.0\t.\t10\t20.0\n')
+        result.append('chr4\t60\t100\t20:3.00|20:0.30\t3.0\t.\t70\t66.0\n')
+        result.append('chr4\t110\t190\t80:1.00\t1.0\t.\t150\t80.0\n')
         for i in range(0, len(clusters)):
             self.assertEqual(clusters[i].write_line(), result[i])
 
@@ -180,7 +181,7 @@ class TestCoreObjects(unittest.TestCase):
         self.assertEqual(self.bed_tag.write_line(), 'chr1\t1\t100\thola\t666\t+\n')
 
     def test_pk_reader_writer(self):
-        self.assertEqual(self.pk_cluster.write_line(), 'chr1\t1\t15\t4:1|1:2|2:1|3:4|2:5|2:2|1:1\n')
+        self.assertEqual(self.pk_cluster.write_line(), 'chr1\t1\t15\t4:1|1:2|2:1|3:4|2:5|2:2|1:1\t5.0\t.\t11\t35.0\n')
 
     def test_pk_to_bed(self):
         self.cluster_short.set_tag_length(10)
@@ -360,7 +361,7 @@ class TestCoreObjects(unittest.TestCase):
         cluster = Cluster(rounding=True)
         cluster.read_line('chr21 1 10 1:1|1:2|3:5|1:1|1:4|1:3|2:1')
         cluster.trim(3)
-        self.assertEqual(cluster.write_line(), 'chr21\t3\t8\t3:5|1:1|1:4|1:3\n')
+        self.assertEqual(cluster.write_line(), 'chr21\t3\t8\t3:5|1:1|1:4|1:3\t5.0\t.\t4\t23.0\n')
 
     def test_eland_read_write(self):
         cluster = Cluster(read=ELAND, write=ELAND)
@@ -416,9 +417,9 @@ class TestCoreObjects(unittest.TestCase):
         cluster.read_line('chr1    1  1000  10:2|10:4|80:5|500:7|100:7|100:5')
         cluster2.read_line('chr1    11  1000  10:4|80:5|500:6|100:7|99:5|1:4.99')
         cluster2 = cluster - cluster2
-        self.assertEqual(cluster2.write_line(), 'chr1\t1\t10\t10:2.00\nchr1\t101\t600\t500:1.00\nchr1\t800\t800\t1:0.01\n')
+        self.assertEqual(cluster2.write_line(), 'chr1\t1\t10\t10:2.00\t2.0\t.\t5\t520.01\nchr1\t101\t600\t500:1.00\t2.0\t.\t5\t520.01\nchr1\t800\t800\t1:0.01\t2.0\t.\t5\t520.01\n')
         cluster2.write_as(PK, True)
-        self.assertEqual(cluster2.write_line(), 'chr1\t0\t10\t10:2.00\nchr1\t100\t600\t500:1.00\nchr1\t799\t800\t1:0.01\n')
+        self.assertEqual(cluster2.write_line(), 'chr1\t0\t10\t10:2.00\t2.0\t.\t5\t520.01\nchr1\t100\t600\t500:1.00\t2.0\t.\t5\t520.01\nchr1\t799\t800\t1:0.01\t2.0\t.\t5\t520.01\n')
 
     def test_intersects(self):
         self.assertTrue(Cluster('chr1', 1, 10).intersects(Cluster('chr1', 10, 14)))
@@ -567,9 +568,9 @@ class TestCoreObjects(unittest.TestCase):
         cluster.add_level(1, 3)
         cluster.add_level(10, 0)
         cluster.add_level(100, 1)
-        self.assertEqual(cluster.write_line(), 'chr5\t0\t300\t100:1|50:2|50:3|100:1\nchr5\t500\t501\t1:3\nchr5\t511\t611\t100:1\n') #HALF OPEN
+        self.assertEqual(cluster.write_line(), 'chr5\t0\t300\t100:1|50:2|50:3|100:1\t3.0\t.\t338\t553.0\nchr5\t500\t501\t1:3\t3.0\t.\t338\t553.0\nchr5\t511\t611\t100:1\t3.0\t.\t338\t553.0\n') #HALF OPEN
         cluster.write_as(PK, False) #Now write it as closed
-        self.assertEqual(cluster.write_line(),'chr5\t1\t300\t100:1|50:2|50:3|100:1\nchr5\t501\t501\t1:3\nchr5\t512\t611\t100:1\n') #Closed
+        self.assertEqual(cluster.write_line(),'chr5\t1\t300\t100:1|50:2|50:3|100:1\t3.0\t.\t338\t553.0\nchr5\t501\t501\t1:3\t3.0\t.\t338\t553.0\nchr5\t512\t611\t100:1\t3.0\t.\t338\t553.0\n') #Closed
 
     def test_read_wig(self):
         cluster1 = Cluster(read=WIG, chromosome='chr5', start=1, rounding=True, read_half_open=True)
@@ -632,11 +633,11 @@ class TestCoreObjects(unittest.TestCase):
         #result4 = cluster1 +  cluster3 + cluster4
         result5 = cluster1 + cluster5
         result6 = cluster1 + cluster6
-        self.assertEqual(result1.write_line(), 'chr1\t1\t100\t100:2.00\n')
-        self.assertEqual(result2.write_line(), 'chr1\t1\t100\t50:2.00|50:1.00\n')
-        self.assertEqual(result3.write_line(), 'chr1\t1\t145\t9:1.00|91:2.00|45:1.00\n')
+        self.assertEqual(result1.write_line(), 'chr1\t1\t100\t100:2.00\t2.0\t.\t50\t200.0\n')
+        self.assertEqual(result2.write_line(), 'chr1\t1\t100\t50:2.00|50:1.00\t2.0\t.\t25\t150.0\n')
+        self.assertEqual(result3.write_line(), 'chr1\t1\t145\t9:1.00|91:2.00|45:1.00\t2.0\t.\t55\t236.0\n')
         #self.assertEqual(result4.write_line(), 'chr1\t1\t145\t9:2.00|41:3.00|50:2.00|45:1.00\n')
-        self.assertEqual(result5.write_line(), 'chr1\t1\t100\t44:1.00|51:2.00|5:1.00\n')
+        self.assertEqual(result5.write_line(), 'chr1\t1\t100\t44:1.00|51:2.00|5:1.00\t2.0\t.\t70\t151.0\n')
         #self.assertEqual(result6.write_line(), 'chr1\t1\t200\t100:2.00|100:1.00\n')
     
     def test_add2(self):
@@ -645,7 +646,7 @@ class TestCoreObjects(unittest.TestCase):
         cluster.read_line('chr1 1 20000 666 hola +')
         cluster.read_line('chr1 1 20000 666 hola +')
         cluster.read_line('chr1 1001 20000 666 hola +')
-        self.assertEqual(cluster.write_line(), 'chr1\t1\t20000\t1000:3.00|19000:4.00\n')
+        self.assertEqual(cluster.write_line(), 'chr1\t1\t20000\t1000:3.00|19000:4.00\t4\t.\t10500\t79000\n')
 
 
     def test_add_pk(self):
@@ -654,13 +655,13 @@ class TestCoreObjects(unittest.TestCase):
         cluster1.read_line('chr1\t1\t145\t9:2.00|41:3.00|50:2.00|45:1.00\n')
         cluster2.read_line('chr1\t1\t125\t9:4.00|41:3.00|30:2.00|45:1.00\n')
         result = cluster1 + cluster2
-        self.assertEqual(result.write_line(), 'chr1\t1\t145\t50:6.00|30:4.00|20:3.00|25:2.00|20:1.00\n')
+        self.assertEqual(result.write_line(), 'chr1\t1\t145\t50:6.00|30:4.00|20:3.00|25:2.00|20:1.00\t6.0\t.\t25\t550.0\n')
 
     def test_cluster_pk(self):
         cluster = Cluster(read=PK)
         cluster.read_line('chr1\t1\t145\t9:2.00|41:3.00|50:2.00|45:1.00\n')
         cluster.read_line('chr1\t1\t125\t9:4.00|41:3.00|30:2.00|45:1.00\n')
-        self.assertEqual(cluster.write_line(), 'chr1\t1\t145\t50:6.00|30:4.00|20:3.00|25:2.00|20:1.00\n')
+        self.assertEqual(cluster.write_line(), 'chr1\t1\t145\t50:6.00|30:4.00|20:3.00|25:2.00|20:1.00\t6.0\t.\t25\t550.0\n')
 
     #def test_add_differentchr(self):
     #    self.assertRaises(DifferentChromosome, self.DifferentChromosome)

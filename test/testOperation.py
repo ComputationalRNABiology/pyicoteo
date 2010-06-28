@@ -28,13 +28,13 @@ class TestOperations(unittest.TestCase):
         
         self.pk_path = self.files_dir + 'test_convert.pk'
         self.pk_file = open(self.pk_path,'w+')
-        self.pk_file.write('chr1\t37\t52\t16:1.00\n')
-        self.pk_file.write('chr10\t1\t100\t100:1.00\n')
-        self.pk_file.write('chr10\t301\t380\t80:1.00\n')
-        self.pk_file.write("chr18\t270\t324\t20:1.00|15:2.00|20:1.00\n")
-        self.pk_file.write("chr18\t370\t404\t35:1.00\n")
-        self.pk_file.write("chr18\t1290\t1324\t35:1.00\n")
-        self.pk_file.write("chrX\t2270\t2334\t20:1.00|10:4.00|5:5.00|20:4.00|10:1.00\n")
+        self.pk_file.write('chr1\t37\t52\t16:1.00\t1\t.\t44\t16\n')
+        self.pk_file.write('chr10\t1\t100\t100:1.00\t1\t.\t50\t100\n')
+        self.pk_file.write('chr10\t301\t380\t80:1.00\t1\t.\t340\t80\n')
+        self.pk_file.write('chr18\t270\t324\t20:1.00|15:2.00|20:1.00\t2.0\t.\t297\t70.0\n')
+        self.pk_file.write('chr18\t370\t404\t35:1.00\t1\t.\t387\t35\n')
+        self.pk_file.write('chr18\t1290\t1324\t35:1.00\t1\t.\t1307\t35\n')
+        self.pk_file.write('chrX\t2270\t2334\t20:1.00|10:4.00|5:5.00|20:4.00|10:1.00\t5.0\t.\t2302\t175.0\n')
         self.pk_file.flush()
         
         self.extended_result_path = self.files_dir + 'result_extend.bed'
@@ -112,12 +112,12 @@ class TestOperations(unittest.TestCase):
         
         self.subtracted_path = self.files_dir + 'subtracted.pk'
         self.subtracted_file = open(self.subtracted_path,'w+')
-        self.subtracted_file.write('chr1\t1\t100\t100:3.00\n')
-        self.subtracted_file.write('chr18\t360\t389\t15:2.00|15:1.00\n')
-        self.subtracted_file.write('chr18\t460\t469\t10:1.00\n')
-        self.subtracted_file.write('chr2\t1\t100\t100:1.00\n')
-        self.subtracted_file.write('chrX\t101\t149\t1:1.00|48:2.00\n')
-        self.subtracted_file.write('chrX\t2270\t2369\t30:1.00|20:2.00|50:1.00\n')
+        self.subtracted_file.write('chr1\t1\t100\t100:3.00\t3.0\t.\t50\t300.0\n')
+        self.subtracted_file.write('chr18\t360\t389\t15:2.00|15:1.00\t2.0\t.\t367\t45.0\n')
+        self.subtracted_file.write('chr18\t460\t469\t10:1.00\t1.0\t.\t464\t10.0\n')
+        self.subtracted_file.write('chr2\t1\t100\t100:1.00\t1.0\t.\t50\t100.0\n')
+        self.subtracted_file.write('chrX\t101\t149\t1:1.00|48:2.00\t2.0\t.\t125\t97.0\n')
+        self.subtracted_file.write('chrX\t2270\t2369\t30:1.00|20:2.00|50:1.00\t2.0\t.\t2309\t120.0\n')
         self.subtracted_file.flush()
         self.convert_operation = Turbomix(self.bed_path, self.conversion_result_path, read_format=BED, write_format=PK, debug = True, rounding=False) 
 
