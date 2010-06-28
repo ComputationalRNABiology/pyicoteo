@@ -115,8 +115,8 @@ class PicosParser:
         normalize = self.new_subparser()
         normalize.add_argument('--normalize',action='store_true', default=False, help='Normalize to the control before subtracting')
 
-        trim_percentage = self.new_subparser()
-        trim_percentage.add_argument('--trim-proportion', default=0.25, help='Fraction of the cluster height below which the peak is trimmed. Example: For a cluster of height 40, if the flag is 0.05, 40*0.05=2. Every cluster will be trimmed to that height. A position of height 1 is always considered insignificant, no matter what the cluster height is. [Default %(default)s]', type=float)
+        trim_proportion = self.new_subparser()
+        trim_proportion.add_argument('--trim-proportion', default=0.3, help='Fraction of the cluster height below which the peak is trimmed. Example: For a cluster of height 40, if the flag is 0.05, 40*0.05=2. Every cluster will be trimmed to that height. A position of height 1 is always considered insignificant, no matter what the cluster height is. [Default %(default)s]', type=float)
         trim_absolute = self.new_subparser()
         trim_absolute.add_argument('--trim-absolute', help='The height threshold used to split or trim the clusters.', type=int)
 
@@ -135,7 +135,7 @@ class PicosParser:
         protocol_name = self.new_subparser()
         protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
         #callpeaks operation
-        subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.', parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_percentage])
+        subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.', parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_proportion])
         #convert operation
         subparsers.add_parser('convert', help='Convert a file to another file type.', parents=[basic_parser,  output, output_flags, round, label, tag_length, span, optional_frag_size])
         #remove chr operation
@@ -144,7 +144,7 @@ class PicosParser:
         #subtract operation
         subparsers.add_parser('subtract', help='Subtract two pk files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[basic_parser, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label])
         #split operation
-        subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[basic_parser, output, output_flags, round, trim_percentage, trim_absolute, label])
+        subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[basic_parser, output, output_flags, round, trim_proportion, trim_absolute, label])
         #trim operation
         subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[basic_parser, output, output_flags, round, trim_absolute, label])
         #discard operation
@@ -179,7 +179,7 @@ class PicosParser:
         parser.set_defaults(input='', input_format=PK, open_input=False, debug=False, discard=0, output='', control='', label = 'noname', output_format=PK,
                             open_output =False, rounding=False, control_format=PK, region='', region_format=BED, open_region = False,
                             frag_size = 0, tag_length = 0, span=40, p_value=0.01, height_limit=100, correction=1, no_subtract = False, normalize = False,
-                            trim_percentage=0.25,open_control=False, no_sort=False, duplicates=3, threshold=0, trim_absolute=0,
+                            trim_proportion=0.3,open_control=False, no_sort=False, duplicates=3, threshold=0, trim_absolute=0,
                             max_delta=500, min_delta=0, height_filter=8, delta_step=1, verbose=True)
 
 
@@ -211,7 +211,7 @@ class PicosParser:
         turbomix = Turbomix(args.input, args.output, args.input_format, args.output_format, args.label, args.open_input, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
-                            args.trim_percentage, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
+                            args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
                             args.min_delta, args.height_filter, args.delta_step, args.verbose)
 
 

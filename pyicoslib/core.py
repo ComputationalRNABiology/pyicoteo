@@ -355,7 +355,7 @@ class VariableWigWriter(Writer):
 class PkWriter(Writer):
     def _format_line(self, cluster, start, acum_length, profile):
         if self.format == PK:
-            return '%s\t%s\t%s\t%s\t%s\t%s\t%s\n'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, cluster.get_max_height(), cluster.get_max_height_pos(), cluster.get_area())
+            return '%s\t%s\t%s\t%s\t%s\t.\t%s\t%s\n'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, cluster.get_max_height(), cluster.get_max_height_pos(), cluster.get_area())
         else: #Its SPK
             return '%s\t%s\t%s\t%s\t%s\t%s\n'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, cluster.score, cluster.strand)
 
