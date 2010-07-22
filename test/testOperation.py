@@ -28,12 +28,12 @@ class TestOperations(unittest.TestCase):
         
         self.pk_path = self.files_dir + 'test_convert.pk'
         self.pk_file = open(self.pk_path,'w+')
-        self.pk_file.write('chr1\t37\t52\t16:1.00\t1\t.\t44\t16\n')
-        self.pk_file.write('chr10\t1\t100\t100:1.00\t1\t.\t50\t100\n')
-        self.pk_file.write('chr10\t301\t380\t80:1.00\t1\t.\t340\t80\n')
+        self.pk_file.write('chr1\t37\t52\t16:1.00\t1.0\t.\t44\t16.0\n')
+        self.pk_file.write('chr10\t1\t100\t100:1.00\t1.0\t.\t50\t100.0\n')
+        self.pk_file.write('chr10\t301\t380\t80:1.00\t1.0\t.\t340\t80.0\n')
         self.pk_file.write('chr18\t270\t324\t20:1.00|15:2.00|20:1.00\t2.0\t.\t297\t70.0\n')
-        self.pk_file.write('chr18\t370\t404\t35:1.00\t1\t.\t387\t35\n')
-        self.pk_file.write('chr18\t1290\t1324\t35:1.00\t1\t.\t1307\t35\n')
+        self.pk_file.write('chr18\t370\t404\t35:1.00\t1.0\t.\t387\t35.0\n')
+        self.pk_file.write('chr18\t1290\t1324\t35:1.00\t1.0\t.\t1307\t35.0\n')
         self.pk_file.write('chrX\t2270\t2334\t20:1.00|10:4.00|5:5.00|20:4.00|10:1.00\t5.0\t.\t2302\t175.0\n')
         self.pk_file.flush()
         
