@@ -178,7 +178,7 @@ class PicosParser:
         parser = self.create_parser()
         parser.set_defaults(input='', input_format=PK, open_input=False, debug=False, discard=0, output='', control='', label = 'noname', output_format=PK,
                             open_output =False, rounding=False, control_format=PK, region='', region_format=BED, open_region = False,
-                            frag_size = 0, tag_length = 0, span=40, p_value=0.01, height_limit=100, correction=1, no_subtract = False, normalize = False,
+                            frag_size = 0, tag_length = 0, span=40, p_value=0.01, height_limit=100, correction=1., no_subtract = False, normalize = False,
                             trim_proportion=0.3,open_control=False, no_sort=False, duplicates=3, threshold=0, trim_absolute=0,
                             max_delta=500, min_delta=0, height_filter=8, delta_step=1, verbose=True)
 
