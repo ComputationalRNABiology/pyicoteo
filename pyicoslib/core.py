@@ -160,6 +160,7 @@ class BedReader(Reader):
                     self._add_name(cluster, line)
                     self._add_score(cluster, line)
                     self._add_strand(cluster, line)
+                    print cluster.normalize_factor
                     cluster.add_level(cluster.end-cluster.start+1, cluster.normalize_factor)
 
         except ValueError:
@@ -910,7 +911,7 @@ class Cluster:
         smallest_end = sys.maxint
         for current_start, current_end in self._tag_cache:
             while current_start > smallest_end and len(array_ends) > 0:
-                self._levels.append([smallest_end-previous_start+1, len(array_ends)])
+                self._levels.append([smallest_end-previous_start+1, len(array_ends)*self.normalize_factor])
                 previous_start = heapq.heappop(array_ends)
                 while previous_start == heapq.nsmallest(1, array_ends)[0]:
                     previous_start = heapq.heappop(array_ends)
@@ -919,7 +920,7 @@ class Cluster:
                 smallest_end = heapq.nsmallest(1, array_ends)[0]
 
             if previous_start != current_start and len(array_ends) > 0:
-                self._levels.append([current_start-previous_start, len(array_ends)])
+                self._levels.append([current_start-previous_start, len(array_ends)*self.normalize_factor])
             previous_start = current_start
             heapq.heappush(array_ends, current_end)
             smallest_end = heapq.nsmallest(1, array_ends)[0]
@@ -928,7 +929,7 @@ class Cluster:
             previous_end = -1
             while len(array_ends) > 0:
                 if previous_end != smallest_end and len(array_ends) > 0:
-                    self._levels.append([smallest_end-previous_start+1, len(array_ends)])
+                    self._levels.append([smallest_end-previous_start+1, len(array_ends)*self.normalize_factor])
                 previous_start = heapq.heappop(array_ends)+1
                 if len(array_ends) > 0:
                     previous_end = smallest_end
