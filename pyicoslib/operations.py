@@ -409,8 +409,8 @@ class Turbomix:
         if Cut in self.operations and Poisson not in self.operations and not self.threshold:
             print "Can't do Cut without Poisson or a fixed threshold\n"
             sys.exit(0)
-        elif (Subtract in self.operations or Split in self.operations) and (self.write_format not in CLUSTER_FORMATS):
-            print 'Cant get the output as tag format (eland, bed) for Subtract, Split or Callclusters commands, please use a cluster format (pk, wig...)\n'
+        elif (Subtract in self.operations or Split in self.operations or Poisson in self.operations) and (self.write_format not in CLUSTER_FORMATS):
+            print 'Cant get the output as tag format (eland, bed) for Subtract, Split, Poisson filtering please use a clustered format (bedpk, wig...)\n'
             sys.exit(0)
         elif Extend in self.operations and self.read_format in CLUSTER_FORMATS:
             print "Can't extend if the input is a clustered format ",
@@ -767,7 +767,6 @@ class Turbomix:
     def process_file(self):
         if NoWrite in self.operations:
             output = None
-            self.write_format = self.read_format #There is no conversion needed
         else:
             output = file(self.current_output_path, 'wb')
         input = file(self.current_input_path, 'rb')
@@ -886,6 +885,7 @@ class Turbomix:
         self.result_log.write('---------------\n\n')
         self.result_log.write('Correction factor: %s\n\n'%(self.correction_factor))
         self.reads_per_bp =  self.total_bp_with_reads / (self.genome_end-self.genome_start)*self.correction_factor
+        
         p_nucleotide = 1.
         p_cluster = 1.
         p_numreads = 1.
@@ -899,7 +899,7 @@ class Turbomix:
             p_cluster = self._correct_bias(p_cluster)
             p_numreads = self._correct_bias(p_numreads)
             self.result_log.write('%s\t%.8f\t%.8f\t%.8f\n'%(k, p_nucleotide, p_cluster, p_numreads))
-                
+            
             if chromosome not in self.poisson_results['basepair'].keys() and p_nucleotide < self.p_value:
                 self.poisson_results["basepair"][chromosome] = k
 
