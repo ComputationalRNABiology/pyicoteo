@@ -180,6 +180,7 @@ class Utils:
                     self.cluster.clear()
                     self.cluster.read_line(line)
                     self.cluster.extend(self.extension)
+                    
                     if not self.cluster.is_empty():
                         filtered_chunk.append(self.cluster.write_line())
             
@@ -198,6 +199,7 @@ class Utils:
                 chunks = []
                 for tempdir in cycle(tempdirs):
                     current_chunk = list(islice(input_iterator,buffer_size))
+                    
                     if filter:
                         current_chunk = self.filter_chunk(current_chunk)
                     if current_chunk:
@@ -377,9 +379,9 @@ class Turbomix:
         #Clusters and preprocessors
         try:
             self.input_preprocessor = Utils.BigSort(read_format, is_input_open, extension, 'input')
-            self.cluster = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span)
-            self.cluster_aux = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span)
-            self.control_cluster = Cluster(read=control_format, read_half_open = is_control_open)
+            self.cluster = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
+            self.cluster_aux = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
+            self.control_cluster = Cluster(read=control_format, read_half_open = is_control_open, verbose=self.verbose)
             self.control_preprocessor = Utils.BigSort(control_format, is_control_open, extension, 'control')
         except ConversionNotSupported:
             print '\nThe reading "%s" and writing "%s" is not supported. \n\n'%(self.read_format, self.write_format)
@@ -554,6 +556,7 @@ class Turbomix:
 
     def run(self):
         self.do_subtract = (Subtract in self.operations and self.control_path is not None)
+        self.do_normalize = (Normalize in self.operations and self.control_path is not None)
         self.do_heuremove = (RemoveRegion in self.operations and self.annotation_path)
         self.do_poisson = Poisson in self.operations
         self.do_split = Split in self.operations
@@ -621,6 +624,7 @@ class Turbomix:
     def normalize(self):
         if self.control_path:
             print 'Calculating normalization factor...'
+            print self.current_input_path, self.current_control_path
             self.normalize_factor = self.get_normalize_factor(self.current_input_path, self.current_control_path)
             self.cluster.normalize_factor = self.normalize_factor
             self.cluster_aux.normalize_factor = self.normalize_factor
@@ -643,7 +647,9 @@ class Turbomix:
 
     def decide_sort(self, input_path, control_path=None):
         """Decide if the files need to be sorted or not."""
-        if (not self.read_format in CLUSTER_FORMATS and self.write_format in CLUSTER_FORMATS) or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations:
+        if (not self.read_format in CLUSTER_FORMATS and self.write_format in CLUSTER_FORMATS) or self.do_subtract or self.do_normalize or self.do_heuremove or self.do_dupremove or ModFDR in self.operations:
+            filter= (self.read_format == ELAND or Extend in self.operations)
+            
             if self.no_sort:
                 if self.verbose:
                     print 'Input sort skipped'
@@ -652,17 +658,17 @@ class Turbomix:
             else:
                 if self.verbose: print 'Sorting input file...'
                 self.is_sorted = True
-                self.sorted_input_file = self.input_preprocessor.sort(input_path, None, self.get_lambda_func(self.read_format), filter=(self.read_format == ELAND or Extend in self.operations))
+                self.sorted_input_file = self.input_preprocessor.sort(input_path, None, self.get_lambda_func(self.read_format), filter=filter)
                 self.current_input_path = self.sorted_input_file.name
 
-            if self.do_subtract:
+            if self.do_subtract or self.do_normalize:
                 if self.no_sort:
                     if self.verbose: print 'Control sort skipped'
                     self.sorted_control_file = file(control_path)
                     self.current_control_path = self.sorted_control_file.name
                 else:
                     if self.verbose: print 'Sorting control file...'
-                    self.sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format), filter=(self.control_format == ELAND or Extend in self.operations))
+                    self.sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format), filter=filter)
                     self.current_control_path = self.sorted_control_file.name
 
     def operate(self, input_path, control_path=None, output_path=None):

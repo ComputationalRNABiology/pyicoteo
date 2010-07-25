@@ -461,7 +461,7 @@ class Cluster:
         self.writer = f.create_writer(format, half_open, span)
 
     def clear(self):
-        """Makes the cluster empty"""
+        """Empties the cluster"""
         self.chromosome = ''
         self.start = 0
         self.end = -1
@@ -521,9 +521,12 @@ class Cluster:
                     previous_start = self.start
                     self.start = self.end - extension + 1
                     self._levels[0][0] += previous_start - self.start
-                    if self.start < 1 and self.verbose:
-                        print 'Extending the line invalidates the read. Discarding ', self.chromosome, self.start, self.end
+
+                    if self.start < 1:
                         self.clear()
+                        if self.verbose:
+                            print 'Extending the line invalidates the read. Discarding ', self.chromosome, self.start, self.end
+                        
                 else:
                     previous_end = self.end
                     self.end = self.start + extension - 1
@@ -904,7 +907,6 @@ class Cluster:
         return result
 
     def _flush_tag_cache(self):
-        
         import heapq
         array_ends = []
         previous_start = -1

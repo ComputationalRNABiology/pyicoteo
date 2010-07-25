@@ -22,6 +22,43 @@ from operations import (Turbomix, Extend, Poisson, RemoveRegion, RemoveChromosom
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
 __version__ = '0.8.5'
 
+#Default values for the flags
+INPUT=''
+INPUT_FORMAT=PK
+OPEN_INPUT=False
+DEBUG=False
+DISCARD=0
+OUTPUT=''
+CONTROL=''
+LABEL = 'noname'
+OUTPUT_FORMAT=PK
+OPEN_OUTPUT=False
+ROUNDING=False
+CONTROL_FORMAT=PK
+REGION=''
+REGION_FORMAT=BED
+OPEN_REGION= False
+FRAG_SIZE = 0
+TAG_LENGTH = 0
+SPAN=40
+P_VALUE=0.01
+HEIGHT_LIMIT=100
+CORRECTION=1.
+NO_SUBTRACT = False
+NORMALIZE = False
+TRIM_PROPORTION=0.3
+OPEN_CONTROL=False
+NO_SORT=False
+DUPLICATES=3
+THRESHOLD=0
+TRIM_ABSOLUTE=0
+MAX_DELTA=500
+MIN_DELTA=0
+HEIGHT_FILTER=8
+DELTA_STEP=1
+VERBOSE=True
+SPECIES='hg19'
+
 class PicosParser:
 
     def config_section_map(self, section, config_file):
@@ -49,74 +86,74 @@ class PicosParser:
         #parent parsers
         basic_parser = self.new_subparser()
         basic_parser.add_argument('input', help='The input file or directory. ')
-        basic_parser.add_argument('-o','--open-input', action='store_true', default=False, help='Defines if the input is half-open or closed notation. [Default %(default)s]')
-        basic_parser.add_argument( '-f','--input-format',default='pk', help="""The format the input file is written as.
+        basic_parser.add_argument('-o','--open-input', action='store_true', default=OPEN_INPUT, help='Defines if the input is half-open or closed notation. [Default %(default)s]')
+        basic_parser.add_argument( '-f','--input-format',default=INPUT_FORMAT, help="""The format the input file is written as.
                                  The options are %s. [Default pk]"""%read_formats)
-        basic_parser.add_argument('--debug', action='store_true', default=False)
-        basic_parser.add_argument('--no-sort',action='store_true', default=False,
+        basic_parser.add_argument('--debug', action='store_true', default=DEBUG)
+        basic_parser.add_argument('--no-sort',action='store_true', default=NO_SORT,
                                   help='Force skip the sorting step. WARNING: Use only if you know what you are doing. Processing unsorted files assuming they are will outcome in erroneous results')
-        basic_parser.add_argument('--silent' ,action='store_false', default=True, dest='verbose', help='Force skip the sorting step. WARNING: Working with unsorted files will outcome in unexpected results')
+        basic_parser.add_argument('--silent' ,action='store_false', default=VERBOSE, dest='verbose', help='Force skip the sorting step. WARNING: Working with unsorted files will outcome in unexpected results')
 
         output = self.new_subparser()
         output.add_argument('output', help='The output file or directory')
 
         output_flags = self.new_subparser()
-        output_flags.add_argument('-O','--open-output', action='store_true', default=False, help='Define if the output is half-open or closed notation. [Default %(default)s]')
-        output_flags.add_argument('-F','--output-format',default='pk', help='Format desired for the output. You can choose between %s. WARNING, for some operations, some outputs are not valid. See operation help for more info. [default pk]'%write_formats)
+        output_flags.add_argument('-O','--open-output', action='store_true', default=OPEN_OUTPUT, help='Define if the output is half-open or closed notation. [Default %(default)s]')
+        output_flags.add_argument('-F','--output-format',default=OUTPUT_FORMAT, help='Format desired for the output. You can choose between %s. WARNING, for some operations, some outputs are not valid. See operation help for more info. [default pk]'%write_formats)
 
         control = self.new_subparser()
         control.add_argument('control', help='The control file or directory')
         control_format = self.new_subparser()
-        control_format.add_argument('--control-format',default='pk', help='The format the control file is written as. [default %(default)s]')
+        control_format.add_argument('--control-format',default=CONTROL_FORMAT, help='The format the control file is written as. [default %(default)s]')
         optional_control = self.new_subparser()
         optional_control.add_argument('--control', help='The control file or directory')
         open_control = self.new_subparser()
-        open_control.add_argument('--open-control', action='store_true', default=False, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
+        open_control.add_argument('--open-control', action='store_true', default=OPEN_CONTROL, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
 
         region = self.new_subparser()
         region.add_argument('region', help='The region file')
         optional_region = self.new_subparser()
         optional_region.add_argument('--region', help='The region file or directory')
         region_format = self.new_subparser()
-        region_format.add_argument('--region-format',default='bed', help='The format the region file is written as. [default %(default)s]')
-        region_format.add_argument('--open-region', action='store_true', default=False, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
+        region_format.add_argument('--region-format',default=REGION_FORMAT, help='The format the region file is written as. [default %(default)s]')
+        region_format.add_argument('--open-region', action='store_true', default=OPEN_REGION, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
 
         label = self.new_subparser()
-        label.add_argument('--label', default='pyicos_output', help='The label that will identify the experiment')
+        label.add_argument('--label', default=LABEL, help='The label that will identify the experiment')
 
         span = self.new_subparser()
-        span.add_argument('--span', default=25, help='The span of the variable and fixed wig formats', type=int)
+        span.add_argument('--span', default=SPAN, help='The span of the variable and fixed wig formats', type=int)
 
         round = self.new_subparser()
-        round.add_argument('--round',action='store_true',dest='rounding', default=False, help='Round the final results to an integer')
+        round.add_argument('--round',action='store_true',dest='rounding', default=ROUNDING, help='Round the final results to an integer')
         pvalue = self.new_subparser()
-        pvalue.add_argument('--p-value',type=float, default=0.01, help='The p-value we consider to be significant in our statistical test. [Default %(default)s]')
+        pvalue.add_argument('--p-value',type=float, default=P_VALUE, help='The p-value we consider to be significant in our statistical test. [Default %(default)s]')
 
         tolerated_duplicates =self.new_subparser()
-        tolerated_duplicates.add_argument('--duplicates',type=int, default=3, help='The number of duplicates we accept as valid. ()[Default %(default)s]')
+        tolerated_duplicates.add_argument('--duplicates',type=int, default=DUPLICATES, help='The number of duplicates we accept as valid. ()[Default %(default)s]')
 
         height = self.new_subparser()
-        height.add_argument('--height-limit',type=int, default=100,help='The cluster height limit Pyicos will analize too. Every cluster that goes up the threshold will have a p-value of 0, therefore considered significant. This parameter is here just for speed purposes, raise it you think that you peak threashold will be over 100 (Almost impossible, but you never know. There is people with crazy data out there.) [Default %(default)s]')
+        height.add_argument('--height-limit',type=int, default=HEIGHT_LIMIT, help='The cluster height limit Pyicos will analize too. Every cluster that goes up the threshold will have a p-value of 0, therefore considered significant. This parameter is here just for speed purposes, raise it you think that you peak threashold will be over 100 (Almost impossible, but you never know. There is people with crazy data out there.) [Default %(default)s]')
 
         correction = self.new_subparser()
-        correction.add_argument('--correction',type=float, default=1., help='This value will correct the size of the genome you are analyzing. This way you can take into consideration the real mappable genome [Default %(default)s]')
+        correction.add_argument('--correction',type=float, default=CORRECTION, help='This value will correct the size of the genome you are analyzing. This way you can take into consideration the real mappable genome [Default %(default)s]')
 
         tag_length = self.new_subparser()
-        tag_length.add_argument( '--tag-length',default=None, type=int, help='The tag length, or the extended one. Needed when converting from a Clustered format (wig, pk) to a non clustered format (bed, eland) [Default %(default)s]')
+        tag_length.add_argument( '--tag-length',default=TAG_LENGTH, type=int, help='The tag length, or the extended one. Needed when converting from a Clustered format (wig, pk) to a non clustered format (bed, eland) [Default %(default)s]')
 
         frag_size = self.new_subparser()
         frag_size.add_argument('frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicos to reconstruct the original signal in the original wet lab experiment.', type=int)
         optional_frag_size = self.new_subparser()
-        optional_frag_size.add_argument('-x', '--frag_size', dest='frag_size', help='The estimated inmmunoprecipitated fragment size. This flag is optional.', type=int)
+        optional_frag_size.add_argument('-x', '--frag_size', dest=FRAG_SIZE, help='The estimated inmmunoprecipitated fragment size. This flag is optional.', type=int)
 
         no_subtract = self.new_subparser()
-        no_subtract.add_argument('--no-subtract',action='store_true', default=False, help='Dont subtract the control to the output, only normalize.')
+        no_subtract.add_argument('--no-subtract',action='store_true', default=NO_SUBTRACT, help='Dont subtract the control to the output, only normalize.')
 
         normalize = self.new_subparser()
-        normalize.add_argument('--normalize',action='store_true', default=False, help='Normalize to the control before subtracting')
+        normalize.add_argument('--normalize',action='store_true', default=NORMALIZE, help='Normalize to the control before subtracting')
 
         trim_proportion = self.new_subparser()
-        trim_proportion.add_argument('--trim-proportion', default=0.3, help='Fraction of the cluster height below which the peak is trimmed. Example: For a cluster of height 40, if the flag is 0.05, 40*0.05=2. Every cluster will be trimmed to that height. A position of height 1 is always considered insignificant, no matter what the cluster height is. [Default %(default)s]', type=float)
+        trim_proportion.add_argument('--trim-proportion', default=TRIM_PROPORTION, help='Fraction of the cluster height below which the peak is trimmed. Example: For a cluster of height 40, if the flag is 0.05, 40*0.05=2. Every cluster will be trimmed to that height. A position of height 1 is always considered insignificant, no matter what the cluster height is. [Default %(default)s]', type=float)
         trim_absolute = self.new_subparser()
         trim_absolute.add_argument('--trim-absolute', help='The height threshold used to split or trim the clusters.', type=int)
 
@@ -126,18 +163,24 @@ class PicosParser:
         threshold = self.new_subparser()
         threshold.add_argument('--threshold', help='The height threshold used to cut', type=int)
 
+        species = self.new_subparser()
+        species.add_argument('-p', '--species', default=SPECIES,
+                             help='The species that you are analyzing. This will read the length of the chromosomes of this species from the files inside the folder "chrdesc". If the species information is not known, the filtering step will assume that the chromosomes are as long as the position of the furthest read.')
+
         correlation_flags = self.new_subparser()
-        correlation_flags.add_argument('-x','--max-delta',type=int, default=500, help='Maximum delta [Default %(default)s]')
-        correlation_flags.add_argument('-m','--min-delta',type=int, default=0, help='Minimum delta [Default %(default)s]')
-        correlation_flags.add_argument('-t','--height-filter',type=int, default=8, help='Height to filter the peaks [Default %(default)s]')
-        correlation_flags.add_argument('-s','--delta-step',type=int, default=1, help='The step of the delta values to test [Default %(default)s]')
+        correlation_flags.add_argument('-x','--max-delta',type=int, default=MAX_DELTA, help='Maximum delta [Default %(default)s]')
+        correlation_flags.add_argument('-m','--min-delta',type=int, default=MIN_DELTA, help='Minimum delta [Default %(default)s]')
+        correlation_flags.add_argument('-t','--height-filter',type=int, default=HEIGHT_FILTER, help='Height to filter the peaks [Default %(default)s]')
+        correlation_flags.add_argument('-s','--delta-step',type=int, default=DELTA_STEP, help='The step of the delta values to test [Default %(default)s]')
 
         protocol_name = self.new_subparser()
         protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
         #callpeaks operation
-        subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.', parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_proportion])
+        subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.',
+                              parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_proportion, species])
         #convert operation
-        subparsers.add_parser('convert', help='Convert a file to another file type.', parents=[basic_parser,  output, output_flags, round, label, tag_length, span, optional_frag_size])
+        subparsers.add_parser('convert', help='Convert a file to another file type.',
+                              parents=[basic_parser,  output, output_flags, round, label, tag_length, span, optional_frag_size])
         #remove chr operation
         parser_chremove = subparsers.add_parser('labelremove', help='Remove all lines that have the specified label(s).', parents=[basic_parser, output, output_flags, round, label])
         parser_chremove.add_argument('discard', help='The tag name (or names) as it appears in the file. Example1: chr1 Example2: chrX:chr3:mytag:myothertag')
@@ -157,10 +200,10 @@ class PicosParser:
         subparsers.add_parser('extend', help='Extend the reads of a file to the desired length (we currently support only bed and eland files for this operation)', parents=[basic_parser,  output, output_flags, frag_size, round, label, span])
         #poisson analysis
         subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.',
-                              parents=[basic_parser, output_flags, frag_size, pvalue, height, correction])
+                              parents=[basic_parser, output_flags, frag_size, pvalue, height, correction, species])
         #cut operations
         subparsers.add_parser('filter', help="""Analyze the significance of accumulated reads in the file using the poisson distribution and generate the resulting profiles, in wig or pk formats""",
-                              parents=[basic_parser, output, frag_size, output_flags, round, pvalue, height, correction, threshold])
+                              parents=[basic_parser, output, frag_size, output_flags, round, pvalue, height, correction, threshold, species])
         #modfdr analysis
         subparsers.add_parser('modfdr', help="""Use the modified FDR method to determine what clusters are significant in an specific region. Output in a clustered format only.""",
                               parents=[basic_parser, region, output, output_flags, round])
@@ -170,17 +213,19 @@ class PicosParser:
         #strcorr operation
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
                               parents=[basic_parser, output_flags, correlation_flags])
-        #strcorr operation
+        #enrichment operation
+        #subparsers.add_parser('enrichment', help='An enrichment test', parents=[basic_parser, output_flags, region, region_format, output])
+        #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
         return parser
 
     def __init__(self):
         parser = self.create_parser()
-        parser.set_defaults(input='', input_format=PK, open_input=False, debug=False, discard=0, output='', control='', label = 'noname', output_format=PK,
-                            open_output =False, rounding=False, control_format=PK, region='', region_format=BED, open_region = False,
-                            frag_size = 0, tag_length = 0, span=40, p_value=0.01, height_limit=100, correction=1., no_subtract = False, normalize = False,
-                            trim_proportion=0.3,open_control=False, no_sort=False, duplicates=3, threshold=0, trim_absolute=0,
-                            max_delta=500, min_delta=0, height_filter=8, delta_step=1, verbose=True)
+        parser.set_defaults(input=INPUT, input_format=INPUT_FORMAT, open_input=OPEN_INPUT, debug=DEBUG, discard=DISCARD, output=OUTPUT, control=CONTROL, label = LABEL, output_format=OUTPUT_FORMAT,
+                            open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, open_region =OPEN_REGION,
+                            frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE,
+                            trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE,
+                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES)
 
 
         args = parser.parse_args()
