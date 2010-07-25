@@ -647,7 +647,7 @@ class Turbomix:
 
     def decide_sort(self, input_path, control_path=None):
         """Decide if the files need to be sorted or not."""
-        if (not self.read_format in CLUSTER_FORMATS and self.write_format in CLUSTER_FORMATS) or self.do_subtract or self.do_normalize or self.do_heuremove or self.do_dupremove or ModFDR in self.operations:
+        if (not self.read_format in CLUSTER_FORMATS and self.write_format in CLUSTER_FORMATS) or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations:
             filter= (self.read_format == ELAND or Extend in self.operations)
             
             if self.no_sort:
@@ -661,7 +661,7 @@ class Turbomix:
                 self.sorted_input_file = self.input_preprocessor.sort(input_path, None, self.get_lambda_func(self.read_format), filter=filter)
                 self.current_input_path = self.sorted_input_file.name
 
-            if self.do_subtract or self.do_normalize:
+            if self.do_subtract:
                 if self.no_sort:
                     if self.verbose: print 'Control sort skipped'
                     self.sorted_control_file = file(control_path)
