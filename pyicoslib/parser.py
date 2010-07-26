@@ -143,8 +143,6 @@ class PicosParser:
 
         frag_size = self.new_subparser()
         frag_size.add_argument('frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicos to reconstruct the original signal in the original wet lab experiment.', type=int)
-        optional_frag_size = self.new_subparser()
-        optional_frag_size.add_argument('-x', '--frag_size', dest=FRAG_SIZE, help='The estimated inmmunoprecipitated fragment size. This flag is optional.', type=int)
 
         no_subtract = self.new_subparser()
         no_subtract.add_argument('--no-subtract',action='store_true', default=NO_SUBTRACT, help='Dont subtract the control to the output, only normalize.')
@@ -180,7 +178,8 @@ class PicosParser:
                               parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_proportion, species])
         #convert operation
         subparsers.add_parser('convert', help='Convert a file to another file type.',
-                              parents=[basic_parser,  output, output_flags, round, label, tag_length, span, optional_frag_size])
+                              parents=[basic_parser, output, output_flags, round, label, tag_length, span])
+
         #remove chr operation
         parser_chremove = subparsers.add_parser('labelremove', help='Remove all lines that have the specified label(s).', parents=[basic_parser, output, output_flags, round, label])
         parser_chremove.add_argument('discard', help='The tag name (or names) as it appears in the file. Example1: chr1 Example2: chrX:chr3:mytag:myothertag')
@@ -226,7 +225,6 @@ class PicosParser:
                             frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE,
                             trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE,
                             max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES)
-
 
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the input format
