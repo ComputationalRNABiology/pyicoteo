@@ -32,11 +32,11 @@ VARIABLE_WIG = 'variable_wig'
 FIXED_WIG = 'fixed_wig'
 PK = 'bedpk'
 SPK = 'bedspk'
-
+SAM = 'sam'
 CLUSTER_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG, PK, SPK)
 WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
 
-READ_FORMATS = (ELAND, BED, WIG, PK, SPK) #formats that we actually can read as
+READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM) #formats that we actually can read as
 WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
 
 
@@ -75,10 +75,14 @@ class ReaderFactory:
             return WigReader(format, half_open, cached)
         elif format == ELAND:
             return ElandReader(format, half_open, cached)
+        elif format == SAM:
+            return SamReader(format, half_open, cached)
         else:
+            
             raise ConversionNotSupported
 
 class Reader:
+
     def __init__(self, format, half_open, cached):
         if half_open:
             self.correction = 1
@@ -105,6 +109,10 @@ class Reader:
         #if the strands are different, the cluster becomes strandless
         if cluster.strand != cluster_aux.strand:
             cluster.strand == ''
+
+    def quality_filter(self, line):
+        """checks if the line passes the quality conditions"""
+        return True
 
 class BedReader(Reader):
 
@@ -160,11 +168,58 @@ class BedReader(Reader):
                     self._add_name(cluster, line)
                     self._add_score(cluster, line)
                     self._add_strand(cluster, line)
-                    print cluster.normalize_factor
                     cluster.add_level(cluster.end-cluster.start+1, cluster.normalize_factor)
 
-        except ValueError:
+        except (ValueError, IndexError):
             raise InvalidLine
+
+class SamReader(Reader):
+
+    def _get_strand(self):
+        strand = "+"
+        if (self.sam_flag & (0x10)):	# minus strand if true.
+            strand = "-"
+        return strand
+
+
+    def read_line(self, cluster, line):
+        try:
+            line = line.split()
+            self.sam_flag = int(line[1])
+            if (not (self.sam_flag & 0x0004)):
+                new_start = int(line[3])+self.correction
+                new_end = new_start+len(line[9])
+                cluster.chromosome = line[2]
+                new_strand = self._get_strand()
+                if cluster.is_empty():
+                    cluster._tag_cache.append([new_start, new_start+len(line[9])])
+                    cluster.start = new_start
+                    cluster.end = new_end
+                    cluster.name = line[0]
+                    cluster.sequence = line[9]
+                    cluster.strand = new_strand
+                    
+                else:
+                    cluster._tag_cache.append([new_start, new_start+len(line[9])])
+                    cluster.start = min(cluster.start, new_start)
+                    cluster.end = max(cluster.end, new_end)
+                    cluster.sequence = ''
+                    cluster.name = ''
+                    if cluster.strand != new_strand:
+                        cluster.strand == ''
+
+        except (ValueError, IndexError):
+            raise InvalidLine
+
+    def quality_filter(self, line):
+        sline = line.split()
+        try:
+            mapped = (int(sline[1]))
+        except:
+            return False
+
+        return not (mapped & 0x0004)
+
 
 class WigReader(Reader):
     def read_line(self, cluster, line):
@@ -177,13 +232,12 @@ class WigReader(Reader):
 
             cluster.add_level(int(line[2])-int(line[1])-self.correction+1, float(line[3])*cluster.normalize_factor)
             cluster._recalculate_end()
-        except ValueError:
+        except (ValueError, IndexError):
             raise InvalidLine
 
 class ElandReader(Reader):
-    qualityFilter = re.compile(r'chr\w{1,2}.fa')
-    
-    #sort_func = lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
+    eland_filter = re.compile(r'chr\w{1,2}.fa')
+
     def read_line(self, cluster, line):
         if line is not None and line != '\n':
             try:
@@ -201,18 +255,14 @@ class ElandReader(Reader):
                         cluster.strand = '+'
                     else:
                         cluster.strand = '-'
-
                 else:
                     self._add_line_to_cluster(line, cluster)
 
-            except ValueError:
-                raise InvalidLine
-            except IndexError:
+            except (ValueError, IndexError):
                 raise InvalidLine
 
-    def eland_quality_filter(self, line):
-        """checks if the eland line passes the quality conditions"""
-        return self.qualityFilter.search(line)
+    def quality_filter(self, line):
+        return self.eland_filter.search(line)
 
 class PkReader(Reader):
     def read_line(self, cluster, line):
@@ -237,8 +287,11 @@ class PkReader(Reader):
                         cluster.strand = ""
 
                     cluster._recalculate_end()
-        except ValueError:
+        except (ValueError, IndexError):
             raise InvalidLine
+
+
+
 
 
 ##################################
@@ -256,6 +309,8 @@ class WriterFactory:
             return VariableWigWriter(format, half_open, span)
         elif format == PK or format == SPK:
             return PkWriter(format, half_open, span)
+        elif format == SAM:
+            return SamWriter(format, half_open, span)
         else:
             raise ConversionNotSupported
 
@@ -303,6 +358,29 @@ class BedWriter(Writer):
                 return lines
             else:
                 return bed_blueprint%(cluster.chromosome, cluster.start+self.correction, cluster.end, cluster.name, cluster.score,  cluster.strand)
+
+class SamWriter(Writer):
+    def write_line(self, cluster):
+        sam_blueprint = '%s\t%s\t%s\t%s\t255\t%sM0S\t=\t0\t0\t%s\t%s\n'
+        if cluster.is_empty():
+            return ''
+        else:
+            if cluster.strand == '-':
+                samflag = 16
+            else:
+                samflag = 0
+            if not cluster.sequence:
+                cluster.sequence = (len(cluster)+self.correction)*'A'
+            if not cluster.is_singleton():
+                lines = ''
+                split_tags = cluster.absolute_split(0)
+                for tag in split_tags:
+                    tags = cluster.decompose()
+                    for tag in tags:
+                        lines = '%s%s'%(lines, sam_blueprint%(tag.name, samflag, tag.chromosome, tag.start+self.correction, len(tag), tag.sequence, (len(tag)+self.correction)*'?'))
+                return lines
+            else:
+                return sam_blueprint%(cluster.name, samflag, cluster.chromosome, cluster.start+self.correction, len(cluster), cluster.sequence, (len(cluster)+self.correction)*'?')
 
 
 class WigWriter(Writer):

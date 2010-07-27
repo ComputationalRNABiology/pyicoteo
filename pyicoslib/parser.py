@@ -143,6 +143,8 @@ class PicosParser:
 
         frag_size = self.new_subparser()
         frag_size.add_argument('frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicos to reconstruct the original signal in the original wet lab experiment.', type=int)
+        optional_frag_size = self.new_subparser()
+        optional_frag_size.add_argument('-x', '--frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicos to reconstruct the original signal in the original wet lab experiment.', type=int)
 
         no_subtract = self.new_subparser()
         no_subtract.add_argument('--no-subtract',action='store_true', default=NO_SUBTRACT, help='Dont subtract the control to the output, only normalize.')
@@ -178,7 +180,7 @@ class PicosParser:
                               parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_proportion, species])
         #convert operation
         subparsers.add_parser('convert', help='Convert a file to another file type.',
-                              parents=[basic_parser, output, output_flags, round, label, tag_length, span])
+                              parents=[basic_parser, output, output_flags, round, label, tag_length, span, optional_frag_size])
 
         #remove chr operation
         parser_chremove = subparsers.add_parser('labelremove', help='Remove all lines that have the specified label(s).', parents=[basic_parser, output, output_flags, round, label])
@@ -255,7 +257,7 @@ class PicosParser:
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
-                            args.min_delta, args.height_filter, args.delta_step, args.verbose)
+                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species)
 
 
         if sys.argv[1] == 'protocol':

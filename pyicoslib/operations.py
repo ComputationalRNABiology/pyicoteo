@@ -26,7 +26,7 @@ from tempfile import gettempdir
 import linecache
 from datetime import datetime
 
-from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported, BED, ELAND, PK, WIG, SPK, CLUSTER_FORMATS, VARIABLE_WIG, READ_FORMATS, WRITE_FORMATS
+from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported, BED, ELAND, PK, WIG, SPK, CLUSTER_FORMATS, VARIABLE_WIG, READ_FORMATS, WRITE_FORMATS, SAM
 from tempfile import gettempdir
 
 Normalize = 'normalize'
@@ -176,7 +176,7 @@ class Utils:
         def filter_chunk(self, chunk):
             filtered_chunk = []
             for line in chunk:
-                if self.file_format != ELAND or self.cluster.reader.eland_quality_filter(line):
+                if self.cluster.reader.quality_filter(line):
                     self.cluster.clear()
                     self.cluster.read_line(line)
                     self.cluster.extend(self.extension)
@@ -199,7 +199,6 @@ class Utils:
                 chunks = []
                 for tempdir in cycle(tempdirs):
                     current_chunk = list(islice(input_iterator,buffer_size))
-                    
                     if filter:
                         current_chunk = self.filter_chunk(current_chunk)
                     if current_chunk:
@@ -360,7 +359,7 @@ class Turbomix:
                  is_input_open=False, is_output_open=False, debug = False, rounding=False, tag_length = None, discarded_chromosomes = None,
                  control_path = None, control_format = PK, is_control_open = False, annotation_path = None, annotation_format = PK, 
                  is_annotation_open=False, span = 20, extension = 0, p_value = 0.05, height_limit = 20, correction_factor = 1, trim_percentage=0.15, no_sort=False,
-                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False):
+                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False, species='hg19'):
         self.__dict__.update(locals())
         self.is_sorted = False
         self.operations = []
@@ -378,6 +377,7 @@ class Turbomix:
         self.is_annotation_open = False
         #Clusters and preprocessors
         try:
+            
             self.input_preprocessor = Utils.BigSort(read_format, is_input_open, extension, 'input')
             self.cluster = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
             self.cluster_aux = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
@@ -423,18 +423,6 @@ class Turbomix:
             print CLUSTER_FORMATS
             sys.exit(0)
     
-    def _init_poisson(self):
-        self.genome_start = sys.maxint        
-        self.genome_end = 0
-        self.total_bp_with_reads = 0.
-        self.total_clusters = 0.
-        self.total_reads = 0.
-        self.acum_height = 0.
-        self.absolute_max_height = 0
-        self.absolute_max_numreads = 0
-        self.heights =  defaultdict(int)
-        self.max_heights =  defaultdict(int)
-        self.numreads_dict =  defaultdict(int)
         
     def _add_slash_to_path(self, path):
         return Utils.add_slash_to_path(path)
@@ -640,6 +628,8 @@ class Turbomix:
         else:
             if format == ELAND:
                 return lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
+            elif format == SAM:
+                return lambda x:(x.split()[2], int(x.split()[3]), len(x.split()[9]))
             elif self.do_dupremove:
                 return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]), x.split()[3])
             else:
@@ -648,8 +638,7 @@ class Turbomix:
     def decide_sort(self, input_path, control_path=None):
         """Decide if the files need to be sorted or not."""
         if (not self.read_format in CLUSTER_FORMATS and self.write_format in CLUSTER_FORMATS) or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations:
-            filter= (self.read_format == ELAND or Extend in self.operations)
-            
+            filter= (self.read_format == ELAND or self.read_format == SAM or Extend in self.operations)
             if self.no_sort:
                 if self.verbose:
                     print 'Input sort skipped'
@@ -862,6 +851,18 @@ class Turbomix:
         else:
             return p_value
 
+    def _init_poisson(self):
+        self.total_bp_with_reads = 0.
+        self.total_clusters = 0.
+        self.total_reads = 0.
+        self.acum_height = 0.
+        self.chr_length = 0
+        self.absolute_max_height = 0
+        self.absolute_max_numreads = 0
+        self.heights =  defaultdict(int)
+        self.max_heights =  defaultdict(int)
+        self.numreads_dict =  defaultdict(int)
+
     def poisson_analysis(self, chromosome=''):
         """
         We do 3 different global poisson statistical tests for each file:
@@ -886,11 +887,24 @@ class Turbomix:
            out = self.output_path
         else:
            out = os.path.dirname(os.path.abspath(self.output_path))
+
+        #search for the chromosome length in the chr len files
+        found = False
+        try:
+            for line in file('%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)):
+                chrom, length = line.split()
+                if chrom == chromosome:
+                    found = True
+                    self.chr_length = int(length)
+        except IOError:
+            pass #file not found, the warning will be printed
+        
+        if not found: print "WARNING: The file containing %s length for assembly %s could not be found, an aproximation will be used"%(chromosome, self.species)
         self.result_log.write('---------------\n')
         self.result_log.write('%s\n'%(chromosome))
         self.result_log.write('---------------\n\n')
         self.result_log.write('Correction factor: %s\n\n'%(self.correction_factor))
-        self.reads_per_bp =  self.total_bp_with_reads / (self.genome_end-self.genome_start)*self.correction_factor
+        self.reads_per_bp =  self.total_bp_with_reads / self.chr_length*self.correction_factor
         
         p_nucleotide = 1.
         p_cluster = 1.
@@ -923,13 +937,11 @@ class Turbomix:
     def poisson_retrieve_data(self, cluster):
         acum_numreads = 0.
         self.total_clusters+=1
-        self.genome_start = min(self.genome_start, cluster.start)
-        self.genome_end = max(self.genome_end, cluster.end) 
         for length, height in cluster:
             self.heights[height] += length
             self.total_bp_with_reads+=length
             acum_numreads += length*height
-            
+        self.chr_length = max(self.chr_length, cluster.end)
         max_height = cluster.get_max_height()
         #numreads per cluster
         numreads_in_cluster = acum_numreads/self.extension
