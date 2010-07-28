@@ -239,7 +239,7 @@ class ElandReader(Reader):
     eland_filter = re.compile(r'chr\w{1,2}.fa')
 
     def read_line(self, cluster, line):
-        if line is not None and line != '\n':
+        if line is not None and line != '\n' and self.quality_filter(line):
             try:
                 cluster.read_count += 1
                 if cluster.is_empty():

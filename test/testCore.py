@@ -1,5 +1,5 @@
 import unittest
-from pyicoslib.core import Cluster, DifferentChromosome, InvalidLine, Region, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, FIXED_WIG, VARIABLE_WIG
+from pyicoslib.core import Cluster, DifferentChromosome, InvalidLine, Region, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, FIXED_WIG, VARIABLE_WIG, SAM
 
 class TestCoreObjects(unittest.TestCase):
     def setUp(self):
@@ -667,7 +667,7 @@ class TestCoreObjects(unittest.TestCase):
     #    self.assertRaises(DifferentChromosome, self.DifferentChromosome)
 
     def read_invalid_lines(self):
-       cluster = Cluster(read=ELAND)
+       cluster = Cluster(read=SAM)
        for i in range(100):
              cluster.read_line('chr1 1 15 4:1|1:2|2:10|3:4|2:15|2:2|1:1')
 

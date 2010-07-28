@@ -287,7 +287,7 @@ class SortedFileClusterReader:
         self.slow_cursor = 1
         self.cluster_cache = dict() #TODO test if this actually improves speed (I think it does, but I could be wrong)
         self.invalid_count = 0
-        self.invalid_limit = 40
+        self.invalid_limit = 2000
 
     def _read_line_load_cache(self, cursor):
         """Loads the cache if the line read by the cursor is not there yet.
@@ -352,7 +352,7 @@ class Turbomix:
     ch.setFormatter(formatter)
     logger.addHandler(ch)
     invalid_count = 0
-    invalid_limit = 10
+    invalid_limit = 2000
     control_path = None
     
     def __init__(self, input_path, output_path, read_format=BED, write_format=PK, experiment_name='picos_experiment', 
@@ -539,7 +539,7 @@ class Turbomix:
                 Utils.list_available_formats()
                 raise OperationFailed
             else:
-                if self.verbose: print "Skipping invalid (%s) line: %s"%(cluster.reader.format, line),
+                #if self.verbose: print "Skipping invalid (%s) line: %s"%(cluster.reader.format, line),
                 self.invalid_count += 1
 
     def run(self):
