@@ -25,7 +25,6 @@ from itertools import islice, cycle
 from tempfile import gettempdir
 import linecache
 from datetime import datetime
-
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported, BED, ELAND, PK, WIG, SPK, CLUSTER_FORMATS, VARIABLE_WIG, READ_FORMATS, WRITE_FORMATS, SAM
 from tempfile import gettempdir
 
@@ -178,12 +177,15 @@ class Utils:
             for line in chunk:
                 if self.cluster.reader.quality_filter(line):
                     self.cluster.clear()
-                    self.cluster.read_line(line)
-                    self.cluster.extend(self.extension)
+                    try:
+                        self.cluster.read_line(line)
+                        self.cluster.extend(self.extension)
+                    except InvalidLine:
+                        print 'Discarding middle invalid line: %s'%line
                     
                     if not self.cluster.is_empty():
                         filtered_chunk.append(self.cluster.write_line())
-            
+
             return filtered_chunk
 
         def sort(self, input,output=None,key=None,buffer_size=40000,tempdirs=[], tempFileSize=512*1024, filter=False):
@@ -377,7 +379,6 @@ class Turbomix:
         self.is_annotation_open = False
         #Clusters and preprocessors
         try:
-            
             self.input_preprocessor = Utils.BigSort(read_format, is_input_open, extension, 'input')
             self.cluster = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
             self.cluster_aux = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
@@ -734,6 +735,7 @@ class Turbomix:
             try:
                 self.read_and_preprocess(self.cluster, line)
                 if not self.cluster.is_empty():
+
                     self.process_cluster(self.cluster, output)
                 self.cluster.clear()
             except InsufficientData:
@@ -752,6 +754,9 @@ class Turbomix:
             else:
                 if not self.cluster.is_empty():
                     self.process_cluster(self.cluster, output)
+                    #self.p = Process(target=self.process_cluster, args=(self.cluster, output))
+                    #self.p.start()
+                    #self.p.join()
                 self.cluster.clear()
                 self.read_and_preprocess(self.cluster, line)
 
@@ -993,6 +998,7 @@ class Turbomix:
     def extract_and_write(self, cluster, output):
         """The line will be written to the file if the last conditions are met"""
         if not cluster.is_empty() and cluster.start > -1:
+            
             output.write(cluster.write_line())
 
     def _current_directory(self):
@@ -1022,8 +1028,10 @@ class Turbomix:
                         
                     if cut_cluster.is_significant(thres):
                         real_output.write(cut_cluster.write_line())
+                        
                 except KeyError:
                     real_output.write(cut_cluster.write_line()) #If its not in the dictionary its just too big and there was no pvalue calculated, just write it
+                    
                 #write to the unfiltered file
                 if not cut_cluster.is_empty():
                     try:
