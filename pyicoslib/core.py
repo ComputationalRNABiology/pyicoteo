@@ -181,7 +181,6 @@ class SamReader(Reader):
             strand = "-"
         return strand
 
-
     def read_line(self, cluster, line):
         try:
             line = line.split()
@@ -544,7 +543,9 @@ class Cluster:
         self.start = 0
         self.end = -1
         self.name = 'noname'
+        del self._levels
         self._levels = []
+        del self._tag_cache
         self._tag_cache = []
         self.strand = ''
         self.score = 0
