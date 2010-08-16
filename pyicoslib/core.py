@@ -504,7 +504,6 @@ class Cluster:
         self.score = score
         self.read_as(read, read_half_open)
         self.write_as(write, write_half_open, span)
-
         self.tag_length = tag_length
         self.sequence = sequence
         self._tag_cache = []

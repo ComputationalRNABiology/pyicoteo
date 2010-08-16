@@ -144,7 +144,7 @@ class TestOperations(unittest.TestCase):
         self.subtracted_file.seek(0)
         for result_line in file(self.subtract_result_path):
             self.assertEqual(result_line, self.subtracted_file.next())
-
+    
     def fact(self, x):
         return (1 if x==0 else x * self.fact(x-1))
 

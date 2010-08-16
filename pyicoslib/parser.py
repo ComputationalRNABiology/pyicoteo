@@ -58,6 +58,7 @@ HEIGHT_FILTER=8
 DELTA_STEP=1
 VERBOSE=True
 SPECIES='hg19'
+CACHED=True
 
 class PicosParser:
 
@@ -93,6 +94,7 @@ class PicosParser:
         basic_parser.add_argument('--no-sort',action='store_true', default=NO_SORT,
                                   help='Force skip the sorting step. WARNING: Use only if you know what you are doing. Processing unsorted files assuming they are will outcome in erroneous results')
         basic_parser.add_argument('--silent' ,action='store_false', default=VERBOSE, dest='verbose', help='Force skip the sorting step. WARNING: Working with unsorted files will outcome in unexpected results')
+        basic_parser.add_argument('--disable-cache' ,action='store_false', default=CACHED, dest='cached', help='Disable internal reading cache. When Clustering low coverage files, it will increase speed and improve memory usage. With very read dense files, the speed will decrease.')
 
         output = self.new_subparser()
         output.add_argument('output', help='The output file or directory')
@@ -226,7 +228,7 @@ class PicosParser:
                             open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, open_region =OPEN_REGION,
                             frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE,
                             trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE,
-                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES)
+                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED)
 
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the input format
@@ -257,7 +259,7 @@ class PicosParser:
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
-                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species)
+                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached)
 
 
         if sys.argv[1] == 'protocol':

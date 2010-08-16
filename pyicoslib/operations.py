@@ -361,7 +361,7 @@ class Turbomix:
                  is_input_open=False, is_output_open=False, debug = False, rounding=False, tag_length = None, discarded_chromosomes = None,
                  control_path = None, control_format = PK, is_control_open = False, annotation_path = None, annotation_format = PK, 
                  is_annotation_open=False, span = 20, extension = 0, p_value = 0.05, height_limit = 20, correction_factor = 1, trim_percentage=0.15, no_sort=False,
-                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False, species='hg19'):
+                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False, species='hg19', cached=False):
         self.__dict__.update(locals())
         self.is_sorted = False
         self.operations = []
@@ -380,9 +380,10 @@ class Turbomix:
         #Clusters and preprocessors
         try:
             self.input_preprocessor = Utils.BigSort(read_format, is_input_open, extension, 'input')
-            self.cluster = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
+            self.cluster = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span, verbose=self.verbose, cached=cached)
             self.cluster_aux = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
-            self.control_cluster = Cluster(read=control_format, read_half_open = is_control_open, verbose=self.verbose)
+            self.cluster_aux2 = Cluster(read=self.read_format, write=self.write_format, rounding=self.rounding, read_half_open = self.is_input_open, write_half_open = self.is_output_open, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
+            self.control_cluster = Cluster(read=control_format, read_half_open = is_control_open, verbose=self.verbose, cached=cached)
             self.control_preprocessor = Utils.BigSort(control_format, is_control_open, extension, 'control')
         except ConversionNotSupported:
             print '\nThe reading "%s" and writing "%s" is not supported. \n\n'%(self.read_format, self.write_format)
@@ -744,25 +745,30 @@ class Turbomix:
 
     def _to_cluster_conversion(self, input, output):
         while self.cluster.is_empty():
-            self.read_and_preprocess(self.cluster, input.next())
-
+            self.cluster_aux2.clear()
+            self.read_and_preprocess(self.cluster_aux2, input.next())
+            self.safe_read_line(self.cluster, self.cluster_aux2.write_line())
+            
         for line in input:
             self.cluster_aux.clear()
             self.read_and_preprocess(self.cluster_aux, line)
-            if self.cluster.intersects(self.cluster_aux) or self.cluster_aux.is_contiguous(self.cluster) or self.cluster.is_contiguous(self.cluster_aux):
-                self.cluster += self.cluster_aux
+            if self.cluster_aux2.intersects(self.cluster_aux) or self.cluster_aux.is_contiguous(self.cluster_aux2) or self.cluster_aux2.is_contiguous(self.cluster_aux):
+                new_line = self.cluster_aux.write_line()
+                self.cluster.read_line(new_line)
+                self.cluster_aux2.clear()
+                self.cluster_aux2.read_line(new_line)
             else:
                 if not self.cluster.is_empty():
                     self.process_cluster(self.cluster, output)
-                    #self.p = Process(target=self.process_cluster, args=(self.cluster, output))
-                    #self.p.start()
-                    #self.p.join()
                 self.cluster.clear()
-                self.read_and_preprocess(self.cluster, line)
-
+                self.cluster_aux2.clear()
+                self.read_and_preprocess(self.cluster_aux2, line)
+                self.cluster.read_line(self.cluster_aux2.write_line())
+                
         if not self.cluster.is_empty():
             self.process_cluster(self.cluster, output)
             self.cluster.clear()
+
 
     def process_file(self):
         if NoWrite in self.operations:
