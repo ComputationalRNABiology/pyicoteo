@@ -23,7 +23,6 @@ from collections import defaultdict
 from heapq import heappop, heappush
 from itertools import islice, cycle
 from tempfile import gettempdir
-import linecache
 from datetime import datetime
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported, BED, ELAND, PK, WIG, SPK, CLUSTER_FORMATS, VARIABLE_WIG, READ_FORMATS, WRITE_FORMATS, SAM
 from tempfile import gettempdir
@@ -281,23 +280,25 @@ class Utils:
                     
 class SortedFileClusterReader:
     """Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
-    and retrieves the clusters that overlap with the region specified. Uses linecache.
-    This class is thought for substituting the code in "def subtract" and "def remove_regions" inside picos.operations.
+    and retrieves the clusters that overlap with the region specified.
+    This class is thought for substituting the code in "def remove_regions" inside picos.operations.
     """
     def __init__(self, file_path, read_format, read_half_open=False, rounding = True):
         self.__dict__.update(locals())
         self.slow_cursor = 1
-        self.cluster_cache = dict() #TODO test if this actually improves speed (I think it does, but I could be wrong)
+        self.cluster_cache = dict() 
         self.invalid_count = 0
         self.invalid_limit = 2000
+        self.file_iterator = file(file_path)
 
     def _read_line_load_cache(self, cursor):
         """Loads the cache if the line read by the cursor is not there yet.
         If the line is empty, it means that the end of file was reached,
         so this function sends a signal for the parent function to halt """
         if cursor not in self.cluster_cache:
-            line = linecache.getline(self.file_path, cursor)
-            if line == '':
+            try:
+                line = self.file_iterator.next()
+            except StopIteration:
                 return True
             self.cluster_cache[cursor] = Cluster(read=self.read_format, read_half_open=self.read_half_open, rounding=self.rounding)
             self.safe_read_line(self.cluster_cache[cursor], line)
@@ -369,14 +370,17 @@ class Turbomix:
         if discarded_chromosomes:
             self.discarded_chromosomes = discarded_chromosomes.split(':')
         self.previous_chr = None
+        
         if control_path is not None:
             self.fast_subtract_cursor = 1
             self.slow_subtract_cursor = 1
-        self.annotation_cluster = Cluster(read=annotation_format, read_half_open = is_annotation_open)
+
         if annotation_path is not None:
             self.fast_annotation_cursor = 1
             self.slow_annotation_cursor = 1
+        
         self.is_annotation_open = False
+        self.annotation_cluster = Cluster(read=annotation_format, read_half_open = is_annotation_open)
         #Clusters and preprocessors
         try:
             self.input_preprocessor = Utils.BigSort(read_format, is_input_open, extension, 'input')
@@ -686,7 +690,8 @@ class Turbomix:
 
             self.start_operation_message()
             self.decide_sort(input_path, control_path)
-
+            if self.current_control_path:
+                self.control_reader = SortedFileClusterReader(self.current_control_path, self.control_format)
             if StrandCorrelation in self.operations:
                 self.strand_correlation()
 
@@ -790,11 +795,11 @@ class Turbomix:
         if not NoWrite in self.operations:
             output.flush()
             output.close()
-
+    """
     def subtract(self, cluster):
         self.control_cluster.clear()
         line = linecache.getline(self.current_control_path, self.slow_subtract_cursor)
-        if line == '': return cluster
+        if line == '': return cluster #if linecache returns an empty string, it means that the end of the file has been reached
         self.read_and_preprocess_no_heuremove(self.control_cluster, line)
         #advance slow cursor
         while (self.control_cluster.chromosome < cluster.chromosome) or (self.control_cluster.chromosome == cluster.chromosome and cluster.start > self.control_cluster.end):
@@ -816,6 +821,20 @@ class Turbomix:
 
         return cluster
 
+        Hay que cambiar linecache por un iterador normal! esto va a molar muuuucho! :D
+
+    """
+    def subtract(self, cluster): 
+        region = Region(cluster.start, cluster.end, cluster.name, cluster.chromosome)
+        over = self.control_reader.get_overlaping_clusters(region, overlap=0.0000001)
+        for control_cluster in over:
+            if self.do_dupremove:
+                control_cluster = self.remove_duplicates(control_cluster)
+            if self.do_extend:
+                control_cluster.extend(self.extension)
+            cluster -= control_cluster
+        return cluster
+    """
     def remove_regions(self, cluster):
         self.annotation_cluster.clear()
         line = linecache.getline(self.annotation_path, self.slow_annotation_cursor)
@@ -841,6 +860,15 @@ class Turbomix:
             if line == '': return cluster
             self.safe_read_line(self.annotation_cluster, line)
 
+        return cluster
+
+
+        WARNING: NOT TESTED!!!
+    """
+    def remove_regions():
+        region = Region(cluster.start, cluster.end, cluster.name, cluster.chromosome)
+        if self.control_reader.get_overlaping_clusters(region, overlap=0.5):
+            cluster.clear() 
         return cluster
 
     def remove_duplicates(self, cluster):
@@ -967,7 +995,7 @@ class Turbomix:
     def process_cluster(self, cluster, output):
         if cluster.chromosome not in self.discarded_chromosomes and not cluster.is_empty():
             if self.previous_chr != cluster.chromosome: #A new chromosome has been detected
-                linecache.clearcache() #new chromosome, no need for the cache anymore
+                #linecache.clearcache() #new chromosome, no need for the cache anymore
                 if self.is_sorted and self.verbose:
                     print '%s...'%cluster.chromosome,
                     sys.stdout.flush()
