@@ -993,11 +993,14 @@ class Cluster:
             while current_start > smallest_end and len(array_ends) > 0:
                 self._levels.append([smallest_end-previous_start+1, len(array_ends)*self.normalize_factor])
                 previous_start = heapq.heappop(array_ends)
-                while previous_start == heapq.nsmallest(1, array_ends)[0]:
-                    previous_start = heapq.heappop(array_ends)
-                
+                try:
+                    while previous_start == heapq.nsmallest(1, array_ends)[0]:
+                        previous_start = heapq.heappop(array_ends)
+                except IndexError:
+                    pass #if array_ends is empty, go on
                 previous_start = previous_start + 1
-                smallest_end = heapq.nsmallest(1, array_ends)[0]
+                if len(array_ends) > 0:
+                    smallest_end = heapq.nsmallest(1, array_ends)[0]
 
             if previous_start != current_start and len(array_ends) > 0:
                 self._levels.append([current_start-previous_start, len(array_ends)*self.normalize_factor])
