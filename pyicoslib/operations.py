@@ -365,12 +365,14 @@ class Turbomix:
                  tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False, species='hg19', cached=False):
         self.__dict__.update(locals())
         self.is_sorted = False
+        self.temp_input = False #Flag that indicates if temp files where created for the input
+        self.temp_control = False #Indicates if temporary files where created for the control
         self.operations = []
         self.discarded_chromosomes = []
         if discarded_chromosomes:
             self.discarded_chromosomes = discarded_chromosomes.split(':')
         self.previous_chr = None
-        
+        """
         if control_path is not None:
             self.fast_subtract_cursor = 1
             self.slow_subtract_cursor = 1
@@ -378,7 +380,7 @@ class Turbomix:
         if annotation_path is not None:
             self.fast_annotation_cursor = 1
             self.slow_annotation_cursor = 1
-        
+        """
         self.is_annotation_open = False
         self.annotation_cluster = Cluster(read=annotation_format, read_half_open = is_annotation_open)
         #Clusters and preprocessors
@@ -435,8 +437,8 @@ class Turbomix:
 
     def read_and_preprocess(self, cluster, line):
         self.safe_read_line(cluster, line)
-        if self.do_dupremove:
-            cluster = self.remove_duplicates(cluster)
+        #if self.do_dupremove:
+        #    cluster = self.remove_duplicates(cluster)
         if self.do_heuremove:
             cluster = self.remove_regions(cluster)
         if self.do_extend:
@@ -445,8 +447,8 @@ class Turbomix:
     def read_and_preprocess_no_heuremove(self, cluster, line):
         """For the control I dont need to remove the annotation regions, this way it will be faster"""
         self.safe_read_line(cluster, line)
-        if self.do_dupremove:
-            cluster = self.remove_duplicates(cluster)
+        #if self.do_dupremove:
+        #    cluster = self.remove_duplicates(cluster)
         if self.do_extend:
             cluster.extend(self.extension)
 
@@ -623,6 +625,45 @@ class Turbomix:
             self.cluster.normalize_factor = self.normalize_factor
             self.cluster_aux.normalize_factor = self.normalize_factor
 
+
+    def filter_files(self):
+        new_file_path = "%s/tempfilter%s_input"%(gettempdir(), os.getpid())
+        new_file = file(new_file_path, 'w')
+        print "Filtering input file..."
+        previous_line = ''
+        equal_lines = 0
+        for line in file(self.current_input_path):
+            if line == previous_line:
+                equal_lines+=1
+            else:
+                equal_lines=0
+            previous_line = line
+            if self.tolerated_duplicates >= equal_lines: 
+                new_file.write(line)
+        new_file.flush() 
+        new_file.close()
+        if self.temp_input:
+            os.remove(self.current_input_path)      
+        self.current_input_path = new_file_path
+
+        if self.current_control_path:
+            print "Filtering control file..."
+            new_file_path = "%s/tempfilter%s_control"%(gettempdir(), os.getpid())
+            new_file = file(new_file_path, 'w')
+            for line in file(self.current_control_path): 
+                if line == previous_line:
+                    equal_lines+=1
+                else:
+                    equal_lines=0
+                if self.tolerated_duplicates >= equal_lines: 
+                    new_file.write(line)  
+
+            if self.temp_control:
+                os.remove(self.current_control_path)                  
+            self.current_control_path = new_file_path
+        new_file.flush()
+        new_file.close()
+
     def get_lambda_func(self, format):
         if self.write_format == SPK:
             if format == ELAND:
@@ -648,23 +689,23 @@ class Turbomix:
             if self.no_sort:
                 if self.verbose:
                     print 'Input sort skipped'
-                self.sorted_input_file = file(input_path)
-                self.current_input_path = self.sorted_input_file.name
+                self.current_input_path = input_path
             else:
                 if self.verbose: print 'Sorting input file...'
                 self.is_sorted = True
-                self.sorted_input_file = self.input_preprocessor.sort(input_path, None, self.get_lambda_func(self.read_format), filter=filter)
-                self.current_input_path = self.sorted_input_file.name
-
+                sorted_input_file = self.input_preprocessor.sort(input_path, None, self.get_lambda_func(self.read_format), filter=filter)
+                self.current_input_path = sorted_input_file.name
+                self.temp_input = True
             if self.do_subtract:
                 if self.no_sort:
                     if self.verbose: print 'Control sort skipped'
-                    self.sorted_control_file = file(control_path)
-                    self.current_control_path = self.sorted_control_file.name
+                    self.current_control_path = control_path
                 else:
                     if self.verbose: print 'Sorting control file...'
-                    self.sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format), filter=filter)
-                    self.current_control_path = self.sorted_control_file.name
+               
+                    sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format), filter=filter)
+                    self.current_control_path = sorted_control_file.name
+                    self.temp_control = True
 
     def operate(self, input_path, control_path=None, output_path=None):
         """Operate expects single paths, not directories. Its called from run() several times if the input for picos is a directory"""
@@ -692,8 +733,12 @@ class Turbomix:
             self.decide_sort(input_path, control_path)
             if self.current_control_path:
                 self.control_reader = SortedFileClusterReader(self.current_control_path, self.control_format)
+            
             if StrandCorrelation in self.operations:
                 self.strand_correlation()
+
+            if self.do_dupremove:
+                self.filter_files()
 
             if Normalize in self.operations:
                 self.normalize()
@@ -722,17 +767,17 @@ class Turbomix:
 
         finally: #Finally try deleting all temporary files, quit silently if they dont exist
             try:
-                if not self.no_sort:
-                    os.remove(self.sorted_input_file.name)
+                if self.temp_input:
+                    os.remove(self.current_input_path)
                     if self.verbose:
-                        print 'Temporary file %s removed'%self.sorted_input_file.name
+                        print 'Temporary file %s removed'%self.current_input_path
             except AttributeError, OSError:
                 pass
             try:
-                if not self.no_sort:
+                if self.temp_output:
                     os.remove(self.sorted_control_file.name)
                     if self.verbose:
-                        print 'Temporary file %s removed'%self.sorted_control_file.name
+                        print 'Temporary file %s removed'%self.current_control_path
             except AttributeError, OSError:
                 pass
  
@@ -759,16 +804,19 @@ class Turbomix:
             self.read_and_preprocess(self.cluster_aux, line)
             if self.cluster_aux2.intersects(self.cluster_aux) or self.cluster_aux.is_contiguous(self.cluster_aux2) or self.cluster_aux2.is_contiguous(self.cluster_aux):
                 new_line = self.cluster_aux.write_line()
-                self.cluster.read_line(new_line)
-                self.cluster_aux2.clear()
-                self.cluster_aux2.read_line(new_line)
+                if new_line:        
+                    self.cluster.read_line(new_line)
+                    self.cluster_aux2.clear()
+                    self.cluster_aux2.read_line(new_line)
             else:
                 if not self.cluster.is_empty():
                     self.process_cluster(self.cluster, output)
                 self.cluster.clear()
                 self.cluster_aux2.clear()
                 self.read_and_preprocess(self.cluster_aux2, line)
-                self.cluster.read_line(self.cluster_aux2.write_line())
+                new_line = self.cluster_aux2.write_line()
+                if new_line:
+                    self.safe_read_line(self.cluster, new_line)
                 
         if not self.cluster.is_empty():
             self.process_cluster(self.cluster, output)
@@ -828,8 +876,8 @@ class Turbomix:
         region = Region(cluster.start, cluster.end, cluster.name, cluster.chromosome)
         over = self.control_reader.get_overlaping_clusters(region, overlap=0.0000001)
         for control_cluster in over:
-            if self.do_dupremove:
-                control_cluster = self.remove_duplicates(control_cluster)
+            #if self.do_dupremove:
+            #    control_cluster = self.remove_duplicates(control_cluster)
             if self.do_extend:
                 control_cluster.extend(self.extension)
             cluster -= control_cluster
@@ -863,7 +911,7 @@ class Turbomix:
         return cluster
 
 
-        WARNING: NOT TESTED!!!
+        WARNING: remove regions NOT TESTED!!!
     """
     def remove_regions():
         region = Region(cluster.start, cluster.end, cluster.name, cluster.chromosome)
@@ -880,7 +928,7 @@ class Turbomix:
                 cluster.clear()
         else:
             self.previous_tag_id = cluster.name
-            self.identical_reads = 1
+            self.identical_reads = 0
 
         return cluster
 
