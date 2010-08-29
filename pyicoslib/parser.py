@@ -132,7 +132,7 @@ class PicosParser:
         pvalue.add_argument('--p-value',type=float, default=P_VALUE, help='The p-value we consider to be significant in our statistical test. [Default %(default)s]')
 
         tolerated_duplicates =self.new_subparser()
-        tolerated_duplicates.add_argument('--duplicates',type=int, default=DUPLICATES, help='The number of duplicates we accept as valid. ()[Default %(default)s]')
+        tolerated_duplicates.add_argument('--duplicates',type=int, default=DUPLICATES, help='The number of duplicated reads accept will be counted. Any duplicated read after this threshold will be discarded. [Default %(default)s]')
 
         height = self.new_subparser()
         height.add_argument('--height-limit',type=int, default=HEIGHT_LIMIT, help='The cluster height limit Pyicos will analize too. Every cluster that goes up the threshold will have a p-value of 0, therefore considered significant. This parameter is here just for speed purposes, raise it you think that you peak threashold will be over 100 (Almost impossible, but you never know. There is people with crazy data out there.) [Default %(default)s]')
@@ -179,7 +179,7 @@ class PicosParser:
         protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
         #callpeaks operation
         subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.',
-                              parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_proportion, species])
+                              parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_proportion, species, tolerated_duplicates])
         #convert operation
         subparsers.add_parser('convert', help='Convert a file to another file type.',
                               parents=[basic_parser, output, output_flags, round, label, tag_length, span, optional_frag_size])
