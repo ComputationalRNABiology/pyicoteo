@@ -661,8 +661,8 @@ class Turbomix:
             if self.temp_control:
                 os.remove(self.current_control_path)                  
             self.current_control_path = new_file_path
-        new_file.flush()
-        new_file.close()
+            new_file.flush()
+            new_file.close()
 
     def get_lambda_func(self, format):
         if self.write_format == SPK:
