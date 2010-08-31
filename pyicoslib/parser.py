@@ -313,7 +313,7 @@ class PicosParser:
             turbomix.operations = [ModFDR]
 
         elif sys.argv[1] == 'callpeaks':
-            turbomix.operations = [RemoveChromosome, Split, Extend, DiscardArtifacts, Poisson, Cut]
+            turbomix.operations = [RemoveChromosome, Split, Extend, DiscardArtifacts, Poisson, Cut, RemoveDuplicates]
             if args.region:
                 turbomix.operations.append(RemoveRegion)
             if args.control:
