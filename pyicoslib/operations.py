@@ -187,10 +187,11 @@ class Utils:
 
             return filtered_chunk
 
-        def sort(self, input,output=None,key=None,buffer_size=40000,tempdirs=[], tempFileSize=512*1024, filter=False):
+        def sort(self, input,output=None,key=None,buffer_size=40000, tempdirs=[], tempFileSize=1048576, filter_chunks=False):
             if key is None:
                 key = lambda x : x
 
+            filter_chunks=True
             if not tempdirs:
                 tempdirs.append(gettempdir())
             input_file = file(input,'rb',tempFileSize)
@@ -685,7 +686,7 @@ class Turbomix:
     def decide_sort(self, input_path, control_path=None):
         """Decide if the files need to be sorted or not."""
         if (not self.read_format in CLUSTER_FORMATS and self.write_format in CLUSTER_FORMATS) or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations:
-            filter= (self.read_format == ELAND or self.read_format == SAM or Extend in self.operations)
+            #filter= (self.read_format == ELAND or self.read_format == SAM or Extend in self.operations)
             if self.no_sort:
                 if self.verbose:
                     print 'Input sort skipped'
@@ -693,7 +694,8 @@ class Turbomix:
             else:
                 if self.verbose: print 'Sorting input file...'
                 self.is_sorted = True
-                sorted_input_file = self.input_preprocessor.sort(input_path, None, self.get_lambda_func(self.read_format), filter=filter)
+                #sorted_input_file = self.input_preprocessor.sort(input_path, None, self.get_lambda_func(self.read_format), filter=filter)
+                sorted_input_file = self.input_preprocessor.sort(input_path, None, self.get_lambda_func(self.read_format))
                 self.current_input_path = sorted_input_file.name
                 self.temp_input = True
             if self.do_subtract:
@@ -702,8 +704,8 @@ class Turbomix:
                     self.current_control_path = control_path
                 else:
                     if self.verbose: print 'Sorting control file...'
-               
-                    sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format), filter=filter)
+                    sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format))
+                    #sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format), filter=filter)
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
 

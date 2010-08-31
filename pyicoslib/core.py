@@ -502,7 +502,7 @@ class Cluster:
         self.rounding = rounding
         self.normalize_factor = normalize_factor
         self.score = score
-        self.read_as(read, read_half_open)
+        self.read_as(read, read_half_open, cached)
         self.write_as(write, write_half_open, span)
         self.tag_length = tag_length
         self.sequence = sequence
@@ -528,7 +528,7 @@ class Cluster:
         else:
             return True
 
-    def read_as(self, format, half_open=False, cached=True):
+    def read_as(self, format, half_open=False, cached=False):
         f = ReaderFactory()
         self.reader = f.create_reader(format, half_open, cached)
 
