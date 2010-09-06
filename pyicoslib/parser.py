@@ -46,6 +46,8 @@ HEIGHT_LIMIT=100
 CORRECTION=1.
 NO_SUBTRACT = False
 NORMALIZE = False
+SPLIT_PROPORTION=0.1
+SPLIT_ABSOLUTE=0
 TRIM_PROPORTION=0.3
 OPEN_CONTROL=False
 NO_SORT=False
@@ -154,10 +156,16 @@ class PicosParser:
         normalize = self.new_subparser()
         normalize.add_argument('--normalize',action='store_true', default=NORMALIZE, help='Normalize to the control before subtracting')
 
+        split_proportion = self.new_subparser()
+        split_proportion.add_argument('--split-proportion', default=SPLIT_PROPORTION, help='Fraction of the cluster height below which the cluster is splitted. [Default %(default)s]', type=float)
+
         trim_proportion = self.new_subparser()
         trim_proportion.add_argument('--trim-proportion', default=TRIM_PROPORTION, help='Fraction of the cluster height below which the peak is trimmed. Example: For a cluster of height 40, if the flag is 0.05, 40*0.05=2. Every cluster will be trimmed to that height. A position of height 1 is always considered insignificant, no matter what the cluster height is. [Default %(default)s]', type=float)
         trim_absolute = self.new_subparser()
-        trim_absolute.add_argument('--trim-absolute', help='The height threshold used to split or trim the clusters.', type=int)
+        trim_absolute.add_argument('--trim-absolute', help='The height threshold to trim the clusters.', type=int)
+
+        split_absolute = self.new_subparser()
+        split_absolute.add_argument('--split-absolute', help='The height threshold to split the clusters.', type=int)
 
         discard = self.new_subparser()
         discard.add_argument('--discard', help='Discard the reads that have this particular tag. Example: --discard chr1 will discard all reads with chr1 as tag. You can specify multiple tags to discard using the following notation --discard chr1:chr2:tagN')
@@ -190,7 +198,7 @@ class PicosParser:
         #subtract operation
         subparsers.add_parser('subtract', help='Subtract two pk files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[basic_parser, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label])
         #split operation
-        subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[basic_parser, output, output_flags, round, trim_proportion, trim_absolute, label])
+        subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[basic_parser, output, output_flags, round, split_proportion, split_absolute, label])
         #trim operation
         subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[basic_parser, output, output_flags, round, trim_absolute, label])
         #discard operation
@@ -228,7 +236,7 @@ class PicosParser:
                             open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, open_region =OPEN_REGION,
                             frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE,
                             trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE,
-                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED)
+                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE)
 
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the input format
@@ -259,7 +267,7 @@ class PicosParser:
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
-                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached)
+                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute)
 
 
         if sys.argv[1] == 'protocol':

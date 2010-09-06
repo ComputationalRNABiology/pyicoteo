@@ -631,7 +631,7 @@ class Cluster:
         self._subtrim(threshold, 0, True) #trim the left side of the cluster
         self._subtrim(threshold, -1, False) #trim the right side of the cluster
 
-    def split(self, percentage=0.05):
+    def split(self, percentage=0.05, absolute=0):
         """
         Scans each cluster position from start to end and looks for local maxima x and local minima y.
         Given two consecutive local maxima x_{i} and x_{i+1} we define the smallest of them as x_{min}.
@@ -658,7 +658,10 @@ class Cluster:
             if height < prev_height: # we are going down
                 if going_up: #if we were going up previously, we found a local maxima
                     if prev_local_maxima:
-                        local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
+                        if absolute:
+                            local_threshold = absolute
+                        else:
+                            local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
                         thresholds.append(local_threshold)
                     prev_local_maxima = prev_height
                 going_up = False
