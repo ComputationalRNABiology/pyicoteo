@@ -363,8 +363,9 @@ class Turbomix:
                  is_input_open=False, is_output_open=False, debug = False, rounding=False, tag_length = None, discarded_chromosomes = None,
                  control_path = None, control_format = PK, is_control_open = False, annotation_path = None, annotation_format = PK, 
                  is_annotation_open=False, span = 20, extension = 0, p_value = 0.05, height_limit = 20, correction_factor = 1, trim_percentage=0.15, no_sort=False,
-                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False, species='hg19', cached=False):
+                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False, species='hg19', cached=False, split_proportion=0.1, split_absolute=None):
         self.__dict__.update(locals())
+        print split_proportion, split_absolute
         self.is_sorted = False
         self.temp_input = False #Flag that indicates if temp files where created for the input
         self.temp_control = False #Indicates if temporary files where created for the control
@@ -892,7 +893,7 @@ class Turbomix:
         self.safe_read_line(self.annotation_cluster, line)
         #advance slow cursor
         while (self.annotation_cluster.chromosome < cluster.chromosome) or (self.annotation_cluster.chromosome == cluster.chromosome and cluster.start > self.annotation_cluster.end):
-            self.annotation_cluster.clear()
+            self.annotation_cluster.clear()pyicosfox2_modfdr.pk
             self.slow_annotation_cursor+=1
             line = linecache.getline(self.annotation_path, self.slow_annotation_cursor)
             if line == '': return cluster
@@ -1073,7 +1074,7 @@ class Turbomix:
                 cluster.trim(self.trim_absolute)
 
             if self.do_split:
-                for subcluster in cluster.split(self.trim_percentage): #TODO incluir self.trim_absolute!
+                for subcluster in cluster.split(self.split_proportion, self.split_absolute): 
                     self.extract_and_write(subcluster, output)
             else:
                 self.extract_and_write(cluster, output)
@@ -1114,8 +1115,9 @@ class Turbomix:
                         real_output.write(cut_cluster.write_line())
                         
                 except KeyError:
-                    real_output.write(cut_cluster.write_line()) #If its not in the dictionary its just too big and there was no pvalue calculated, just write it
-                    
+                    #real_output.write(cut_cluster.write_line()) #If its not in the dictionary its just too big and there was no pvalue calculated, just write it
+                    pass
+
                 #write to the unfiltered file
                 if not cut_cluster.is_empty():
                     try:
@@ -1127,9 +1129,10 @@ class Turbomix:
 
 
     def modfdr(self):
+        print "Running modfdr filter..."
         old_output = '%s/deleteme_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
-        cluster_reader = SortedFileClusterReader(old_output, self.write_format)
         shutil.move(os.path.abspath(self.current_output_path), old_output)
+        cluster_reader = SortedFileClusterReader(old_output, self.write_format)
         real_output = file(self.current_output_path, 'w+')
         unfiltered_output = file('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
         for region_line in file(self.annotation_path):
@@ -1140,6 +1143,7 @@ class Turbomix:
                 unfiltered_output.write(cluster.write_line())
             region.add_tags(overlaping_clusters)
             for cluster in region.get_FDR_clusters():
+                print cluster.write_line()
                 real_output.write(cluster.write_line())
 
 
