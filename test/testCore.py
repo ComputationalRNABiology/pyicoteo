@@ -451,9 +451,10 @@ class TestCoreObjects(unittest.TestCase):
         double_cluster.read_line('chr1  100  215  5:1|10:5|5:7|5:80|5:1|5:40|15:1|10:2|5:3|5:8|10:6|10:5|10:4|10:3|6:2')
         results = double_cluster.split(0.01)
         correct_clusters = [Cluster(rounding=True), Cluster(rounding=True), Cluster(rounding=True)]
-        correct_clusters[0].read_line('chr1    100      125      5:1|10:5|5:7|5:80')
-        correct_clusters[1].read_line('chr1    130      134      5:40')
-        correct_clusters[2].read_line('chr1    165      215     5:8|10:6|10:5|10:4|10:3|6:2')
+        correct_clusters[0].read_line('chr1    100      125      5:1|10:5|5:7|5:80|2:1')
+        correct_clusters[1].read_line('chr1    128      141      2:1|5:40|7:1')
+        correct_clusters[2].read_line('chr1    143      215      7:1|10:2|5:3|5:8|10:6|10:5|10:4|10:3|6:2')
+        print results
         for i in range (0,len(correct_clusters)):
             self.assertEqual(results[i].write_line(), correct_clusters[i].write_line())
 
