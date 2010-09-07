@@ -365,7 +365,6 @@ class Turbomix:
                  is_annotation_open=False, span = 20, extension = 0, p_value = 0.05, height_limit = 20, correction_factor = 1, trim_percentage=0.15, no_sort=False,
                  tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False, species='hg19', cached=False, split_proportion=0.1, split_absolute=None):
         self.__dict__.update(locals())
-        print split_proportion, split_absolute
         self.is_sorted = False
         self.temp_input = False #Flag that indicates if temp files where created for the input
         self.temp_control = False #Indicates if temporary files where created for the control

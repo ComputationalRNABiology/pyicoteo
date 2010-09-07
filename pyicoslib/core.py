@@ -639,63 +639,77 @@ class Cluster:
 
         y_{j}\leq x_{min}(1-t)
 
-        Where t is a proportion threshold between 0 and 1. By default t=0.05, meaning that by default clusters will be split if the "gap"
-        in between has a signal 5% smaller than the smaller local maxima.
+        Where t is a proportion threshold between 0 and 1. By default t=0.05. The cluster will divid at the local minimum. 
         """
         prev_height = -sys.maxint
-        prev_local_maxima = None
+        prev_local_maxima = 0
         new_cluster = self.copy_cluster()
         new_cluster.clear()
         new_cluster.start = self.start
         new_cluster.chromosome = self.chromosome
         clusters = []
-        thresholds = []
-        thresholds.append(-sys.maxint)
-        local_threshold = sys.maxint
+        split_points = []
         going_up = True
+        minimum_height = sys.maxint
         #get the local maxima
+        level_number = 1
         for length, height in self:
             if height < prev_height: # we are going down
-                if going_up: #if we were going up previously, we found a local maxima
+                if going_up: #if we were going up previously, we found a local maximum
                     if prev_local_maxima:
                         if absolute:
                             local_threshold = absolute
                         else:
                             local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
-                        thresholds.append(local_threshold)
+                        if minimum_height < local_threshold: #split point found
+                            split_points.append(minimum_pos)               
+
                     prev_local_maxima = prev_height
                 going_up = False
             else:
+                if not going_up: #if we were going down previously, we reached a local minimum
+                    minimum_height = prev_height
+                    minimum_pos = level_number-1
                 going_up = True
 
             prev_height = height
+            prev_length = length
+            level_number+=1
+    
+        if going_up: #if the cluster ended going up, it ended in a local maximum that was not detected previously
+            if absolute:
+                local_threshold = absolute
+            else:
+                local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
+            if minimum_height < local_threshold: #split point found
+                split_points.append(minimum_pos)    
 
-        thresholds.append(-sys.maxint)
-        prev_height = -sys.maxint
-        maxima_count = 0
         nucleotides = self.start
-        going_up = True
-        #split using the local maxima threshold information
-        for length, height in self:
-            if height < prev_height: 
-                if going_up: #previous was a maxima
-                    maxima_count += 1
-                going_up = False
-            else:
-                going_up = True
+        if split_points:
+            level_number = 1
+            for length, height in self:
+                if level_number in split_points:
+                    right_len = length/2
+                    left_len = right_len
+                    if length%2 == 0: #its even
+                        left_len-=1
+                    if left_len:
+                        new_cluster.add_level(left_len, height)
+                    self.__subsplit(new_cluster, clusters, nucleotides, left_len+1)
+                    if right_len:
+                        new_cluster.add_level(right_len, height)
+                else:
+                    new_cluster.add_level(length, height) # add significant parts to the profile
+                nucleotides+=length
+                level_number+=1
 
-            if height <= thresholds[maxima_count]:
-                if not new_cluster.is_empty():
-                    self.__subsplit(new_cluster, clusters, nucleotides, length)
-                new_cluster.start=nucleotides+length
-            else:
-                 new_cluster.add_level(length, height) # add significant parts to the profile
+            if not new_cluster.is_empty():
+               self.__subsplit(new_cluster, clusters, nucleotides, length)
+            return clusters
+        else:
+            return [self]
 
-            prev_height = height
-            nucleotides += length
 
-        if not new_cluster.is_empty():
-           self.__subsplit(new_cluster, clusters, nucleotides, length)
 
         return clusters
 
