@@ -282,7 +282,6 @@ class Utils:
 class SortedFileClusterReader:
     """Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
     and retrieves the clusters that overlap with the region specified.
-    This class is thought for substituting the code in "def remove_regions" inside picos.operations.
     """
     def __init__(self, file_path, read_format, read_half_open=False, rounding = True):
         self.__dict__.update(locals())
@@ -363,7 +362,7 @@ class Turbomix:
                  is_input_open=False, is_output_open=False, debug = False, rounding=False, tag_length = None, discarded_chromosomes = None,
                  control_path = None, control_format = PK, is_control_open = False, annotation_path = None, annotation_format = PK, 
                  is_annotation_open=False, span = 20, extension = 0, p_value = 0.05, height_limit = 20, correction_factor = 1, trim_percentage=0.15, no_sort=False,
-                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False, species='hg19', cached=False, split_proportion=0.1, split_absolute=None):
+                 tolerated_duplicates=sys.maxint, threshold=None, trim_absolute=None, max_delta=200, min_delta=0, height_filter=15, delta_step=1, verbose=False, species='hg19', cached=False, split_proportion=0.1, split_absolute=None, repeats=100):
         self.__dict__.update(locals())
         self.is_sorted = False
         self.temp_input = False #Flag that indicates if temp files where created for the input
@@ -1073,7 +1072,7 @@ class Turbomix:
 
 
     def modfdr(self):
-        print "Running modfdr filter..."
+        print "\nRunning modfdr filter with %s p-value threshold and %s repeats..."%(self.p_value, self.repeats)
         old_output = '%s/deleteme_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
         shutil.move(os.path.abspath(self.current_output_path), old_output)
         cluster_reader = SortedFileClusterReader(old_output, self.write_format)
@@ -1086,8 +1085,7 @@ class Turbomix:
             for cluster in overlaping_clusters:
                 unfiltered_output.write(cluster.write_line())
             region.add_tags(overlaping_clusters)
-            for cluster in region.get_FDR_clusters():
-                print cluster.write_line()
+            for cluster in region.get_FDR_clusters(self.repeats, self.p_value):
                 real_output.write(cluster.write_line())
 
 
