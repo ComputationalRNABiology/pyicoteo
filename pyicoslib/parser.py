@@ -61,6 +61,7 @@ DELTA_STEP=1
 VERBOSE=True
 SPECIES='hg19'
 CACHED=True
+REPEATS=100
 
 class PicosParser:
 
@@ -95,7 +96,7 @@ class PicosParser:
         basic_parser.add_argument('--debug', action='store_true', default=DEBUG)
         basic_parser.add_argument('--no-sort',action='store_true', default=NO_SORT,
                                   help='Force skip the sorting step. WARNING: Use only if you know what you are doing. Processing unsorted files assuming they are will outcome in erroneous results')
-        basic_parser.add_argument('--silent' ,action='store_false', default=VERBOSE, dest='verbose', help='Force skip the sorting step. WARNING: Working with unsorted files will outcome in unexpected results')
+        basic_parser.add_argument('--silent' ,action='store_false', default=VERBOSE, dest='verbose', help='Run without printing in screen')
         basic_parser.add_argument('--disable-cache' ,action='store_false', default=CACHED, dest='cached', help='Disable internal reading cache. When Clustering low coverage files, it will increase speed and improve memory usage. With very read dense files, the speed will decrease.')
 
         output = self.new_subparser()
@@ -131,7 +132,7 @@ class PicosParser:
         round = self.new_subparser()
         round.add_argument('--round',action='store_true',dest='rounding', default=ROUNDING, help='Round the final results to an integer')
         pvalue = self.new_subparser()
-        pvalue.add_argument('--p-value',type=float, default=P_VALUE, help='The p-value we consider to be significant in our statistical test. [Default %(default)s]')
+        pvalue.add_argument('--p-value',type=float, default=P_VALUE, help='The threshold p-value that will make a cluster significant. [Default %(default)s]')
 
         tolerated_duplicates =self.new_subparser()
         tolerated_duplicates.add_argument('--duplicates',type=int, default=DUPLICATES, help='The number of duplicated reads accept will be counted. Any duplicated read after this threshold will be discarded. [Default %(default)s]')
@@ -165,7 +166,10 @@ class PicosParser:
         trim_absolute.add_argument('--trim-absolute', help='The height threshold to trim the clusters.', type=int)
 
         split_absolute = self.new_subparser()
-        split_absolute.add_argument('--split-absolute', help='The height threshold to split the clusters.', type=int)
+        split_absolute.add_argument('--split-absolute', default=SPLIT_ABSOLUTE, help='The height threshold to split the clusters. [Default %(default)s]', type=int)
+
+        repeats = self.new_subparser()
+        repeats.add_argument('--repeats', help='Number of random repeats when generating the "background" for the modfdr operation[Default %(default)s]', default=REPEATS, type=int)
 
         discard = self.new_subparser()
         discard.add_argument('--discard', help='Discard the reads that have this particular tag. Example: --discard chr1 will discard all reads with chr1 as tag. You can specify multiple tags to discard using the following notation --discard chr1:chr2:tagN')
@@ -217,7 +221,7 @@ class PicosParser:
                               parents=[basic_parser, output, frag_size, output_flags, round, pvalue, height, correction, threshold, species])
         #modfdr analysis
         subparsers.add_parser('modfdr', help="""Use the modified FDR method to determine what clusters are significant in an specific region. Output in a clustered format only.""",
-                              parents=[basic_parser, region, output, output_flags, round])
+                              parents=[basic_parser, region, output, output_flags, round, pvalue, repeats])
         #remove operation
         subparsers.add_parser('remove', help='Removes regions that overlap with another the coordinates in the "black list" file.',
                               parents=[basic_parser, output_flags, region, region_format, output])
@@ -236,7 +240,7 @@ class PicosParser:
                             open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, open_region =OPEN_REGION,
                             frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE,
                             trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE,
-                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE)
+                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS)
 
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the input format
@@ -267,7 +271,7 @@ class PicosParser:
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
-                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute)
+                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, args.repeats)
 
 
         if sys.argv[1] == 'protocol':
