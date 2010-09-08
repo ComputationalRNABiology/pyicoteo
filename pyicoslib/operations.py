@@ -835,7 +835,7 @@ class Turbomix:
         if self.write_format == WIG or self.write_format == VARIABLE_WIG:
             output.write('track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.experiment_name)
 
-        if self.write_format in CLUSTER_FORMATS:
+        if self.write_format in CLUSTER_FORMATS and not ModFDR in self.operations:
             if not self.read_format in CLUSTER_FORMATS and self.verbose:
                 print 'Clustering reads...'
             self._to_cluster_conversion(input, output)
@@ -845,35 +845,7 @@ class Turbomix:
         if not NoWrite in self.operations:
             output.flush()
             output.close()
-    """
-    def subtract(self, cluster):
-        self.control_cluster.clear()
-        line = linecache.getline(self.current_control_path, self.slow_subtract_cursor)
-        if line == '': return cluster #if linecache returns an empty string, it means that the end of the file has been reached
-        self.read_and_preprocess_no_heuremove(self.control_cluster, line)
-        #advance slow cursor
-        while (self.control_cluster.chromosome < cluster.chromosome) or (self.control_cluster.chromosome == cluster.chromosome and cluster.start > self.control_cluster.end):
-            self.control_cluster.clear()
-            self.slow_subtract_cursor+=1
-            line = linecache.getline(self.current_control_path, self.slow_subtract_cursor)
-            if line == '': return cluster
-            self.read_and_preprocess_no_heuremove(self.control_cluster, line)
 
-        self.fast_subtract_cursor = self.slow_subtract_cursor
-        while self.control_cluster.start <= cluster.end and self.control_cluster.chromosome == cluster.chromosome:
-            if cluster.intersects(self.control_cluster):
-                cluster -= self.control_cluster
-            self.fast_subtract_cursor += 1
-            self.control_cluster.clear()
-            line = linecache.getline(self.current_control_path, self.fast_subtract_cursor)
-            if line == '': return cluster
-            self.read_and_preprocess_no_heuremove(self.control_cluster, line)
-
-        return cluster
-
-        Hay que cambiar linecache por un iterador normal! esto va a molar muuuucho! :D
-
-    """
     def subtract(self, cluster): 
         region = Region(cluster.start, cluster.end, cluster.name, cluster.chromosome)
         over = self.control_reader.get_overlaping_clusters(region, overlap=0.0000001)
@@ -884,35 +856,8 @@ class Turbomix:
                 control_cluster.extend(self.extension)
             cluster -= control_cluster
         return cluster
+
     """
-    def remove_regions(self, cluster):
-        self.annotation_cluster.clear()
-        line = linecache.getline(self.annotation_path, self.slow_annotation_cursor)
-        if line == '': return cluster
-        self.safe_read_line(self.annotation_cluster, line)
-        #advance slow cursor
-        while (self.annotation_cluster.chromosome < cluster.chromosome) or (self.annotation_cluster.chromosome == cluster.chromosome and cluster.start > self.annotation_cluster.end):
-            self.annotation_cluster.clear()pyicosfox2_modfdr.pk
-            self.slow_annotation_cursor+=1
-            line = linecache.getline(self.annotation_path, self.slow_annotation_cursor)
-            if line == '': return cluster
-            self.safe_read_line(self.annotation_cluster, line)
-
-        self.fast_annotation_cursor = self.slow_annotation_cursor
-        while self.annotation_cluster.start <= cluster.end  and self.annotation_cluster.chromosome == cluster.chromosome:
-            if cluster.overlap(self.annotation_cluster) >= 0.5:
-                cluster.clear()
-                return cluster #Its discarded, so its over. Return the empty cluster.
-
-            self.fast_annotation_cursor += 1
-            self.annotation_cluster.clear()
-            line = linecache.getline(self.annotation_path, self.fast_annotation_cursor)
-            if line == '': return cluster
-            self.safe_read_line(self.annotation_cluster, line)
-
-        return cluster
-
-
         WARNING: remove regions NOT TESTED!!!
     """
     def remove_regions():

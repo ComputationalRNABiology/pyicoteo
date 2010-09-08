@@ -752,6 +752,7 @@ class Cluster:
         """Returns True if the cluster is considered an artifact.
            It is considered an artifact if its shorter than 100 nucleotides,
            or the maximum height length is more than 30% of the cluster (block cluster)"""
+        self._flush_tag_cache()
         if len(self) < 100:
             return True
         h = self.get_max_height()
