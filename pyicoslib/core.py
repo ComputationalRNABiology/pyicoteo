@@ -1250,21 +1250,6 @@ class Region:
                     self.clusters[-1].read_line(self.tags[i].write_line())
                 else:
                     self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True))
-    """
-    def _create_clusters(self):
-        self.clusters = []
-        self.tags.sort(key=lambda x: (x.start, x.end))
-        for tag in self.tags:
-            self.clusters.append(tag)
-        i = 0
-        while i < len(self.clusters)-1:
-            if self.clusters[i].intersects(self.clusters[i+1]) or self.clusters[i].intersects(self.clusters[i+1]) or self.clusters[i+1].intersects(self.clusters[i]):
-                self.clusters[i] += self.clusters[i+1]
-                self.clusters.pop(i+1)
-            else:
-                i += 1
-    """
-
 
     def percentage_covered(self):
         """Returns the percentage of the region covered by tags"""
