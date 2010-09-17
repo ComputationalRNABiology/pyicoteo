@@ -18,27 +18,10 @@ import sys
 import random
 import math
 from collections import defaultdict
-
+from defaults import *
 
 debug = False
 verbose = False
-
-#MIRO = 'miro'
-ELAND = 'eland'
-ELAND_EXPORT = 'eland_export'
-BED = 'bed'
-WIG = 'bed_wig'
-VARIABLE_WIG = 'variable_wig'
-FIXED_WIG = 'fixed_wig'
-PK = 'bedpk'
-SPK = 'bedspk'
-SAM = 'sam'
-CLUSTER_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG, PK, SPK)
-WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
-
-READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM) #formats that we actually can read as
-WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
-
 
 class Empty:
     def __init__(self):
@@ -950,59 +933,63 @@ class Cluster:
         Adds the levels of 2 selfs, activating the + operator for this type of object results = self + self2
         """
         if other._tag_cache:
-            other._flush_tag_cache()
-            
-        result = self.copy_cluster()
-        if result.read_count and other.read_count:
-            result.read_count += other.read_count #if both clusters have a read count, add it
-        other_acum_levels = 0
-        #add zeros so both selfs have equal length and every level is added
-        if other.end > result.end:
-            result.add_level(other.end-result.end, 0)
+            self._tag_cache.extend(other._tag_cache)
+            return self
+        else: 
+            result = self.copy_cluster()
+            if result.read_count and other.read_count:
+                result.read_count += other.read_count #if both clusters have a read count, add it
+            other_acum_levels = 0
+            #add zeros so both selfs have equal length and every level is added
+            if other.end > result.end:
+                result.add_level(other.end-result.end, 0)
 
-        if other.start < result.start:
-            result._levels.insert(0, [result.start - other.start, 0])
-            result.start = other.start
+            if other.start < result.start:
+                result._levels.insert(0, [result.start - other.start, 0])
+                result.start = other.start
 
-        for j in xrange(0, len(other._levels)):
-            other_level_start = other.start + other_acum_levels
-            other_acum_levels += other._levels[j][0]
-            other_level_end = other.start + other_acum_levels
-            other_height = other._levels[j][1]
-            other_length = other._levels[j][0]
-            i = 0
-            acum_levels = 0
-            while (len(result._levels) > i):
-                level_start = result.start + acum_levels
-                acum_levels += result._levels[i][0]
-                level_end = result.start + acum_levels
-                height = result._levels[i][1]
-                if (other_level_start >= level_start and other_level_start < level_end)  or (other_level_end > level_start and other_level_end < level_end) or (other_level_start <= level_start and other_level_end >= level_end):
-                    if other_level_start <= level_start and other_level_end >= level_end:
-                        result._levels[i][1] += other_height
+            for j in xrange(0, len(other._levels)):
+                other_level_start = other.start + other_acum_levels
+                other_acum_levels += other._levels[j][0]
+                other_level_end = other.start + other_acum_levels
+                other_height = other._levels[j][1]
+                other_length = other._levels[j][0]
+                i = 0
+                acum_levels = 0
+                while (len(result._levels) > i):
+                    level_start = result.start + acum_levels
+                    acum_levels += result._levels[i][0]
+                    level_end = result.start + acum_levels
+                    height = result._levels[i][1]
+                    if (other_level_start >= level_start and other_level_start < level_end)  or (other_level_end > level_start and other_level_end < level_end) or (other_level_start <= level_start and other_level_end >= level_end):
+                        if other_level_start <= level_start and other_level_end >= level_end:
+                            result._levels[i][1] += other_height
 
-                    elif other_level_start <= level_start and other_level_end < level_end:
-                        result._levels[i][0] = other_level_end - level_start
-                        result._levels[i][1] += other_height
-                        result._levels.insert(i+1, [level_end - other_level_end, height])
-                        level_end = other_level_end
+                        elif other_level_start <= level_start and other_level_end < level_end:
+                            result._levels[i][0] = other_level_end - level_start
+                            result._levels[i][1] += other_height
+                            result._levels.insert(i+1, [level_end - other_level_end, height])
+                            level_end = other_level_end
 
-                    elif other_level_start > level_start and other_level_start < level_end and other_level_end >= level_end:
-                        result._levels[i][0] -= level_end-other_level_start
-                        result._levels.insert(i+1, [level_end-other_level_start,result._levels[i][1]+other_height])
-                        i+=1
+                        elif other_level_start > level_start and other_level_start < level_end and other_level_end >= level_end:
+                            result._levels[i][0] -= level_end-other_level_start
+                            result._levels.insert(i+1, [level_end-other_level_start,result._levels[i][1]+other_height])
+                            i+=1
 
-                    elif other_level_start > level_start and other_level_end < level_end:
-                        result._levels[i][0] = other_length
-                        result._levels[i][1] += other_height
-                        result._levels.insert(i+1, [level_end - other_level_end, height])
-                        result._levels.insert(i, [other_level_start - level_start, height])
-                i+=1
+                        elif other_level_start > level_start and other_level_end < level_end:
+                            result._levels[i][0] = other_length
+                            result._levels[i][1] += other_height
+                            result._levels.insert(i+1, [level_end - other_level_end, height])
+                            result._levels.insert(i, [other_level_start - level_start, height])
+                    i+=1
 
-        result._clean_levels()
+            result._clean_levels()
         return result
 
     def _flush_tag_cache(self):
+        """
+        Joins all reads in levels. Assumes that the tags were sorted (TODO: Is there a fast way of detecting if they are sorted, so we could sort them if neccesary?)
+        """
         import heapq
         array_ends = []
         previous_start = -1
