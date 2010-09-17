@@ -21,47 +21,7 @@ from operations import (Turbomix, Extend, Poisson, RemoveRegion, RemoveChromosom
                         Split, Cut, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation)
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
 __version__ = '0.8.5'
-
-#Default values for the flags
-INPUT=''
-INPUT_FORMAT=PK
-OPEN_INPUT=False
-DEBUG=False
-DISCARD=0
-OUTPUT=''
-CONTROL=''
-LABEL = 'noname'
-OUTPUT_FORMAT=PK
-OPEN_OUTPUT=False
-ROUNDING=False
-CONTROL_FORMAT=PK
-REGION=''
-REGION_FORMAT=BED
-OPEN_REGION= False
-FRAG_SIZE = 0
-TAG_LENGTH = 0
-SPAN=40
-P_VALUE=0.01
-HEIGHT_LIMIT=100
-CORRECTION=1.
-NO_SUBTRACT = False
-NORMALIZE = False
-SPLIT_PROPORTION=0.1
-SPLIT_ABSOLUTE=0
-TRIM_PROPORTION=0.3
-OPEN_CONTROL=False
-NO_SORT=False
-DUPLICATES=3
-THRESHOLD=0
-TRIM_ABSOLUTE=0
-MAX_DELTA=500
-MIN_DELTA=0
-HEIGHT_FILTER=8
-DELTA_STEP=1
-VERBOSE=True
-SPECIES='hg19'
-CACHED=True
-REPEATS=100
+from defaults import *
 
 class PicosParser:
 
@@ -147,7 +107,7 @@ class PicosParser:
         tag_length.add_argument( '--tag-length',default=TAG_LENGTH, type=int, help='The tag length, or the extended one. Needed when converting from a Clustered format (wig, pk) to a non clustered format (bed, eland) [Default %(default)s]')
 
         frag_size = self.new_subparser()
-        frag_size.add_argument('frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicos to reconstruct the original signal in the original wet lab experiment.', type=int)
+        frag_size.add_argument('frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by the extend operation to extend the tags, taking into consideration their strand, if provided. If the strand is not provided, Pyicos will assume positive strand.', type=int)
         optional_frag_size = self.new_subparser()
         optional_frag_size.add_argument('-x', '--frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicos to reconstruct the original signal in the original wet lab experiment.', type=int)
 
@@ -170,6 +130,8 @@ class PicosParser:
 
         repeats = self.new_subparser()
         repeats.add_argument('--repeats', help='Number of random repeats when generating the "background" for the modfdr operation[Default %(default)s]', default=REPEATS, type=int)
+        masker_file = self.new_subparser()
+        masker_file.add_argument('--masker', help='You can provide a masker file that will be used by the modfdr operation background generation so that randomized reads will not fall in this areas')
 
         discard = self.new_subparser()
         discard.add_argument('--discard', help='Discard the reads that have this particular tag. Example: --discard chr1 will discard all reads with chr1 as tag. You can specify multiple tags to discard using the following notation --discard chr1:chr2:tagN')
@@ -221,7 +183,7 @@ class PicosParser:
                               parents=[basic_parser, output, frag_size, output_flags, round, pvalue, height, correction, threshold, species])
         #modfdr analysis
         subparsers.add_parser('modfdr', help="""Use the modified FDR method to determine what clusters are significant in an specific region. Output in a clustered format only.""",
-                              parents=[basic_parser, region, output, output_flags, round, pvalue, repeats])
+                              parents=[basic_parser, region, output, output_flags, round, pvalue, repeats, masker_file])
         #remove operation
         subparsers.add_parser('remove', help='Removes regions that overlap with another the coordinates in the "black list" file.',
                               parents=[basic_parser, output_flags, region, region_format, output])
@@ -240,7 +202,7 @@ class PicosParser:
                             open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, open_region =OPEN_REGION,
                             frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE,
                             trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE,
-                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS)
+                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE)
 
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the input format
@@ -271,7 +233,7 @@ class PicosParser:
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
-                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, args.repeats)
+                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, args.repeats, args.masker_file)
 
 
         if sys.argv[1] == 'protocol':
@@ -325,7 +287,9 @@ class PicosParser:
             turbomix.operations = [ModFDR]
 
         elif sys.argv[1] == 'callpeaks':
-            turbomix.operations = [RemoveChromosome, Split, Extend, DiscardArtifacts, Poisson, Cut, RemoveDuplicates]
+            turbomix.operations = [RemoveChromosome, Split, Extend, Poisson, Cut, RemoveDuplicates] 
+            if args.duplicates > 1: #If there is only 1 duplicate,  there is no need to discard artifacts
+                turbomix.operations.append(DiscardArtifacts)
             if args.region:
                 turbomix.operations.append(RemoveRegion)
             if args.control:

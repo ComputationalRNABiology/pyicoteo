@@ -119,14 +119,14 @@ class TestOperations(unittest.TestCase):
         self.subtracted_file.write('chrX\t101\t149\t1:1.00|48:2.00\t2.0\t.\t125\t97.0\n')
         self.subtracted_file.write('chrX\t2270\t2369\t30:1.00|20:2.00|50:1.00\t2.0\t.\t2309\t120.0\n')
         self.subtracted_file.flush()
-        self.convert_operation = Turbomix(self.bed_path, self.conversion_result_path, read_format=BED, write_format=PK, debug = True, rounding=False) 
+        self.convert_operation = Turbomix(self.bed_path, self.conversion_result_path, read_format=BED, write_format=PK, debug = True, rounding=False, verbose=False) 
 
         #self.convert_operation = Turbomix(self.bed_path, self.conversion_subtraction_result_path, read_format=BED, write_format=PK, debug = True, rounding=False)
 
-        self.extend_operation = Turbomix(self.bed_path, self.extended_result_path, read_format=BED, write_format=BED, debug = True, rounding=False, extension = 100)
+        self.extend_operation = Turbomix(self.bed_path, self.extended_result_path, read_format=BED, write_format=BED, debug = True, rounding=False, extension = 100, verbose=False)
         self.extend_operation.operations = [Extend]
 
-        self.subtract_operation = Turbomix(self.notsubtracted_path, self.subtract_result_path, read_format=BED, debug = True, rounding=False, control_path = self.bed_control_path, control_format = BED)
+        self.subtract_operation = Turbomix(self.notsubtracted_path, self.subtract_result_path, read_format=BED, debug = True, rounding=False, control_path = self.bed_control_path, control_format = BED, verbose=False)
         self.subtract_operation.operations = [Subtract]
     
     def test_add_slash_to_path(self):
