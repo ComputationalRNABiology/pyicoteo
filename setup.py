@@ -6,8 +6,8 @@ setup(name='Pyicos',
       author=u'Juan Gonzalez_Vallinas',
       author_email='juanramon.gonzalezvallinas@upf.edu',
       url='http://regulatorygenomics.upf.edu/pyicos',
-      package_data = {'chrdesc' : ['chrdesc/mm8', 'chrdesc/mm9', 'chrdesc/hg18', 'chrdesc/hg19'] },
-      packages = ['pyicoslib.lib'],
+      packages = ['pyicoslib.lib', 'chrdesc'],
+      package_data = {'chrdesc' : ['mm8', 'mm9', 'hg18', 'hg19'] },
       scripts = ['pyicos'],
       py_modules = ['pyicoslib.core', 'pyicoslib.operations', 'pyicoslib.parser', 'pyicoslib.defaults']
      )
