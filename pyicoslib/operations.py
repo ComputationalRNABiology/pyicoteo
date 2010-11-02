@@ -361,7 +361,7 @@ class Turbomix:
                  is_input_open=OPEN_INPUT, is_output_open=OPEN_OUTPUT, debug = DEBUG, rounding=ROUNDING, tag_length = TAG_LENGTH, discarded_chromosomes = None,
                  control_path = CONTROL, control_format = PK, is_control_open = OPEN_CONTROL, annotation_path = REGION, annotation_format = PK, 
                  is_annotation_open=OPEN_REGION, span = SPAN, extension = FRAG_SIZE, p_value = P_VALUE, height_limit = HEIGHT_LIMIT, correction_factor = CORRECTION, trim_percentage=TRIM_PROPORTION, no_sort=NO_SORT,
-                 tolerated_duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE):
+                 tolerated_duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, min_delta=MIN_DELTA, correlation_height=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE):
         self.__dict__.update(locals())
         self.is_sorted = False
         self.temp_input = False #Flag that indicates if temp files where created for the input
@@ -1076,7 +1076,7 @@ class Turbomix:
         old_output = '%s/deleteme_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
         shutil.move(os.path.abspath(self.current_output_path), old_output)
         cluster_reader = SortedFileClusterReader(old_output, self.write_format)
-        masker_reader = SortedFileClusterReader(self.masker_file)
+        #masker_reader = SortedFileClusterReader(self.masker_file)
         real_output = file(self.current_output_path, 'w+')
         unfiltered_output = file('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
         for region_line in file(self.annotation_path):
@@ -1093,6 +1093,7 @@ class Turbomix:
     def strand_correlation(self):
         self.delta_results = dict()
         self.best_delta = -1
+
         positive_cluster = Cluster()
         negative_cluster = Cluster()
         positive_cluster_cache = [] #we are trying to hold to the previous cluster
@@ -1118,7 +1119,7 @@ class Turbomix:
 
             else:
                 if negative_cluster.is_empty() or not negative_cluster.intersects(line_read):
-                    if positive_cluster.get_max_height() > self.height_filter and negative_cluster.get_max_height() > self.height_filter: #if we have big clusters, correlate them
+                    if positive_cluster.get_max_height() > self.correlation_height and negative_cluster.get_max_height() > self.correlation_height: #if we have big clusters, correlate them
                         self._correlate_clusters(positive_cluster, negative_cluster)
                     negative_cluster = line_read.copy_cluster() #after correlating, select the next cluster
                 else:
@@ -1140,6 +1141,7 @@ class Turbomix:
         max_corr = -1
         average_len = acum_length/num_analyzed
         print "Average analyzed length", average_len
+        print self.delta_results
         for delta in range(self.min_delta, self.max_delta, self.delta_step):
             if delta in self.delta_results:
                 self.delta_results[delta]=self.delta_results[delta]/self.analized_pairs
@@ -1150,30 +1152,30 @@ class Turbomix:
                 #print 'Delta %s:%s'%(delta, self.delta_results[delta])
         print 'Correlation test result: Extension =%s nucleotides'%(max_delta+average_len)
         self.extension = max_delta+average_len
-        try:
-            import matplotlib.pyplot
-            matplotlib.pyplot.plot(range(self.min_delta, self.max_delta), data)
-            matplotlib.pyplot.plot()
-            matplotlib.pyplot.savefig('%s.png'%os.path.basename(self.current_input_path))
-            matplotlib.pyplot.show()
-        except ImportError:
-            print 'WARNING: Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library.'
+        if not data:
+            if self.verbose: print 'WARNING: Not enough data to plot the correlation graph. Lower the threshold of the --corr-height flag'
+        else: 
+            try:
+                import matplotlib.pyplot
+                matplotlib.pyplot.plot(range(self.min_delta, self.max_delta), data)
+                matplotlib.pyplot.plot()
+                matplotlib.pyplot.savefig('%s.png'%os.path.basename(self.current_input_path))
+                matplotlib.pyplot.show()
+            except ImportError:
+                print 'WARNING: Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library.'
+
 
 
     def _correlate_clusters(self, positive_cluster, negative_cluster):
-        distance = negative_cluster.start-positive_cluster.start
+        distance = negative_cluster.end-positive_cluster.start
         if (distance < self.max_delta and distance > self.min_delta) and positive_cluster.chromosome == negative_cluster.chromosome:
             self.analized_pairs+=1
-            #print 'Pair of clusters:'
-            #print positive_cluster.write_line(), negative_cluster.write_line(),
             for delta in range(self.min_delta, self.max_delta+1, self.delta_step):
                 r_squared = self._analize_paired_clusters(positive_cluster, negative_cluster, delta)**2
                 if delta not in self.delta_results:
                     self.delta_results[delta] = r_squared
                 else:
                     self.delta_results[delta] += r_squared
-                #print 'Delta %s:%s'%(delta, result)
-
 
     def _analize_paired_clusters(self, positive_cluster, negative_cluster, delta):
         #from scipy.stats.stats import pearsonr Abandoned scipy

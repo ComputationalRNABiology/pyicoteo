@@ -429,7 +429,11 @@ class PkWriter(Writer):
         start = cluster.start
         for length, height in cluster:
             if cluster.rounding:
-                height = round(height)
+                rounded_height = round(height)
+                if height > 0 and rounded_height == 0: #if rounding becomes 0, the cluster will be printed in 2 parts, and we dont want this with bedpk format
+                    rounded_height = 1
+                height = rounded_height
+
             if height > 0:
                 if first:
                     if cluster.rounding:
@@ -1229,15 +1233,14 @@ class Region:
         self.clusters = []
         self.tags.sort(key=lambda x: (x.start, x.end))
         if self.tags:
-            #get the first tag
+            #Insert first cluster object
             self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True))
-
             for i in xrange(0, len(self.tags)):
-                if self.clusters[-1].overlap(self.tags[i]) > 0 or self.clusters[-1].is_empty():
-                    self.clusters[-1].read_line(self.tags[i].write_line())
-                else:
-                    self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True))
+                if not self.clusters[-1].overlap(self.tags[i]) > 0 and not self.clusters[-1].is_empty():
+                    self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True)) #create a new cluster object
 
+                self.clusters[-1].read_line(self.tags[i].write_line())
+            
     def percentage_covered(self):
         """Returns the percentage of the region covered by tags"""
         covered = 0.

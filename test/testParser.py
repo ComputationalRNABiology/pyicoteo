@@ -28,6 +28,7 @@ class TestParser(unittest.TestCase):
         """
         try:
             p = PicosParser()
+            p.run_parser()
         except SystemExit, e:
             self.assertEquals(type(e), type(SystemExit()))
             self.assertEquals(e.code, 2)
