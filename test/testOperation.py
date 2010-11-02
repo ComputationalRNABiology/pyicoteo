@@ -28,13 +28,13 @@ class TestOperations(unittest.TestCase):
         
         self.pk_path = self.files_dir + 'test_convert.pk'
         self.pk_file = open(self.pk_path,'w+')
-        self.pk_file.write('chr1\t37\t52\t16:1.00\t1.0\t.\t44\t16.0\n')
-        self.pk_file.write('chr10\t1\t100\t100:1.00\t1.0\t.\t50\t100.0\n')
-        self.pk_file.write('chr10\t301\t380\t80:1.00\t1.0\t.\t340\t80.0\n')
-        self.pk_file.write('chr18\t270\t324\t20:1.00|15:2.00|20:1.00\t2.0\t.\t297\t70.0\n')
-        self.pk_file.write('chr18\t370\t404\t35:1.00\t1.0\t.\t387\t35.0\n')
-        self.pk_file.write('chr18\t1290\t1324\t35:1.00\t1.0\t.\t1307\t35.0\n')
-        self.pk_file.write('chrX\t2270\t2334\t20:1.00|10:4.00|5:5.00|20:4.00|10:1.00\t5.0\t.\t2302\t175.0\n')
+        self.pk_file.write('chr1\t37\t52\t16:1.00\t1.0\t-\t44\t16.0\n')
+        self.pk_file.write('chr10\t1\t100\t100:1.00\t1.0\t+\t50\t100.0\n')
+        self.pk_file.write('chr10\t301\t380\t80:1.00\t1.0\t+\t340\t80.0\n')
+        self.pk_file.write('chr18\t270\t324\t20:1.00|15:2.00|20:1.00\t2.0\t+\t297\t70.0\n')
+        self.pk_file.write('chr18\t370\t404\t35:1.00\t1.0\t+\t387\t35.0\n')
+        self.pk_file.write('chr18\t1290\t1324\t35:1.00\t1.0\t+\t1307\t35.0\n')
+        self.pk_file.write('chrX\t2270\t2334\t20:1.00|10:4.00|5:5.00|20:4.00|10:1.00\t5.0\t+\t2302\t175.0\n')
         self.pk_file.flush()
         
         self.extended_result_path = self.files_dir + 'result_extend.bed'
@@ -119,14 +119,14 @@ class TestOperations(unittest.TestCase):
         self.subtracted_file.write('chrX\t101\t149\t1:1.00|48:2.00\t2.0\t.\t125\t97.0\n')
         self.subtracted_file.write('chrX\t2270\t2369\t30:1.00|20:2.00|50:1.00\t2.0\t.\t2309\t120.0\n')
         self.subtracted_file.flush()
-        self.convert_operation = Turbomix(self.bed_path, self.conversion_result_path, read_format=BED, write_format=PK, debug = True, rounding=False, verbose=False) 
+        self.convert_operation = Turbomix(self.bed_path, self.conversion_result_path, input_format=BED, output_format=PK, debug = True, rounding=False, verbose=False) 
 
-        #self.convert_operation = Turbomix(self.bed_path, self.conversion_subtraction_result_path, read_format=BED, write_format=PK, debug = True, rounding=False)
+        #self.convert_operation = Turbomix(self.bed_path, self.conversion_subtraction_result_path, input_format=BED, output_format=PK, debug = True, rounding=False)
 
-        self.extend_operation = Turbomix(self.bed_path, self.extended_result_path, read_format=BED, write_format=BED, debug = True, rounding=False, extension = 100, verbose=False)
+        self.extend_operation = Turbomix(self.bed_path, self.extended_result_path, input_format=BED, output_format=BED, debug = True, rounding=False, frag_size = 100, verbose=False)
         self.extend_operation.operations = [Extend]
 
-        self.subtract_operation = Turbomix(self.notsubtracted_path, self.subtract_result_path, read_format=BED, debug = True, rounding=False, control_path = self.bed_control_path, control_format = BED, verbose=False)
+        self.subtract_operation = Turbomix(self.notsubtracted_path, self.subtract_result_path, input_format=BED, debug = True, rounding=False, control_path = self.bed_control_path, control_format = BED, verbose=False)
         self.subtract_operation.operations = [Subtract]
     
     def test_add_slash_to_path(self):
@@ -164,7 +164,7 @@ class TestOperations(unittest.TestCase):
     Outdated test, extract and write is not controlling the artifacts anymore
 
     def test_write_if(self):
-        weirdOperation = Turbomix(self.bed_path, self.dummy_path,read_format=BED, write_format=PK, debug = True, rounding=False)
+        weirdOperation = Turbomix(self.bed_path, self.dummy_path,input_format=BED, output_format=PK, debug = True, rounding=False)
         weirdOperation.operations = [NoWrite]
         artifact1 = Cluster(read=PK, write=PK)
         artifact1.read_line('chr1     16      40      5:1|10:5|5:7|5:8')
