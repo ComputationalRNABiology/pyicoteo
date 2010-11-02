@@ -3,4 +3,5 @@ from pyicoslib.parser import PicosParser
 
 if __name__ == '__main__':
     p = PicosParser()
+    p.run_parser()
 

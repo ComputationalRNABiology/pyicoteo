@@ -46,7 +46,7 @@ DUPLICATES=3
 THRESHOLD=0
 TRIM_ABSOLUTE=0
 MAX_DELTA=500
-MIN_DELTA=0
+MIN_DELTA=20
 HEIGHT_FILTER=8
 DELTA_STEP=1
 VERBOSE=True
@@ -56,4 +56,6 @@ REPEATS=100
 MASKER_FILE=''
 WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
 
+
+"""The minimum number of overlapping positive and negative strand reads to include them in the correlation calculation"""
 

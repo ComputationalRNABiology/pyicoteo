@@ -146,7 +146,7 @@ class PicosParser:
         correlation_flags = self.new_subparser()
         correlation_flags.add_argument('-x','--max-delta',type=int, default=MAX_DELTA, help='Maximum delta [Default %(default)s]')
         correlation_flags.add_argument('-m','--min-delta',type=int, default=MIN_DELTA, help='Minimum delta [Default %(default)s]')
-        correlation_flags.add_argument('-t','--height-filter',type=int, default=HEIGHT_FILTER, help='Height to filter the peaks [Default %(default)s]')
+        correlation_flags.add_argument('--corr-height',type=int, dest='height_filter', default=HEIGHT_FILTER, help='The minimum number of overlapping positive and negative strand reads to include them in the correlation calculation [Default %(default)s]')
         correlation_flags.add_argument('-s','--delta-step',type=int, default=DELTA_STEP, help='The step of the delta values to test [Default %(default)s]')
 
         protocol_name = self.new_subparser()
@@ -196,7 +196,7 @@ class PicosParser:
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
         return parser
 
-    def __init__(self):
+    def run_parser(self):
         parser = self.create_parser()
         parser.set_defaults(input=INPUT, input_format=INPUT_FORMAT, open_input=OPEN_INPUT, debug=DEBUG, discard=DISCARD, output=OUTPUT, control=CONTROL, label = LABEL, output_format=OUTPUT_FORMAT,
                             open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, open_region =OPEN_REGION,
