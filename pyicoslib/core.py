@@ -91,7 +91,7 @@ class Reader:
         cluster._levels = result._levels
         #if the strands are different, the cluster becomes strandless
         if cluster.strand != cluster_aux.strand:
-            cluster.strand == ''
+            cluster.strand == '.'
 
     def quality_filter(self, line):
         """checks if the line passes the quality conditions"""
@@ -115,7 +115,7 @@ class BedReader(Reader):
         if len(line) > 5:
             cluster.strand = line[5]
         else:
-            cluster.strand = ''
+            cluster.strand = '.'
 
     def read_line(self, cluster, line):
         cluster.read_count += 1
@@ -129,15 +129,17 @@ class BedReader(Reader):
                     cluster.start = new_start
                     cluster.end = int(line[2])
                     self._add_strand(cluster, line)
+                    
                 else:
                     cluster._tag_cache.append([new_start, int(line[2])])
                     cluster.start = min(cluster.start, new_start)
                     cluster.end = max(cluster.end, int(line[2]))
                     if len(line) > 5:
-                        if cluster.strand != line[5]:
-                            cluster.strand == ''
+                        if line[5] != cluster.strand:
+                            cluster.strand = '.'
                     else:
-                        cluster.strand == ''
+                        cluster.strand = '.'
+                
                 self._add_name(cluster, line)
                 self._add_score(cluster, line)
             else:
@@ -188,7 +190,7 @@ class SamReader(Reader):
                     cluster.sequence = ''
                     cluster.name = ''
                     if cluster.strand != new_strand:
-                        cluster.strand == ''
+                        cluster.strand == '.'
 
         except (ValueError, IndexError):
             raise InvalidLine
@@ -263,12 +265,16 @@ class PkReader(Reader):
                         temp = item.split(':')
                         cluster.add_level(int(temp[0]), float(temp[1])*cluster.normalize_factor) #normalizing in execution time
 
-                    if len(line) > 4:
-                        cluster.strand = line[4]
+                    if len(line) > 5:
+                        cluster.strand = line[5]
                     else:
-                        cluster.strand = ""
+                        cluster.strand = '.'
+
+                    if len(line) > 8:
+                        cluster.p_value = float(line[8])
 
                     cluster._recalculate_end()
+
         except (ValueError, IndexError):
             raise InvalidLine
 
@@ -415,10 +421,13 @@ class VariableWigWriter(Writer):
 
 class PkWriter(Writer):
     def _format_line(self, cluster, start, acum_length, profile):
-        if self.format == PK:
-            return '%s\t%s\t%s\t%s\t%s\t.\t%s\t%s\n'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, cluster.get_max_height(), cluster.get_max_height_pos(), cluster.get_area())
-        else: #Its SPK
-            return '%s\t%s\t%s\t%s\t%s\t%s\n'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, cluster.score, cluster.strand)
+        format_str = '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, cluster.get_max_height(), cluster.strand, cluster.get_max_height_pos(), cluster.get_area())
+        if cluster.p_value != None:
+            format_str = '%s\t%s\n'%(format_str, cluster.p_value)
+        else:
+            format_str = '%s\n'%format_str
+        return format_str
+
 
     def write_line(self, cluster):
         """prints a pk line out of the data in the object"""
@@ -471,7 +480,7 @@ class Cluster:
     Represents one cluster of overlaping tags or a single Tag. This object can read and write in every format provided.
     It can be added, compared, subtracted to other cluster objects. Several interesting properties can be extracted from it.
     """
-    def __init__(self, chromosome='', start=0, end=-1, strand='', name='noname', score=0, rounding = False,
+    def __init__(self, chromosome='', start=0, end=-1, strand='.', name='noname', score=0, rounding = False,
                  read=PK, write=PK, read_half_open=False, write_half_open=False, normalize_factor=1., tag_length=None, sequence=None, span=20, cached=False, verbose=False):
         """If you want the object to operate with integers instead
         of floats, set the rounding flag to True."""
@@ -495,6 +504,8 @@ class Cluster:
         self.sequence = sequence
         self._tag_cache = []
         self.read_count = 0
+        self.strand = strand
+        self.p_value = None
 
     def is_singleton(self):
         if self._tag_cache:
@@ -533,7 +544,7 @@ class Cluster:
         self._levels = []
         del self._tag_cache
         self._tag_cache = []
-        self.strand = ''
+        self.strand = '.'
         self.score = 0
         self.read_count = 0
 
@@ -570,6 +581,7 @@ class Cluster:
             ret_cluster.sequence = self.sequence
             ret_cluster.read_count = self.read_count
             ret_cluster.verbose = self.verbose
+            ret_cluster.p_value = self.p_value
             return ret_cluster
 
     #TODO raise 'there is no strand' error
@@ -992,7 +1004,7 @@ class Cluster:
 
     def _flush_tag_cache(self):
         """
-        Joins all reads in levels. Assumes that the tags were sorted (TODO: Is there a fast way of detecting if they are sorted, so we could sort them if neccesary?)
+        Joins all reads in levels. Assumes that the tags were sorted (TODO: Is there a FAST way of detecting if they are sorted, so we could sort them if neccesary?)
         """
         import heapq
         array_ends = []
@@ -1138,8 +1150,8 @@ class Region:
             max_height = max(max_height, cluster.get_max_height())
         return max_height
 
-    def get_FDR_clusters(self, repeats=100, p_value=0.01, masker_tags=[]):
-        significant_clusters = []
+    def get_FDR_clusters(self, repeats=100, masker_tags=[]):
+
         max_height = int(self.get_max_height())
         #Get the N values and the probabilities for the real and for the simulated random instances
         real_heights = self.get_heights()
@@ -1165,6 +1177,7 @@ class Region:
         #Get the mean and the variance for the random iterations and calculate the FDR
         found = False
         significant_height = sys.maxint
+        p_values_per_height = defaultdict(int) #if it doesnt have the values, will return a 0
         for h in xrange(1, max_height+1):
             random_mean = Pr_of_h[h]/repeats
             random_variance = 0
@@ -1172,16 +1185,16 @@ class Region:
             for i in xrange(0, repeats):
                 random_variance += (random_variances[h][i]-random_mean)**2
             random_variance = math.sqrt(random_variance/repeats)
-            FDR = random_mean+random_variance/h_prob
-            if FDR < p_value:
-                if not found: #If a p-value smaller than the target is reached, stop the calculations and print the result
-                    significant_height = h
-                    found = True
-                    break    
-        for cluster in self.get_clusters():
-            if cluster.get_max_height() > significant_height:
-                significant_clusters.append(cluster)
-        return significant_clusters
+            p_value = random_mean+random_variance/h_prob
+            if p_value < 0.00000001: #A smaller p-value than 10e-8 is irrelevant. For speed.
+                break
+            p_values_per_height[h] = random_mean+random_variance/h_prob
+        #add the p_values to the clusters and return them
+        ret_clusters = self.get_clusters()
+        for i in range(0 , len(ret_clusters)):
+            ret_clusters[i].p_value = p_values_per_height[int(ret_clusters[i].get_max_height())]
+
+        return ret_clusters
 
     def get_heights(self):
         """Get the number of nucleotides that have a certain height. Returns a defaultdict"""
@@ -1215,7 +1228,7 @@ class Region:
                     print 'I Surrender!'
                     break
 
-        #we need to sort the tags
+        #recreate the clusters
         self._create_clusters()
 
     def add_tags(self, tags):
@@ -1240,7 +1253,8 @@ class Region:
                     self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True)) #create a new cluster object
 
                 self.clusters[-1].read_line(self.tags[i].write_line())
-            
+
+
     def percentage_covered(self):
         """Returns the percentage of the region covered by tags"""
         covered = 0.
@@ -1264,9 +1278,9 @@ class Region:
         return profile[1:].strip()
 
     def get_clusters(self, height=1):
-        """Gets the clusters inside the region higher than the height"""
+        """Gets the clusters inside the region higher than the marked height. By default returns all clusters with at least 2 reads"""
         significant_clusters = []
         for cluster in self.clusters:
-            if cluster.get_max_height() >= height:
+            if cluster.get_max_height() > height:
                 significant_clusters.append(cluster)
         return significant_clusters

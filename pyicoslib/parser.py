@@ -109,13 +109,38 @@ class PicosParser:
         frag_size = self.new_subparser()
         frag_size.add_argument('frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by the extend operation to extend the tags, taking into consideration their strand, if provided. If the strand is not provided, Pyicos will assume positive strand.', type=int)
         optional_frag_size = self.new_subparser()
-        optional_frag_size.add_argument('-x', '--frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicos to reconstruct the original signal in the original wet lab experiment.', type=int)
+        optional_frag_size.add_argument('-x', '--frag-size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicos to reconstruct the original signal in the original wet lab experiment.', type=int)
 
         no_subtract = self.new_subparser()
-        no_subtract.add_argument('--no-subtract',action='store_true', default=NO_SUBTRACT, help='Dont subtract the control to the output, only normalize.')
+        no_subtract.add_argument('--no-subtract',action='store_true', default=False, help='Dont subtract the control to the output, only normalize.')
 
         normalize = self.new_subparser()
-        normalize.add_argument('--normalize',action='store_true', default=NORMALIZE, help='Normalize to the control before subtracting')
+        normalize.add_argument('--normalize',action='store_true', default=False, help='Normalize to the control before subtracting')
+
+        extend = self.new_subparser()
+        extend.add_argument('--extend',action='store_true', default=False, help='Normalize to the control before subtracting')
+        subtract = self.new_subparser()
+        subtract.add_argument('--subtract',action='store_true', default=False, help='Normalize to the control before subtracting')
+        filterop = self.new_subparser()
+        filterop.add_argument('--filter',action='store_true', default=False, help='Normalize to the control before subtracting')
+        poisson = self.new_subparser()
+        poisson.add_argument('--poisson',action='store_true', default=False, help='Normalize to the control before subtracting')
+        modfdr = self.new_subparser()
+        modfdr.add_argument('--modfdr',action='store_true', default=False, help='Normalize to the control before subtracting')
+        remduplicates = self.new_subparser()
+        remduplicates.add_argument('--remduplicates',action='store_true', default=False, help='Normalize to the control before subtracting')
+        split = self.new_subparser()
+        split.add_argument('--split',action='store_true', default=False, help='Normalize to the control before subtracting')
+        trim = self.new_subparser()
+        trim.add_argument('--trim',action='store_true', default=False, help='Normalize to the control before subtracting')
+        strcorr = self.new_subparser()
+        strcorr.add_argument('--strcorr',action='store_true', default=False, help='Normalize to the control before subtracting')
+        remregions = self.new_subparser()
+        remregions.add_argument('--remregions',action='store_true', default=False, help='Normalize to the control before subtracting')
+        remartifacts = self.new_subparser()
+        remartifacts.add_argument('--remartifacts',action='store_true', default=False, help='Normalize to the control before subtracting')
+
+
 
         split_proportion = self.new_subparser()
         split_proportion.add_argument('--split-proportion', default=SPLIT_PROPORTION, help='Fraction of the cluster height below which the cluster is splitted. [Default %(default)s]', type=float)
@@ -144,10 +169,10 @@ class PicosParser:
                              help='The species that you are analyzing. This will read the length of the chromosomes of this species from the files inside the folder "chrdesc". If the species information is not known, the filtering step will assume that the chromosomes are as long as the position of the furthest read.')
 
         correlation_flags = self.new_subparser()
-        correlation_flags.add_argument('-x','--max-delta',type=int, default=MAX_DELTA, help='Maximum delta [Default %(default)s]')
-        correlation_flags.add_argument('-m','--min-delta',type=int, default=MIN_DELTA, help='Minimum delta [Default %(default)s]')
-        correlation_flags.add_argument('--corr-height',type=int, dest='height_filter', default=HEIGHT_FILTER, help='The minimum number of overlapping positive and negative strand reads to include them in the correlation calculation [Default %(default)s]')
-        correlation_flags.add_argument('-s','--delta-step',type=int, default=DELTA_STEP, help='The step of the delta values to test [Default %(default)s]')
+        correlation_flags.add_argument('--max-delta',type=int, default=MAX_DELTA, help='Maximum delta [Default %(default)s]')
+        correlation_flags.add_argument('--min-delta',type=int, default=MIN_DELTA, help='Minimum delta [Default %(default)s]')
+        correlation_flags.add_argument('--height-filter',type=int, default=HEIGHT_FILTER, help='Height to filter the peaks [Default %(default)s]')
+        correlation_flags.add_argument('--delta-step',type=int, default=DELTA_STEP, help='The step of the delta values to test [Default %(default)s]')
 
         protocol_name = self.new_subparser()
         protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
@@ -160,7 +185,7 @@ class PicosParser:
 
         #remove chr operation
         parser_chremove = subparsers.add_parser('labelremove', help='Remove all lines that have the specified label(s).', parents=[basic_parser, output, output_flags, round, label])
-        parser_chremove.add_argument('discard', help='The tag name (or names) as it appears in the file. Example1: chr1 Example2: chrX:chr3:mytag:myothertag')
+        parser_chremove.add_argument('remlabel', help='The tag name (or names) as it appears in the file. Example1: chr1 Example2: chrX:chr3:mytag:myothertag')
         #subtract operation
         subparsers.add_parser('subtract', help='Subtract two pk files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[basic_parser, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label])
         #split operation
@@ -185,7 +210,7 @@ class PicosParser:
         subparsers.add_parser('modfdr', help="""Use the modified FDR method to determine what clusters are significant in an specific region. Output in a clustered format only.""",
                               parents=[basic_parser, region, output, output_flags, round, pvalue, repeats, masker_file])
         #remove operation
-        subparsers.add_parser('remove', help='Removes regions that overlap with another the coordinates in the "black list" file.',
+        subparsers.add_parser('remregions', help='Removes regions that overlap with another the coordinates in the "black list" file.',
                               parents=[basic_parser, output_flags, region, region_format, output])
         #strcorr operation
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
@@ -194,6 +219,9 @@ class PicosParser:
         #subparsers.add_parser('enrichment', help='An enrichment test', parents=[basic_parser, output_flags, region, region_format, output])
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
+        #whole exposure
+        subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
+
         return parser
 
     def run_parser(self):
@@ -268,7 +296,7 @@ class PicosParser:
         elif sys.argv[1] == 'remove':
             turbomix.operations = [RemoveRegion]
 
-        elif sys.argv[1] == 'chremove':
+        elif sys.argv[1] == 'remlabel':
             turbomix.operations = [RemoveChromosome]
 
         elif sys.argv[1] == 'split':
@@ -298,6 +326,20 @@ class PicosParser:
                     turbomix.operations.append(Subtract)
 
         
+        elif sys.argv[1] == 'all':
+            if args.normalize: turbomix.operations.append(Normalize)
+            if args.extend: turbomix.operations.append(Extend)
+            if args.subtract: turbomix.operations.append(Subtract)
+            if args.filter: turbomix.operations.append(Cut)
+            if args.poisson: turbomix.operations.append(Poisson)
+            if args.modfdr: turbomix.operations.append(ModFDR)
+            if args.remduplicates: turbomix.operations.append(RemoveDuplicates)
+            if args.split: turbomix.operations.append(Split)
+            if args.trim: turbomix.operations.append(Trim)
+            if args.strcorr: turbomix.operations.append(StrandCorrelation)
+            if args.remregions: turbomix.operations.append(RemoveRegion)
+            if args.remartifacts: turbomix.operations.append(DiscardArtifacts)
+
         #parameters are set, now try running
         try:
             turbomix.run()

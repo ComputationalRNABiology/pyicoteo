@@ -2,7 +2,8 @@ import unittest
 from pyicoslib.parser import PicosParser
 
 '''
-Sometimes it may be useful to have an ArgumentParser parse args other than those of sys.argv. This can be accomplished by passing a list of strings to parse_args. This is useful for testing at the interactive prompt:
+Sometimes it may be useful to have an ArgumentParser parse args other than those of sys.argv. 
+This can be accomplished by passing a list of strings to parse_args. This is useful for testing at the interactive prompt:
 
 >>> parser = argparse.ArgumentParser()
 >>> parser.add_argument(
@@ -38,7 +39,6 @@ class TestParser(unittest.TestCase):
             self.fail('SystemExit exception expected')
 
 def suite():
-
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestParser))
     return suite
