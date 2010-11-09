@@ -498,6 +498,7 @@ class Cluster:
         self.rounding = rounding
         self.normalize_factor = normalize_factor
         self.score = score
+        self.cached = cached
         self.read_as(read, read_half_open, cached)
         self.write_as(write, write_half_open, span)
         self.tag_length = tag_length
@@ -559,7 +560,7 @@ class Cluster:
                     return False
         return True
 
-    def copy_cluster(self):
+    def copy_cluster(self, copy_readers=True):
             """Returns a copy of the self cluster. Faster than copy.deepcopy()"""
             ret_cluster = Empty()
             ret_cluster.__class__ = self.__class__
@@ -567,11 +568,20 @@ class Cluster:
             ret_cluster.end = self.end
             ret_cluster._levels = []
             ret_cluster._tag_cache = []
-            for length, height in self:
-                ret_cluster.add_level(length, height)
+
+            if self._tag_cache: 
+                for tag in self._tag_cache:
+                    ret_cluster._tag_cache.append([tag[0], tag[1]])
+            else:
+                for length, height in self:
+                    ret_cluster.add_level(length, height)
+
+            ret_cluster.cached = self.cached
             ret_cluster.chromosome = self.chromosome
-            ret_cluster.read_as(self.reader.format, self.reader.half_open)
-            ret_cluster.write_as(self.writer.format, self.writer.half_open, self.writer.span)
+            if copy_readers:
+                ret_cluster.read_as(self.reader.format, self.reader.half_open, self.cached)
+                ret_cluster.write_as(self.writer.format, self.writer.half_open, self.writer.span)
+
             ret_cluster.score = self.score
             ret_cluster.name = self.name
             ret_cluster.strand = self.strand
@@ -842,14 +852,20 @@ class Cluster:
         return tags
 
     def __sub__(self, other):
+        if debug: print "Flushing experiment..."
+        if self._tag_cache:
+            self._flush_tag_cache()
+        if debug: print "Flushing control..."
         if other._tag_cache:
             other._flush_tag_cache()
-
+        if debug: print "Copying..."
         result = self.copy_cluster()
+        if debug: print "Subtracting..."
         if result.chromosome == other.chromosome:
             other_acum_levels = 0
             j = 0
             while (len(other._levels) > j):
+                if debug: print "j:", j, len(other._levels)
                 other_level_start = other.start + other_acum_levels
                 other_acum_levels += other._levels[j][0] #for speed
                 other_level_end = other.start + other_acum_levels
@@ -888,9 +904,8 @@ class Cluster:
                     i+=1
 
                 j+=1
-
+            if debug: print "Cleaning..."
             result._clean_levels()
-
         return result
 
     def __iter__(self):
@@ -1070,12 +1085,15 @@ class Cluster:
                 if self.is_empty():
                     break
 
+
+
         if len(self._levels) > 0:
             while self._levels[0][1] <= 0: #delete the 0 to the left of the Cluster
                 self.start += self._levels[0][0]
                 self._levels.pop(0)
                 if self.is_empty():
                     break
+        
 
         if len(self._levels) > 0:
             while self._levels[-1][1] <= 0: #delete the 0 to the right of the Cluster
@@ -1093,6 +1111,7 @@ class Cluster:
                 previous_length = self._levels[i][0]
                 previous_height = self._levels[i][1]
                 i+=1
+
 
         self._recalculate_end()
 
@@ -1229,19 +1248,29 @@ class Region:
                     break
 
         #recreate the clusters
-        self._create_clusters()
+        self.clusterize()
 
     def add_tags(self, tags):
-        """This method reads a list of tags or a single tag"""
+        """This method reads a list of tags or a single tag (Cluster objects, not unprocessed lines)"""
         if type(tags)==type(list()):
             self.tags.extend(tags)
         elif type(tags)==type(Cluster()):
             self.tags.append(tags)
         else:
             print 'Invalid tag!!!'
-        self._create_clusters()
+        self.clusterize()
 
-    def _create_clusters(self):
+    def clusterize(self):
+        """Creates the Cluster objects of the tags in the Region object"""
+        """self.clusters = []
+        self.tags.sort(key=lambda x: (x.start, x.end))
+        if self.tags:
+            self.clusters.append(self.tags[0].copy_cluster()) #Insert first cluster object
+            for i in xrange(1, len(self.tags)):
+                if self.clusters[-1].overlap(self.tags[i]) > 0:
+                    self.clusters[-1] += self.tags[i]
+                else:
+                    self.clusters.append(self.tags[i].copy_cluster())"""
         """Creates the Cluster objects that will hold the profile of the region."""
         self.clusters = []
         self.tags.sort(key=lambda x: (x.start, x.end))
@@ -1253,6 +1282,7 @@ class Region:
                     self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True)) #create a new cluster object
 
                 self.clusters[-1].read_line(self.tags[i].write_line())
+
 
 
     def percentage_covered(self):
@@ -1268,14 +1298,27 @@ class Region:
             return 0
 
 
-    def get_complete_profile(self):
-        """Incomplete: Needs 0s between clusters"""
-        profile = ''
-        previous_end = -1
-        for cluster in self.clusters:
-            for length, height in cluster:
-                profile = '%s|%s:%s'%(profile, length, height)
-        return profile[1:].strip()
+    def get_metacluster(self):
+        """Returns a cluster object that contains the levels of all previous clusters combined, with gaps (zeros) between them"""
+        if self.clusters:
+            if self.clusters[0]._tag_cache:
+                self.clusters[0]._flush_tag_cache()
+            metacluster = self.clusters[0].copy_cluster()
+            previous_end = metacluster.end
+            for i in range(1, len(self.clusters)):
+                self.clusters[i]._flush_tag_cache() #Need the end in its proper place
+                if self.clusters[i].start > previous_end: # add zeros between levels
+                    metacluster.add_level(self.clusters[i].start-previous_end-1, 0)
+            
+                for length, height in self.clusters[i]:
+                    metacluster.add_level(length, height)
+                previous_end = self.clusters[i].end
+
+            metacluster._recalculate_end()
+            return metacluster
+        else:
+            return Cluster()
+        
 
     def get_clusters(self, height=1):
         """Gets the clusters inside the region higher than the marked height. By default returns all clusters with at least 2 reads"""

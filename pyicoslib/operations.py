@@ -42,7 +42,7 @@ DiscardArtifacts = 'discard'
 RemoveRegion = 'remove'
 RemoveDuplicates = 'remove_duplicates'
 ModFDR = 'modfdr'
-StrandCorrelation = 'strcorr'
+StrandCorrelation = 'strand_correlation'
 
 class OperationFailed(Exception):
     pass
@@ -282,7 +282,7 @@ class SortedFileClusterReader:
     """Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
     and retrieves the clusters that overlap with the region specified.
     """
-    def __init__(self, file_path, input_format, read_half_open=False, rounding = True):
+    def __init__(self, file_path, input_format, read_half_open=False, rounding=True, cached=True):
         self.__dict__.update(locals())
         self.slow_cursor = 1
         self.cluster_cache = dict() 
@@ -299,7 +299,7 @@ class SortedFileClusterReader:
                 line = self.file_iterator.next()
             except StopIteration:
                 return True
-            self.cluster_cache[cursor] = Cluster(read=self.input_format, read_half_open=self.read_half_open, rounding=self.rounding)
+            self.cluster_cache[cursor] = Cluster(read=self.input_format, read_half_open=self.read_half_open, rounding=self.rounding, cached=self.cached)
             self.safe_read_line(self.cluster_cache[cursor], line)
         return False
 
@@ -344,9 +344,9 @@ class SortedFileClusterReader:
 class Turbomix:
     """
     This class is the pipeline that makes possible the different combination of operations. 
-    It has different switches that are activated by the list 'operations'.
+    It has different switches that are activated by the list 'self.operations'.
     """
-    logger = logging.getLogger("log/picos.log")
+    logger = logging.getLogger("log/pyicos.log")
     logger.setLevel(logging.WARNING)
     ch = logging.StreamHandler()
     ch.setLevel(logging.WARNING)
@@ -362,8 +362,8 @@ class Turbomix:
                  control_path = CONTROL, control_format = PK, open_control = OPEN_CONTROL, region_path = REGION, region_format = PK, 
                  open_region=OPEN_REGION, span = SPAN, frag_size = FRAG_SIZE, p_value = P_VALUE, height_limit = HEIGHT_LIMIT, correction_factor = CORRECTION,
                  trim_percentage=TRIM_PROPORTION, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, 
-                 min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, 
-                 split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, **kwargs):
+                 min_delta=MIN_DELTA, correlation_height=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, 
+                 split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, **kwargs):
         self.__dict__.update(locals())
         self.is_sorted = False
         self.temp_input = False #Flag that indicates if temp files where created for the input
@@ -379,8 +379,8 @@ class Turbomix:
         try:
             self.input_preprocessor = Utils.BigSort(input_format, open_input, frag_size, 'input')
             self.cluster = Cluster(read=self.input_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_input, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, verbose=self.verbose, cached=cached)
-            self.cluster_aux = Cluster(read=self.input_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_input, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
-            self.cluster_aux2 = Cluster(read=self.input_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_input, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, verbose=self.verbose)
+            self.cluster_aux = Cluster(read=self.input_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_input, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, verbose=self.verbose, cached=cached)
+            self.cluster_aux2 = Cluster(read=self.input_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_input, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, verbose=self.verbose, cached=cached)
             self.control_cluster = Cluster(read=control_format, read_half_open = open_control, verbose=self.verbose, cached=cached)
             self.control_preprocessor = Utils.BigSort(control_format, open_control, frag_size, 'control')
             self.region_preprocessor = Utils.BigSort(region_format, open_region, None, 'region')
@@ -406,7 +406,7 @@ class Turbomix:
         self.do_cut = False
         self.do_extend = False
         self.do_dupremove = False
-        self.sorted_by_picos = False
+        self.sorted_by_pyicos = False
         self.sorted_region_path = ''
 
     def i_cant_do(self):
@@ -432,30 +432,26 @@ class Turbomix:
 
     def read_and_preprocess(self, cluster, line):
         self.safe_read_line(cluster, line)
-        #if self.do_dupremove:
-        #    cluster = self.remove_duplicates(cluster)
         if not cluster.is_empty():
             if self.do_heuremove:
                 cluster = self.remove_regions(cluster)
             if self.do_extend:
                 cluster.extend(self.frag_size)
-    
-    def read_and_preprocess_no_heuremove(self, cluster, line):
-        """For the control I dont need to remove the region regions, this way it will be faster"""
-        self.safe_read_line(cluster, line)
-        #if self.do_dupremove:
-        #    cluster = self.remove_duplicates(cluster)
-        if self.do_extend:
-            cluster.extend(self.frag_size)
+
 
     def success_message(self, output_path):
-        self.result_log.write('\nSummary of operations:\n----------------\n')
+        self.result_log.write('\nSummary of operations\n')
+        self.result_log.write('---------------------\n')
         if self.verbose:
             print 'Success!\n'
             print 'Summary of operations:'
         
             if self.input_format != self.output_format and not NoWrite in self.operations:
                 print 'Convert from %s to %s.'%(self.input_format, self.output_format)
+
+        if StrandCorrelation in self.operations:
+            self.result_log.write('Strand correlation: %.0f pairs analyzed, estimated a %s nucleotides extension value'%(self.analyzed_pairs, self.frag_size))
+            if self.verbose: print 'Strand correlation'
 
         if Extend in self.operations:
             self.result_log.write('Extend to %s\n'%self.frag_size)
@@ -493,8 +489,7 @@ class Turbomix:
             self.result_log.write('Removed %s duplicates\n'%self.duplicates_found)
             if self.verbose: print 'Removed %s duplicates, allowing only up to %s'%(self.duplicates_found, self.duplicates)
 
-        self.result_log.write('Date finished: %s'%datetime.now())
-        
+        self.result_log.write('Date finished: %s'%datetime.now())        
         if not NoWrite in self.operations and self.verbose:
             print 'Output at: %s'%(output_path)
 
@@ -510,7 +505,7 @@ class Turbomix:
                 if Normalize in self.operations:
                     print 'The file %s will be normalized to match %s'%(self.current_input_path, self.current_control_path)
                 if Subtract in self.operations:
-                    print 'The file %s will be substracted from %s'%(self.current_control_path, self.current_input_path)
+                    print 'The file %s will be subtracted from %s'%(self.current_control_path, self.current_input_path)
 
     def get_normalize_factor(self, input, control):
         ret = self.numcells(control, self.control_format)/self.numcells(input, self.input_format)
@@ -554,7 +549,7 @@ class Turbomix:
         self.do_split = Split in self.operations
         self.do_trim = Trim in self.operations
         self.do_cut = Cut in self.operations
-        self.do_extend = Extend in self.operations and not self.sorted_by_picos #If the input was sorted by Pyicos, it was already extended before, so dont do it again
+        self.do_extend = Extend in self.operations and not self.sorted_by_pyicos #If the input was sorted by Pyicos, it was already extended before, so dont do it again
         self.do_discard = DiscardArtifacts in self.operations
         self.do_dupremove = RemoveDuplicates in self.operations
         if self.verbose:
@@ -615,8 +610,7 @@ class Turbomix:
 
     def normalize(self):
         if self.control_path:
-            print 'Calculating normalization factor...'
-            print self.current_input_path, self.current_control_path
+            if self.verbose: print 'Calculating normalization factor...'
             self.normalize_factor = self.get_normalize_factor(self.current_input_path, self.current_control_path)
             self.cluster.normalize_factor = self.normalize_factor
             self.cluster_aux.normalize_factor = self.normalize_factor
@@ -639,38 +633,43 @@ class Turbomix:
                 equal_lines=0
             self.cluster_aux.clear()
             self.cluster_aux.read_line(line)
-            
-            if self.duplicates >= equal_lines: 
+           
+            if self.duplicates >= equal_lines:
                 new_file.write(line)
             else:
                 self.duplicates_found += 1
-            
-        new_file.flush() 
+
+        new_file.flush()
         new_file.close()
         if self.temp_input:
-            os.remove(self.current_input_path)      
+            os.remove(self.current_input_path)     
         self.current_input_path = new_file_path
         self.cluster.clear()
         self.cluster_aux.clear()
-
+        previous_line = ''
+        equal_lines = 0
         if self.current_control_path:
             print "Filtering control file..."
             new_file_path = "%s/tempfilter%s_control"%(gettempdir(), os.getpid())
             new_file = file(new_file_path, 'w')
-            for line in file(self.current_control_path): 
-                if line == previous_line:
+            for line in file(self.current_control_path):
+                self.cluster.clear()
+                self.cluster.read_line(line)
+                if self.cluster.start == self.cluster_aux.start and self.cluster.end == self.cluster.end and self.cluster.chromosome == self.cluster.chromosome:
                     equal_lines+=1
                 else:
                     equal_lines=0
-                if self.duplicates >= equal_lines: 
-                    new_file.write(line)  
+
+                self.cluster_aux.clear()
+                self.cluster_aux.read_line(line)
+                if self.duplicates >= equal_lines:
+                    new_file.write(line) 
 
             if self.temp_control:
-                os.remove(self.current_control_path)                  
+                os.remove(self.current_control_path)                 
             self.current_control_path = new_file_path
             new_file.flush()
             new_file.close()
-
     def get_lambda_func(self, format):
         if self.output_format == SPK:
             if format == ELAND:
@@ -724,7 +723,7 @@ class Turbomix:
             self.current_output_path = output_path
             self.cluster.clear()
             self.cluster_aux.clear()
-            self.result_log = file('%s/pyicos_report_%s.txt'%(os.path.dirname(os.path.abspath(self.output_path)), os.path.basename(self.current_input_path)), 'wb')
+            self.result_log = file('%s/pyicos_report_%s.txt'%(os.path.dirname(os.path.abspath(self.current_output_path)), os.path.basename(self.current_input_path)), 'wb')
             self.result_log.write('Pyicos analysis report\n')
             self.result_log.write('----------------------\n\n')
             self.result_log.write('Date run: %s\n'%datetime.now())
@@ -738,10 +737,10 @@ class Turbomix:
             self.start_operation_message()
             self.decide_sort(input_path, control_path)
             if self.current_control_path:
-                self.control_reader = SortedFileClusterReader(self.current_control_path, self.control_format)
+                self.control_reader = SortedFileClusterReader(self.current_control_path, self.control_format, rounding=self.rounding, cached=self.cached)
             
             if self.region_path:
-                self.region_reader = SortedFileClusterReader(self.sorted_region_path, BED)
+                self.region_reader = SortedFileClusterReader(self.sorted_region_path, BED, rounding=self.rounding, cached=self.cached)
 
             if StrandCorrelation in self.operations:
                 self.strand_correlation()
@@ -756,7 +755,8 @@ class Turbomix:
                 self.cluster.rounding = False
                 self.cluster_aux.rounding = False
 
-            self.process_file()
+            if (not NoWrite in self.operations) or (NoWrite in self.operations and Poisson in self.operations): 
+                self.process_file()
             
             if self.do_poisson: #operate with the last chromosome and print the threadholds
                 self.poisson_analysis(self.previous_chr)
@@ -806,7 +806,6 @@ class Turbomix:
             try:
                 self.read_and_preprocess(self.cluster, line)
                 if not self.cluster.is_empty():
-
                     self.process_cluster(self.cluster, output)
                 self.cluster.clear()
             except InsufficientData:
@@ -834,11 +833,11 @@ class Turbomix:
                     self.cluster.clear()
                     self.cluster_aux2.clear()
                     self.read_and_preprocess(self.cluster_aux2, line)
-                    new_line = self.cluster_aux2.write_line()
                     if not self.cluster_aux2.is_empty():
-                        self.cluster = self.cluster_aux2.copy_cluster()
-                
+                        self.cluster = self.cluster_aux2.copy_cluster()  
+
         if not self.cluster.is_empty():
+
             self.process_cluster(self.cluster, output)
             self.cluster.clear()
 
@@ -864,17 +863,37 @@ class Turbomix:
             output.flush()
             output.close()
 
-    def subtract(self, cluster): 
+    def subtract(self, cluster):
         region = Region(cluster.start, cluster.end, cluster.name, cluster.chromosome)
         over = self.control_reader.get_overlaping_clusters(region, overlap=0.0000001)
-        for control_cluster in over:
-            #if self.do_dupremove:
-            #    control_cluster = self.remove_duplicates(control_cluster)
-            if not control_cluster.is_empty():
-                if self.do_extend:
-                    control_cluster.extend(self.frag_size)
-                cluster -= control_cluster
+        for tag in over:
+            if self.do_extend:
+                tag.extend(self.frag_size)
+        region.add_tags(over)
+        meta = region.get_metacluster()
+        #print meta._levels
+        cluster -= meta
         return cluster
+        
+        """for overlapping_tag in over:
+            if self.do_extend:
+                control_cluster.extend(self.frag_size)
+            if self.cluster_aux.is_empty():
+                self.cluster_aux = overlapping_tag.copy_cluster(copy_readers=False)
+                self.cluster_aux.read_as(self.input_format, self.open_input, self.cached)
+                self.cluster_aux.write_as(self.output_format, self.open_output) 
+                self.cluster.rounding = self.rounding 
+            else:
+                self.cluster_aux += overlapping_tag
+
+                if self.cluster_aux._tag_cache:
+                    self.cluster_aux._flush_tag_cache()
+        if over:
+            self.cluster_aux.clear()
+            cluster -= self.cluster_aux
+
+        return cluster"""
+        
 
 
     def remove_regions(self, cluster):
@@ -1007,6 +1026,9 @@ class Turbomix:
         self.absolute_max_height = max(max_height, self.absolute_max_height)
 
     def process_cluster(self, cluster, output):
+        if self.cluster._tag_cache:
+            self.cluster._flush_tag_cache()
+
         if cluster.chromosome not in self.discarded_chromosomes and not cluster.is_empty():
             if self.previous_chr != cluster.chromosome: #A new chromosome has been detected
                 if self.is_sorted and self.verbose:
@@ -1022,6 +1044,7 @@ class Turbomix:
 
             if self.do_subtract:
                 cluster = self.subtract(cluster)
+
                 for cluster in cluster.absolute_split(threshold=0):
                     self._post_subtract_process_cluster(cluster, output)
             else:
@@ -1045,7 +1068,6 @@ class Turbomix:
     def extract_and_write(self, cluster, output):
         """The line will be written to the file if the last conditions are met"""
         if not cluster.is_empty() and cluster.start > -1:
-            
             output.write(cluster.write_line())
 
     def _current_directory(self):
@@ -1094,9 +1116,9 @@ class Turbomix:
         print "\nRunning modfdr filter with %s p-value threshold and %s repeats..."%(self.p_value, self.repeats)
         old_output = '%s/deleteme_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
         shutil.move(os.path.abspath(self.current_output_path), old_output)
-        cluster_reader = SortedFileClusterReader(old_output, self.output_format)
+        cluster_reader = SortedFileClusterReader(old_output, self.output_format, cached=self.cached)
         if self.masker_file:
-            masker_reader = SortedFileClusterReader(self.masker_file, BED)
+            masker_reader = SortedFileClusterReader(self.masker_file, BED, cached=self.cached)
         real_output = file(self.current_output_path, 'w+')
         unfiltered_output = file('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
         for region_line in file(self.sorted_region_path):
@@ -1111,13 +1133,13 @@ class Turbomix:
 
 
     def strand_correlation(self):
+        if self.verbose: print "Strand correlation analysis..."
         self.delta_results = dict()
         self.best_delta = -1
-
         positive_cluster = Cluster()
         negative_cluster = Cluster()
         positive_cluster_cache = [] #we are trying to hold to the previous cluster
-        self.analized_pairs = 0.
+        self.analyzed_pairs = 0.
         acum_length = 0.
         num_analyzed = 0
         for line in file(self.current_input_path):
@@ -1141,6 +1163,8 @@ class Turbomix:
                 if negative_cluster.is_empty() or not negative_cluster.intersects(line_read):
                     if positive_cluster.get_max_height() > self.correlation_height and negative_cluster.get_max_height() > self.correlation_height: #if we have big clusters, correlate them
                         self._correlate_clusters(positive_cluster, negative_cluster)
+                        if self.max_correlations < self.analyzed_pairs: #if we analyzed enough clusters, stop
+                            break                     
                     negative_cluster = line_read.copy_cluster() #after correlating, select the next cluster
                 else:
                     negative_cluster += line_read
@@ -1155,32 +1179,39 @@ class Turbomix:
                     else:
                         break
 
-        #print 'FINAL DELTAS:'
+        #Use the results
         data = []
         max_delta = 0
         max_corr = -1
         average_len = acum_length/num_analyzed
-        print "Average analyzed length", average_len
-        print self.delta_results
+        self.result_log.write("Strand Correlation\n")
+        self.result_log.write("------------------\n\n")
+        if self.verbose: print "Average analyzed length", average_len
+        self.result_log.write("Average analyzed length:%s\n"%average_len)
         for delta in range(self.min_delta, self.max_delta, self.delta_step):
             if delta in self.delta_results:
-                self.delta_results[delta]=self.delta_results[delta]/self.analized_pairs
+                self.delta_results[delta]=self.delta_results[delta]/self.analyzed_pairs
                 data.append(self.delta_results[delta])
                 if self.delta_results[delta] > max_corr:
                     max_delta = delta
                     max_corr = self.delta_results[delta]
                 #print 'Delta %s:%s'%(delta, self.delta_results[delta])
-        print 'Correlation test result: Extension =%s nucleotides'%(max_delta+average_len)
-        self.frag_size = max_delta+average_len
+        if self.verbose: print 'Correlation test RESULT: You should extend this dataset to %s nucleotides'%(max_delta+average_len)
+        self.result_log.write('Correlation test RESULT: You should extend this dataset to %s nucleotides\n'%(max_delta+average_len))
+        self.frag_size = int(round(max_delta+average_len))
         if not data:
-            if self.verbose: print 'WARNING: Not enough data to plot the correlation graph. Lower the threshold of the --corr-height flag'
+            if self.verbose: print 'WARNING: Not enough data to plot the correlation graph. Lower the threshold of the --height-filter flag'
         else: 
             try:
                 import matplotlib.pyplot
                 matplotlib.pyplot.plot(range(self.min_delta, self.max_delta), data)
                 matplotlib.pyplot.plot()
-                matplotlib.pyplot.savefig('%s.png'%os.path.basename(self.current_input_path))
-                matplotlib.pyplot.show()
+                figure_path = '%s/%s.png'%(os.path.dirname(self.current_output_path), os.path.basename(self.current_output_path))
+                matplotlib.pyplot.savefig(figure_path)
+                matplotlib.pyplot.clf()
+                if self.verbose: print "Correlation figure saved to %s"%figure_path
+                #matplotlib.pyplot.show()
+                matplotlib.pyplot.clf()
             except ImportError:
                 print 'WARNING: Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library.'
 
@@ -1188,8 +1219,8 @@ class Turbomix:
 
     def _correlate_clusters(self, positive_cluster, negative_cluster):
         distance = negative_cluster.end-positive_cluster.start
-        if (distance < self.max_delta and distance > self.min_delta) and positive_cluster.chromosome == negative_cluster.chromosome:
-            self.analized_pairs+=1
+        if (distance < self.max_delta and distance > self.min_delta) and (positive_cluster.chromosome == negative_cluster.chromosome):
+            self.analyzed_pairs+=1
             for delta in range(self.min_delta, self.max_delta+1, self.delta_step):
                 r_squared = self._analize_paired_clusters(positive_cluster, negative_cluster, delta)**2
                 if delta not in self.delta_results:

@@ -1,6 +1,11 @@
 pyicos
 setup.py
+chrdesc/__init__.py
 chrdesc/getChromosomeDescription.py
+chrdesc/hg18
+chrdesc/hg19
+chrdesc/mm8
+chrdesc/mm9
 pyicoslib/__init__.py
 pyicoslib/core.py
 pyicoslib/defaults.py
@@ -12,9 +17,5 @@ test/testCore.py
 test/testOperation.py
 test/testParser.py
 test/testSubVisually.py
-chrdesc/hg18
-chrdesc/hg19
-chrdesc/mm8
-chrdesc/mm9
 test_files/control.bed
 test_files/p300.bed
