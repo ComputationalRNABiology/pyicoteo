@@ -110,7 +110,7 @@ class TestOperations(unittest.TestCase):
 
         self.bed_control_file.flush()
         
-        self.subtracted_path = self.files_dir + 'subtracted.pk'
+        self.subtracted_path = self.files_dir + 'test_subtracted.pk'
         self.subtracted_file = open(self.subtracted_path,'w+')
         self.subtracted_file.write('chr1\t1\t100\t100:3.00\t3.0\t.\t50\t300.0\n')
         self.subtracted_file.write('chr18\t360\t389\t15:2.00|15:1.00\t2.0\t.\t367\t45.0\n')

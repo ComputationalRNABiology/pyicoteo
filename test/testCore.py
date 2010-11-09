@@ -36,6 +36,21 @@ class TestCoreObjects(unittest.TestCase):
         result = r.get_FDR_clusters()
         self.assertEqual(len(result), 1)
 
+
+    def test_get_profile(self):
+        r = Region(1, 1999)
+        c = Cluster(read=BED)
+        c.read_line('chr4 1 40')
+        r.add_tags(c)
+        c = Cluster(read=BED, read_half_open=True)
+        c.read_line('chr4 400 500')
+        r.add_tags(c)
+
+        meta = r.get_metacluster()
+        self.assertEqual(meta._levels, [[40, 1.0], [360, 0.0], [100, 1.0]])
+
+        
+
     #####################   CONVERSION TESTS     ############################################
     
     def test_simple_ucsc_representation(self):
@@ -95,6 +110,13 @@ class TestCoreObjects(unittest.TestCase):
         return cluster
 
 
+    def test_pk_printing(self):
+        #PENDING
+        cluster = Cluster()
+        cluster.read_line('chr1 1 100 10:0.76|10:0.001|80:2')
+        #print cluster.absolute_split(threshold=0)
+        #print cluster.write_line()
+        
     def test_split_subtract_result(self):
         sub_result = Cluster(write_half_open=True, cached=True)
         sub_result.read_line('chr4 1 300 20:1|40:0|20:3|20:0.3|10:-6|80:1|10:0')
@@ -450,7 +472,63 @@ class TestCoreObjects(unittest.TestCase):
         cluster2.read_line('chr1 5 50 100:1')
         self.assertTrue(cluster.intersects(cluster2))
 
+    def test_subtract_with_gaps(self):
+        cluster1 = Cluster()
+        cluster2 = Cluster()
+        cluster1.read_line("chr2 1 100 30:1|50:2|40:1|3000:3")
+        cluster2.read_line("chr2 1 100 30:1|50:0|40:1|200:0|5000:1")
+        cluster1 -= cluster2
+        self.assertEqual(cluster1._levels, [[50, 2.0], [40, 0.0], [200, 3.0], [2800, 2.0]])
 
+    def test_subtract_with_gaps(self):
+        """
+        238c238
+        < chr17	147132	147296	5:1.00|22:2.00|37:1.00|37:2.00|64:1.00	2.0	.	147180	224.0
+        ---
+        > chr17	147132	147260	5:1.00|22:2.00|37:1.00|37:2.00|28:1.00	2.0	.	147180	188.0
+        
+        experiment
+        chr17 146970 147070
+        chr17 147058 147158
+        chr17 147132 147232
+        chr17 147196 147296
+        chr17 147303 147403
+        chr17 147445 147545
+        chr17 147461 147561
+
+        control
+        chr17 146904 147004
+        chr17 147036 147136
+        chr17 147261 147361
+        chr17 147437 147537
+        chr17 147472 147572
+        chr17 147472 147572
+        """        
+        exp_cached = Cluster(cached=True) 
+        control0 = Cluster(read=BED, cached=True)
+        control1 = Cluster(read=BED, cached=True) 
+        control2 = Cluster(read=BED, cached=True)
+        control3 = Cluster(read=BED, cached=True)
+        control4 = Cluster(read=BED, cached=True)
+
+        #experiment.bed
+        exp_cached.read_line("chr17	146970	147296	88:1.00|13:2.00|61:1.00|27:2.00|37:1.00|37:2.00|64:1.00	2.0	.	147139	404.0")
+        #print exp_cached.write_line()
+        #control.bed
+        r = Region(1, 2000, chromosome="chr17")
+        control0.read_line("chr17 146904 147004")
+        control1.read_line("chr17 147036 147136")
+        control2.read_line("chr17 147261 147361")
+        control3.read_line("chr17 147437 147537")
+        control4.read_line("chr17 147472 147572")
+
+        r.add_tags([control1, control2])
+        meta = r.get_metacluster()
+        #print meta._levels
+        exp_cached -= meta
+        #print "CACHED:\n", exp_cached.write_line()
+
+        
     def test_bug_is_artifact(self):
         cluster = Cluster(rounding=True)
         cluster.read_line('chr1  10505760  10505928   8:4|3:5|5:6|8:8|2:10|1:11|5:12|3:15|2:16|2:16|3:18|7:20|3:19|57:20|21:19|8:15|3:14|5:13|8:11|2:9|1:8|5:7|3:4|2:3|2:3')

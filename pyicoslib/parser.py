@@ -20,7 +20,7 @@ import ConfigParser
 from operations import (Turbomix, Extend, Poisson, RemoveRegion, RemoveChromosome, Normalize, Subtract, Trim,
                         Split, Cut, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation)
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.8.5'
+__version__ = '0.9'
 from defaults import *
 
 class PicosParser:
@@ -173,6 +173,7 @@ class PicosParser:
         correlation_flags.add_argument('--min-delta',type=int, default=MIN_DELTA, help='Minimum delta [Default %(default)s]')
         correlation_flags.add_argument('--height-filter',type=int, default=HEIGHT_FILTER, help='Height to filter the peaks [Default %(default)s]')
         correlation_flags.add_argument('--delta-step',type=int, default=DELTA_STEP, help='The step of the delta values to test [Default %(default)s]')
+        correlation_flags.add_argument('--max-correlations',type=int, default=MAX_CORRELATIONS, help='The maximum of clusters that will be enough to calculate the strand correlation shift. Lower this parameter to increase time performance [Default %(default)s]')
 
         protocol_name = self.new_subparser()
         protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
@@ -214,7 +215,7 @@ class PicosParser:
                               parents=[basic_parser, output_flags, region, region_format, output])
         #strcorr operation
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
-                              parents=[basic_parser, output_flags, correlation_flags])
+                              parents=[basic_parser, output, output_flags, correlation_flags])
         #enrichment operation
         #subparsers.add_parser('enrichment', help='An enrichment test', parents=[basic_parser, output_flags, region, region_format, output])
         #protocol reading
@@ -230,7 +231,7 @@ class PicosParser:
                             open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, open_region =OPEN_REGION,
                             frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE,
                             trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE,
-                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE)
+                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS)
 
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the input format
@@ -240,7 +241,12 @@ class PicosParser:
         if sys.argv[1] == 'protocol':
             config = ConfigParser.ConfigParser()
             config.read(args.protocol_name)
-            section = self.config_section_map("Pyicotrocol", config)
+            try:
+                section = self.config_section_map("Pyicotrocol", config)
+            except ConfigParser.NoSectionError:
+                print "\nERROR: %s is not a Pyicos Protocol file, is missing the [Pyicotrocol] header or it doesn't exists\n"%args.protocol_name
+                sys.exit(0)
+
             for key, value in section.items(): #this works fine for all string values
                 try:
                     t = type(parser._defaults[key])
@@ -257,11 +263,14 @@ class PicosParser:
                     if key != 'operations':
                         print 'Parameter %s is not a Pyicos parameter'%key
 
+
+
         turbomix = Turbomix(args.input, args.output, args.input_format, args.output_format, args.label, args.open_input, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
-                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, args.repeats, args.masker_file)
+                            args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
+                            args.repeats, args.masker_file, args.max_correlations)
 
 
         if sys.argv[1] == 'protocol':
