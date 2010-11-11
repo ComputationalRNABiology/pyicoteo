@@ -152,7 +152,8 @@ class Utils:
         NOTE: This class is becoming a preprocessing module. This is a good thing, I think! But its not
         only a sorting class then. We have to think about renaming it, or extracting functionality from it...
         """
-        def __init__(self, file_format=None, read_half_open=False, frag_size=0, id=0):
+        def __init__(self, file_format=None, read_half_open=False, frag_size=0, id=0, verbose=True):
+            self.verbose = verbose
             self.file_format = file_format
             self.frag_size = frag_size
             if self.file_format:
@@ -188,7 +189,7 @@ class Utils:
 
             return filtered_chunk
 
-        def sort(self, input,output=None,key=None,buffer_size=40000, tempdirs=[], tempFileSize=1048576):
+        def sort(self, input,output=None,key=None,buffer_size=320000, tempdirs=[], tempFileSize=8000000):
             if key is None:
                 key = lambda x : x
 
@@ -244,6 +245,7 @@ class Utils:
             return file(output)
 
         def merge(self, chunks,key=None):
+            if self.verbose: print "Merging chunks..."
             if key is None:
                 key = lambda x : x
 
@@ -382,8 +384,8 @@ class Turbomix:
             self.cluster_aux = Cluster(read=self.input_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_input, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, verbose=self.verbose, cached=cached)
             self.cluster_aux2 = Cluster(read=self.input_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_input, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, verbose=self.verbose, cached=cached)
             self.control_cluster = Cluster(read=control_format, read_half_open = open_control, verbose=self.verbose, cached=cached)
-            self.control_preprocessor = Utils.BigSort(control_format, open_control, frag_size, 'control')
-            self.region_preprocessor = Utils.BigSort(region_format, open_region, None, 'region')
+            self.control_preprocessor = Utils.BigSort(control_format, open_control, frag_size, 'control', verbose=self.verbose)
+            self.region_preprocessor = Utils.BigSort(region_format, open_region, None, 'region', verbose=self.verbose)
         except ConversionNotSupported:
             print '\nThe reading "%s" and writing "%s" is not supported. \n\n'%(self.input_format, self.output_format)
             Utils.list_available_formats()
@@ -928,9 +930,9 @@ class Turbomix:
         self.total_clusters = 0.
         self.total_reads = 0.
         self.acum_height = 0.
-        self.chr_length = 0
         self.absolute_max_height = 0
         self.absolute_max_numreads = 0
+        self.chr_length = 0
         self.heights =  defaultdict(int)
         self.max_heights =  defaultdict(int)
         self.numreads_dict =  defaultdict(int)
@@ -963,7 +965,9 @@ class Turbomix:
         #search for the chromosome length in the chr len files
         found = False
         try:
+            #print '%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)
             for line in file('%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)):
+                
                 chrom, length = line.split()
                 if chrom == chromosome:
                     found = True
