@@ -188,7 +188,7 @@ class PicosParser:
         parser_chremove = subparsers.add_parser('labelremove', help='Remove all lines that have the specified label(s).', parents=[basic_parser, output, output_flags, round, label])
         parser_chremove.add_argument('remlabel', help='The tag name (or names) as it appears in the file. Example1: chr1 Example2: chrX:chr3:mytag:myothertag')
         #subtract operation
-        subparsers.add_parser('subtract', help='Subtract two pk files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[basic_parser, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label])
+        subparsers.add_parser('subtract', help='Subtract two clustered files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[basic_parser, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label])
         #split operation
         subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[basic_parser, output, output_flags, round, split_proportion, split_absolute, label])
         #trim operation
