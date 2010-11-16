@@ -1210,7 +1210,11 @@ class Turbomix:
                 import matplotlib.pyplot
                 matplotlib.pyplot.plot(range(self.min_delta, self.max_delta), data)
                 matplotlib.pyplot.plot()
-                figure_path = '%s/%s.png'%(os.path.dirname(self.current_output_path), os.path.basename(self.current_output_path))
+                if os.path.dirname(self.current_output_path):
+                    figure_path = '%s/%s.png'%(os.path.dirname(self.current_output_path), os.path.basename(self.current_output_path))
+                else:
+                    figure_path = '%s.png'%(os.path.basename(self.current_output_path))
+
                 matplotlib.pyplot.savefig(figure_path)
                 matplotlib.pyplot.clf()
                 if self.verbose: print "Correlation figure saved to %s"%figure_path
