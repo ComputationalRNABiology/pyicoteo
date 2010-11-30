@@ -91,7 +91,7 @@ class TestCoreObjects(unittest.TestCase):
         """
         c = Cluster(rounding=True)
         c.read_line("chr2 3000 34234 10:1.6|10:0.3|10:2.1") 
-        self.assertEqual(c.write_line(), 'chr2\t3000\t3029\t10:2|10:1|10:2\t2.1\t.\t3024\t40.0\n')           
+        self.assertEqual(c.write_line(), 'chr2\t3000\t3029\t10:2|10:1|10:2\t2.1\t.\t3014\t40.0\n')           
 
 
     def read_and_extend(self, cluster, line, extension):
@@ -402,6 +402,7 @@ class TestCoreObjects(unittest.TestCase):
         self.assertEqual(cluster.write_line(), '>EAS38_1_1_113_546\tTAGAATAGGCGAGAATAAAGATGTTGTCTTAGAAT\tU0\t1\t0\t0\tchr2.fa\t199668361\tR\t..\t26A\n')
 
     def test_eland(self):
+
         cluster = Cluster(read=ELAND, write=SPK)
         cluster.read_line('>EAS38_1_1_113_546      TAGAATAGGCGAGAATAAAGATGTTGTCTTAGAAT     U0      1       0       0       chr2.fa 199668361       R       ..')
         cluster.read_line('>EAS38_1_1_113_546      TAGAATAGGCGAGAATAAAGATGTTGTCTTAGAAT     U0      1       0       0       chr2.fa 199668362       R       ..')
@@ -410,6 +411,13 @@ class TestCoreObjects(unittest.TestCase):
     #def test_fixed_wig(self):
         #self.pk_cluster.write_as(FIXED_WIG)
         #print self.pk_cluster.write_line()
+
+    def test_get_max_height_pos_bug2(self):
+        cluster = Cluster()
+        cluster.read_line("chr1    120967734       120967735       1:0.50|1:0.25")
+        self.assertEqual(cluster.write_line(), 'chr1\t120967734\t120967735\t1:0.50|1:0.25\t0.5\t.\t120967734\t0.75\n')
+        
+
 
     def test_variable_wig(self):
         double_cluster = Cluster(read=PK, write=VARIABLE_WIG, rounding=True)

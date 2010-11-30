@@ -17,10 +17,10 @@ import sys
 
 from lib import argparse
 import ConfigParser
-from operations import (Turbomix, Extend, Poisson, RemoveRegion, RemoveChromosome, Normalize, Subtract, Trim,
-                        Split, Cut, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation)
+from operations import (Turbomix, Extend, Poisson, RemoveRegion,  Normalize, Subtract, Trim,
+                        Split, Cut, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation, Enrichment)
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.9'
+__version__ = '0.9.1'
 from defaults import *
 
 class PicosParser:
@@ -47,17 +47,49 @@ class PicosParser:
         write_formats = str(WRITE_FORMATS)
         parser = argparse.ArgumentParser(version=__version__)
         subparsers = parser.add_subparsers(help='The operation you want to perform. Note that some operations imply previous automatic operations.')
+
         #parent parsers
-        basic_parser = self.new_subparser()
-        basic_parser.add_argument('input', help='The input file or directory. ')
-        basic_parser.add_argument('-o','--open-input', action='store_true', default=OPEN_INPUT, help='Defines if the input is half-open or closed notation. [Default %(default)s]')
-        basic_parser.add_argument( '-f','--input-format',default=INPUT_FORMAT, help="""The format the input file is written as.
+        experiment = self.new_subparser()
+        experiment.add_argument('experiment', help='The experiment file or directory')
+
+        experiment_flags = self.new_subparser()
+        experiment_flags.add_argument('-o','--open-experiment', action='store_true', dest='experiment_open', default=OPEN_EXPERIMENT, help='Defines if the experiment is half-open or closed notation. [Default %(default)s]')
+        experiment_flags.add_argument( '-f','--experiment-format',default=EXPERIMENT_FORMAT,  dest='experiment_format', help="""The format the experiment file is written as.
                                  The options are %s. [Default pk]"""%read_formats)
+
+
+        experiment_b = self.new_subparser()
+        experiment_b.add_argument('experiment_b',  help='The experiment file B')
+        #No neccesary anyway
+        #experiment_b_flags = self.new_subparser()
+        #experiment_b_flags.add_argument('--open-experiment-b', action='store_true', default=OPEN_EXPERIMENT, help='Defines if the experiment is half-open or closed notation. [Default %(default)s]')
+        #experiment_b_flags.add_argument( '--experiment-b-format',default=EXPERIMENT_FORMAT,  dest='control_format', help="""The format the experiment file is written as.
+        #                         The options are %s. [Default pk]"""%read_formats)
+
+        replicas_a = self.new_subparser()
+        replicas_a.add_argument('--replicas_a', help='The experiment A replicas', nargs='*')
+        
+        replicas_b = self.new_subparser()
+        replicas_b.add_argument('--replicas_b', help='The experiment B replicas', nargs='*')
+
+        control = self.new_subparser()
+        control.add_argument('control', help='The control file or directory')
+        control_format = self.new_subparser()
+        control_format.add_argument('--control-format', default=CONTROL_FORMAT, help='The format the control file is written as. [default %(default)s]')
+
+        optional_control = self.new_subparser()
+        optional_control.add_argument('--control', help='The control file or directory')
+        open_control = self.new_subparser()
+        open_control.add_argument('--open-control', action='store_true', default=OPEN_CONTROL, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
+
+
+        basic_parser = self.new_subparser()
         basic_parser.add_argument('--debug', action='store_true', default=DEBUG)
         basic_parser.add_argument('--no-sort',action='store_true', default=NO_SORT,
                                   help='Force skip the sorting step. WARNING: Use only if you know what you are doing. Processing unsorted files assuming they are will outcome in erroneous results')
         basic_parser.add_argument('--silent' ,action='store_false', default=VERBOSE, dest='verbose', help='Run without printing in screen')
         basic_parser.add_argument('--disable-cache' ,action='store_false', default=CACHED, dest='cached', help='Disable internal reading cache. When Clustering low coverage files, it will increase speed and improve memory usage. With very read dense files, the speed will decrease.')
+        basic_parser.add_argument('--keep-temp', action='store_true', default=KEEP_TEMP, help='keep the temporary files (for debugging purposes)')
 
         output = self.new_subparser()
         output.add_argument('output', help='The output file or directory')
@@ -66,14 +98,6 @@ class PicosParser:
         output_flags.add_argument('-O','--open-output', action='store_true', default=OPEN_OUTPUT, help='Define if the output is half-open or closed notation. [Default %(default)s]')
         output_flags.add_argument('-F','--output-format',default=OUTPUT_FORMAT, help='Format desired for the output. You can choose between %s. WARNING, for some operations, some outputs are not valid. See operation help for more info. [default pk]'%write_formats)
 
-        control = self.new_subparser()
-        control.add_argument('control', help='The control file or directory')
-        control_format = self.new_subparser()
-        control_format.add_argument('--control-format',default=CONTROL_FORMAT, help='The format the control file is written as. [default %(default)s]')
-        optional_control = self.new_subparser()
-        optional_control.add_argument('--control', help='The control file or directory')
-        open_control = self.new_subparser()
-        open_control.add_argument('--open-control', action='store_true', default=OPEN_CONTROL, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
 
         region = self.new_subparser()
         region.add_argument('region', help='The region file')
@@ -118,29 +142,27 @@ class PicosParser:
         normalize.add_argument('--normalize',action='store_true', default=False, help='Normalize to the control before subtracting')
 
         extend = self.new_subparser()
-        extend.add_argument('--extend',action='store_true', default=False, help='Normalize to the control before subtracting')
+        extend.add_argument('--extend',action='store_true', default=False, help='Extend')
         subtract = self.new_subparser()
-        subtract.add_argument('--subtract',action='store_true', default=False, help='Normalize to the control before subtracting')
+        subtract.add_argument('--subtract',action='store_true', default=False, help='subtract')
         filterop = self.new_subparser()
-        filterop.add_argument('--filter',action='store_true', default=False, help='Normalize to the control before subtracting')
+        filterop.add_argument('--filter',action='store_true', default=False, help='filterop')
         poisson = self.new_subparser()
-        poisson.add_argument('--poisson',action='store_true', default=False, help='Normalize to the control before subtracting')
+        poisson.add_argument('--poisson',action='store_true', default=False, help='poisson')
         modfdr = self.new_subparser()
-        modfdr.add_argument('--modfdr',action='store_true', default=False, help='Normalize to the control before subtracting')
+        modfdr.add_argument('--modfdr',action='store_true', default=False, help='modfdr')
         remduplicates = self.new_subparser()
-        remduplicates.add_argument('--remduplicates',action='store_true', default=False, help='Normalize to the control before subtracting')
+        remduplicates.add_argument('--remduplicates',action='store_true', default=False, help='remduplicates')
         split = self.new_subparser()
-        split.add_argument('--split',action='store_true', default=False, help='Normalize to the control before subtracting')
+        split.add_argument('--split',action='store_true', default=False, help='split')
         trim = self.new_subparser()
-        trim.add_argument('--trim',action='store_true', default=False, help='Normalize to the control before subtracting')
+        trim.add_argument('--trim',action='store_true', default=False, help='trim')
         strcorr = self.new_subparser()
-        strcorr.add_argument('--strcorr',action='store_true', default=False, help='Normalize to the control before subtracting')
+        strcorr.add_argument('--strcorr',action='store_true', default=False, help='strcorr')
         remregions = self.new_subparser()
-        remregions.add_argument('--remregions',action='store_true', default=False, help='Normalize to the control before subtracting')
+        remregions.add_argument('--remregions',action='store_true', default=False, help='remregions')
         remartifacts = self.new_subparser()
-        remartifacts.add_argument('--remartifacts',action='store_true', default=False, help='Normalize to the control before subtracting')
-
-
+        remartifacts.add_argument('--remartifacts',action='store_true', default=False, help='remartifacts')
 
         split_proportion = self.new_subparser()
         split_proportion.add_argument('--split-proportion', default=SPLIT_PROPORTION, help='Fraction of the cluster height below which the cluster is splitted. [Default %(default)s]', type=float)
@@ -158,8 +180,8 @@ class PicosParser:
         masker_file = self.new_subparser()
         masker_file.add_argument('--masker', help='You can provide a masker file that will be used by the modfdr operation background generation so that randomized reads will not fall in this areas')
 
-        discard = self.new_subparser()
-        discard.add_argument('--discard', help='Discard the reads that have this particular tag. Example: --discard chr1 will discard all reads with chr1 as tag. You can specify multiple tags to discard using the following notation --discard chr1:chr2:tagN')
+        remlabels = self.new_subparser()
+        remlabels.add_argument('--remlabels', help='Discard the reads that have this particular label. Example: --discard chr1 will discard all reads with chr1 as tag. You can specify multiple tags to discard using the following notation --discard chr1 chr2 tagN')
 
         threshold = self.new_subparser()
         threshold.add_argument('--threshold', help='The height threshold used to cut', type=int)
@@ -179,63 +201,60 @@ class PicosParser:
         protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
         #callpeaks operation
         subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.',
-                              parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_proportion, species, tolerated_duplicates])
+                              parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, species, tolerated_duplicates])
         #convert operation
         subparsers.add_parser('convert', help='Convert a file to another file type.',
-                              parents=[basic_parser, output, output_flags, round, label, tag_length, span, optional_frag_size])
+                              parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, label, tag_length, span, optional_frag_size, remlabels])
 
-        #remove chr operation
-        parser_chremove = subparsers.add_parser('labelremove', help='Remove all lines that have the specified label(s).', parents=[basic_parser, output, output_flags, round, label])
-        parser_chremove.add_argument('remlabel', help='The tag name (or names) as it appears in the file. Example1: chr1 Example2: chrX:chr3:mytag:myothertag')
-        #subtract operation
-        subparsers.add_parser('subtract', help='Subtract two clustered files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[basic_parser, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label])
+        subparsers.add_parser('subtract', help='Subtract two clustered files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[experiment,experiment_flags, basic_parser, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label, remlabels])
         #split operation
-        subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[basic_parser, output, output_flags, round, split_proportion, split_absolute, label])
+        subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, split_proportion, split_absolute, label, remlabels])
         #trim operation
-        subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[basic_parser, output, output_flags, round, trim_absolute, label])
+        subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, trim_absolute, label, remlabels])
         #discard operation
-        subparsers.add_parser('discard', help='Discards artifacts from a file. Only accepts pk or wig as output.', parents=[basic_parser, output, output_flags, round, span, label])
+        subparsers.add_parser('discard', help='Discards artifacts from a file. Only accepts pk or wig as output.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, span, label, remlabels])
         #remove duplicates operation
-        subparsers.add_parser('remduplicates', help='Removes the duplicated reads in a file. Only accepts tag files (bed, eland)', parents=[basic_parser, output, output_flags, tolerated_duplicates, round, span, label])
+        subparsers.add_parser('remduplicates', help='Removes the duplicated reads in a file. Only accepts tag files (bed, eland)', parents=[experiment, experiment_flags, basic_parser, output, output_flags, tolerated_duplicates, round, span, label, remlabels])
         #normalize operation
-        subparsers.add_parser('normalize', help='Normalize a pk file respect of the control.', parents=[basic_parser, control, control_format, output, output_flags, open_control, round, label, span])
+        subparsers.add_parser('normalize', help='Normalize a pk file respect of the control.', parents=[experiment, experiment_flags, basic_parser, control, control_format, output, output_flags, open_control, round, label, span, remlabels])
         #extend operation
-        subparsers.add_parser('extend', help='Extend the reads of a file to the desired length (we currently support only bed and eland files for this operation)', parents=[basic_parser,  output, output_flags, frag_size, round, label, span])
+        subparsers.add_parser('extend', help='Extend the reads of a file to the desired length (we currently support only bed and eland files for this operation)', parents=[experiment,experiment_flags,  basic_parser,  output, output_flags, frag_size, round, label, span, remlabels])
         #poisson analysis
         subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.',
-                              parents=[basic_parser, output_flags, frag_size, pvalue, height, correction, species])
+                              parents=[experiment,experiment_flags,  basic_parser, output_flags, optional_frag_size, pvalue, height, correction, species, remlabels])
         #cut operations
         subparsers.add_parser('filter', help="""Analyze the significance of accumulated reads in the file using the poisson distribution and generate the resulting profiles, in wig or pk formats""",
-                              parents=[basic_parser, output, frag_size, output_flags, round, pvalue, height, correction, threshold, species])
+                              parents=[experiment,experiment_flags,  basic_parser, output, optional_frag_size, output_flags, round, pvalue, height, correction, threshold, species, remlabels])
         #modfdr analysis
         subparsers.add_parser('modfdr', help="""Use the modified FDR method to determine what clusters are significant in an specific region. Output in a clustered format only.""",
-                              parents=[basic_parser, region, output, output_flags, round, pvalue, repeats, masker_file])
+                              parents=[experiment, experiment_flags, basic_parser, region, output, output_flags, round, pvalue, repeats, masker_file, remlabels])
         #remove operation
         subparsers.add_parser('remregions', help='Removes regions that overlap with another the coordinates in the "black list" file.',
-                              parents=[basic_parser, output_flags, region, region_format, output])
+                              parents=[experiment, experiment_flags, basic_parser, output_flags, region, region_format, output, remlabels])
         #strcorr operation
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
-                              parents=[basic_parser, output, output_flags, correlation_flags])
+                              parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
         #enrichment operation
-        #subparsers.add_parser('enrichment', help='An enrichment test', parents=[basic_parser, output_flags, region, region_format, output])
+        subparsers.add_parser('enrichment', help='An enrichment test', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replicas_a, replicas_b, region, region_format, output])
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
         #whole exposure
-        subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, discard, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
+        subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[experiment, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
 
         return parser
 
     def run_parser(self):
         parser = self.create_parser()
-        parser.set_defaults(input=INPUT, input_format=INPUT_FORMAT, open_input=OPEN_INPUT, debug=DEBUG, discard=DISCARD, output=OUTPUT, control=CONTROL, label = LABEL, output_format=OUTPUT_FORMAT,
-                            open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, open_region =OPEN_REGION,
-                            frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE,
-                            trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE,
-                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS)
+        parser.set_defaults(experiment=EXPERIMENT, experiment_format=EXPERIMENT_FORMAT, experiment_open=OPEN_EXPERIMENT, debug=DEBUG, discard=DISCARD, output=OUTPUT, control=CONTROL, 
+                            label = LABEL, output_format=OUTPUT_FORMAT,open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, 
+                            open_region =OPEN_REGION,frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, 
+                            correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE, trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, 
+                            no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE,
+                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, remlabels=REMLABELS, experiment_b=EXPERIMENT)
 
         args = parser.parse_args()
-        if not args.control_format: #If not specified, the control format is equal to the input format
-            args.control_format = args.input_format
+        if not args.control_format: #If not specified, the control format is equal to the experiment format
+            args.control_format = args.experiment_format
 
         #Add any parameters found in the config file. Override them with anything found in the args later
         if sys.argv[1] == 'protocol':
@@ -265,12 +284,12 @@ class PicosParser:
 
 
 
-        turbomix = Turbomix(args.input, args.output, args.input_format, args.output_format, args.label, args.open_input, args.open_output, args.debug,
-                            args.rounding, args.tag_length, args.discard, args.control, args.control_format, args.open_control, args.region,
+        turbomix = Turbomix(args.experiment, args.output, args.experiment_format, args.output_format, args.label, args.experiment_open, args.open_output, args.debug,
+                            args.rounding, args.tag_length, args.remlabels, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
-                            args.repeats, args.masker_file, args.max_correlations)
+                            args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b)
 
 
         if sys.argv[1] == 'protocol':
@@ -305,8 +324,8 @@ class PicosParser:
         elif sys.argv[1] == 'remove':
             turbomix.operations = [RemoveRegion]
 
-        elif sys.argv[1] == 'remlabel':
-            turbomix.operations = [RemoveChromosome]
+        elif sys.argv[1] == 'enrichment':
+            turbomix.operations = [Enrichment]
 
         elif sys.argv[1] == 'split':
             turbomix.operations = [Split]
