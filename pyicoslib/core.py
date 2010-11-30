@@ -93,6 +93,7 @@ class Reader:
         if cluster.strand != cluster_aux.strand:
             cluster.strand == '.'
 
+
     def quality_filter(self, line):
         """checks if the line passes the quality conditions"""
         return True
@@ -128,6 +129,7 @@ class BedReader(Reader):
                     cluster._tag_cache.append([new_start, int(line[2])])
                     cluster.start = new_start
                     cluster.end = int(line[2])
+                    cluster.tag_length = len(cluster) #if the cluster is empty, its the perfect moment to read the tag length of the first read. We assume that all reads are the same, inside the cluster, so in the case that they vary (not that common), the randomness of choosing this should cancel the bias.  
                     self._add_strand(cluster, line)
                     
                 else:
@@ -153,6 +155,7 @@ class BedReader(Reader):
                     self._add_name(cluster, line)
                     self._add_score(cluster, line)
                     self._add_strand(cluster, line)
+                    cluster.tag_length = len(cluster)
                     cluster.add_level(cluster.end-cluster.start+1, cluster.normalize_factor)
 
         except (ValueError, IndexError):
@@ -182,6 +185,7 @@ class SamReader(Reader):
                     cluster.name = line[0]
                     cluster.sequence = line[9]
                     cluster.strand = new_strand
+                    cluster.tag_length = len(cluster)
                     
                 else:
                     cluster._tag_cache.append([new_start, new_start+len(line[9])])
@@ -235,6 +239,7 @@ class ElandReader(Reader):
                     cluster.start = int(line[7])+self.correction
                     cluster.end = length+cluster.start-1
                     cluster._levels.append([length+self.correction, cluster.normalize_factor])
+                    cluster.tag_length = len(cluster)
                     if line[8] is 'F':
                         cluster.strand = '+'
                     else:
@@ -422,7 +427,7 @@ class VariableWigWriter(Writer):
 class PkWriter(Writer):
     def _format_line(self, cluster, start, acum_length, profile):
         format_str = '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, cluster.get_max_height(), cluster.strand, cluster.get_max_height_pos(), cluster.get_area())
-        if cluster.p_value != None:
+        if cluster.p_value != None: #it can be 0 and we want to print this, so DONT change this to "if cluster.p_value":
             format_str = '%s\t%s\n'%(format_str, cluster.p_value)
         else:
             format_str = '%s\n'%format_str
@@ -481,7 +486,7 @@ class Cluster:
     It can be added, compared, subtracted to other cluster objects. Several interesting properties can be extracted from it.
     """
     def __init__(self, chromosome='', start=0, end=-1, strand='.', name='noname', score=0, rounding = False,
-                 read=PK, write=PK, read_half_open=False, write_half_open=False, normalize_factor=1., tag_length=None, sequence=None, span=20, cached=False, verbose=False):
+                 read=PK, write=PK, read_half_open=False, write_half_open=False, normalize_factor=1., tag_length=0, sequence=None, span=20, cached=False, verbose=False):
         """If you want the object to operate with integers instead
         of floats, set the rounding flag to True."""
         self.verbose = verbose
@@ -511,6 +516,7 @@ class Cluster:
     def is_singleton(self):
         if self._tag_cache:
             self._flush_tag_cache()
+
         if self.is_empty():
             return False
 
@@ -520,9 +526,6 @@ class Cluster:
         elif self._levels[0][1] > 1:
             return False
 
-        elif self.tag_length:
-            if self._levels[0][0] > self.tag_length-1:
-                return False
 
         else:
             return True
@@ -774,7 +777,7 @@ class Cluster:
 
     def is_significant(self, threshold):
         """Returns True if the cluster is significant provided a threshold, otherwise False"""
-        return threshold <= self.get_max_height()
+        return threshold <= int(round(self.get_max_height()))
 
     def intersects(self, other):
         """Returns true if a Cluster intersects with another Cluster"""
@@ -913,12 +916,14 @@ class Cluster:
             self._flush_tag_cache()
         return self._levels.__iter__()
 
+
     def get_max_height(self):
         """Returns the maximum height in the cluster"""
         max_height = 0.
         for length, height in self:
             max_height = max(max_height, height)
         return max_height
+
 
     def get_max_height_pos(self):
 	# changed by Sonja (to Juanra's idea)
@@ -934,10 +939,11 @@ class Cluster:
         last_max = 0
         for length, height in self:
             acum_length += length
-            if int(height) > int(max_height):
+            if round(height) > round(max_height):
                 max_height = height
                 first_max = self.start + acum_length - length/2 - 1
-	    if int(height) == int(max_height):	
+
+            if round(height) == round(max_height):	
                 last_max = self.start + acum_length - length/2 - 1
 
         pos = (first_max + last_max)/2
@@ -949,6 +955,7 @@ class Cluster:
         """
         Returns the area of the peak
         """
+
         sum_area = 0
         for length, height in self:
             sum_area += length*height
@@ -1169,6 +1176,22 @@ class Region:
             max_height = max(max_height, cluster.get_max_height())
         return max_height
 
+    def tag_len_average(self):
+        ret = 0.
+        for tag in self.tags:
+            ret += len(tag)
+        return ret/len(self.tags)            
+
+    def binomial(self, n, p, k): 
+        return (math.factorial(n)*p**k*(1-p)**(n-k))/(math.factorial(k)*math.factorial(n-k))
+
+         
+    def p0(self, l, N):
+        return (N-l)/N
+
+    def p1(self, l, N):
+        return l/N
+       
     def get_FDR_clusters(self, repeats=100, masker_tags=[]):
 
         max_height = int(self.get_max_height())
@@ -1180,9 +1203,12 @@ class Region:
         random_region = Region(self.start, self.end)
         random_region.add_tags(self.tags)
         #Get the repeat regions that overlap with the region
-        """masker_tags = repeat_reader.get_overlaping_clusters(region, overlap=0.000001) #get all overlaping masker tags
+        """
+        masker_tags = repeat_reader.get_overlaping_clusters(region, overlap=0.000001) #get all overlaping masker tags
         masker_region = Region(region.chromosome, region.start, region.end, region.name)
-        masker_region.add_tags(masker_tags)"""
+        masker_region.add_tags(masker_tags)
+        """
+
         for r in xrange(0, repeats):
             sys.stdout.flush()
             random_region.shuffle_tags(masker_tags)
@@ -1193,12 +1219,31 @@ class Region:
                 prob = self._get_probability(nis, h)
                 Pr_of_h[h] += prob
                 random_variances[h].append(prob)
+
+
         #Get the mean and the variance for the random iterations and calculate the FDR
         found = False
         significant_height = sys.maxint
         p_values_per_height = defaultdict(int) #if it doesnt have the values, will return a 0
+
+        """
+        number_of_reads = len(self.tags)
+        average_tag_length = self.tag_len_average()
+        region_length = len(self)
+         
+        est_pr_of_h = defaultdict(int)
+        acum = 1
+        for h in xrange(1, max_height+1):
+            est_pr_of_h[h] = acum
+            acum -= self.binomial(number_of_reads, (average_tag_length/region_length), h)
+        """
+
         for h in xrange(1, max_height+1):
             random_mean = Pr_of_h[h]/repeats
+            #print "random_prob:", h, random_mean
+            #print "Binomial:", h, est_pr_of_h[h]
+            #print 
+
             random_variance = 0
             h_prob = self._get_probability(real_heights, h)
             for i in xrange(0, repeats):
@@ -1223,6 +1268,7 @@ class Region:
             for length, height in cluster:
                 heights_dict[int(height)] += length
         return heights_dict
+
 
     def shuffle_tags(self, masker_tags=[]):
         for tag in self.tags:
@@ -1262,27 +1308,20 @@ class Region:
 
     def clusterize(self):
         """Creates the Cluster objects of the tags in the Region object"""
-        """self.clusters = []
-        self.tags.sort(key=lambda x: (x.start, x.end))
-        if self.tags:
-            self.clusters.append(self.tags[0].copy_cluster()) #Insert first cluster object
-            for i in xrange(1, len(self.tags)):
-                if self.clusters[-1].overlap(self.tags[i]) > 0:
-                    self.clusters[-1] += self.tags[i]
-                else:
-                    self.clusters.append(self.tags[i].copy_cluster())"""
-        """Creates the Cluster objects that will hold the profile of the region."""
         self.clusters = []
         self.tags.sort(key=lambda x: (x.start, x.end))
         if self.tags:
             #Insert first cluster object
             self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True))
             for i in xrange(0, len(self.tags)):
-                if not self.clusters[-1].overlap(self.tags[i]) > 0 and not self.clusters[-1].is_empty():
-                    self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True)) #create a new cluster object
-
-                self.clusters[-1].read_line(self.tags[i].write_line())
-
+                if not self.tags[i].is_empty():
+                    if not self.clusters[-1].overlap(self.tags[i]) > 0 and not self.clusters[-1].is_empty():
+                        self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True)) #create a new cluster object
+                    try:
+                        self.clusters[-1].read_line(self.tags[i].write_line())
+                    except InvalidLine:
+                        print "A VER:", self.tags[i].write_line()
+                        raise
 
 
     def percentage_covered(self):
@@ -1327,3 +1366,6 @@ class Region:
             if cluster.get_max_height() > height:
                 significant_clusters.append(cluster)
         return significant_clusters
+
+
+

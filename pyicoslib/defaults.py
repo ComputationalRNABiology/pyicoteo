@@ -14,9 +14,9 @@ WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
 READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM) #formats that we actually can read as
 
 #Default values for Pyicos
-INPUT=''
-INPUT_FORMAT=PK
-OPEN_INPUT=False
+EXPERIMENT=''
+EXPERIMENT_FORMAT=PK
+OPEN_EXPERIMENT=False
 DEBUG=False
 DISCARD=0
 OUTPUT=''
@@ -55,8 +55,9 @@ CACHED=True
 REPEATS=100
 MASKER_FILE=''
 MAX_CORRELATIONS=200
+KEEP_TEMP = False
 WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
-
+REMLABELS = ''
 
 """The minimum number of overlapping positive and negative strand reads to include them in the correlation calculation"""
 
