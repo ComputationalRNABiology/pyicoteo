@@ -239,7 +239,7 @@ class PicosParser:
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
         #whole exposure
-        subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[experiment, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
+        subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
 
         return parser
 
@@ -279,9 +279,14 @@ class PicosParser:
                         args.__dict__[key] = config.get("Pyicotrocol", key)
 
                 except KeyError:
-                    if key != 'operations':
-                        print 'Parameter %s is not a Pyicos parameter'%key
+                    if key == 'input':
+                        args.__dict__['experiment'] = config.get("Pyicotrocol", 'input')
+                        print
+                        print "WARNING: The keyword 'input' for the protocol files is deprecated, please use 'experiment' instead"
 
+                    elif key != 'operations':
+                        print 'ERROR: There is an error in your protocol file.  "%s" is not a Pyicos parameter'%key
+                        sys.exit(0)
 
 
         turbomix = Turbomix(args.experiment, args.output, args.experiment_format, args.output_format, args.label, args.experiment_open, args.open_output, args.debug,
@@ -343,7 +348,7 @@ class PicosParser:
             turbomix.operations = [ModFDR]
 
         elif sys.argv[1] == 'callpeaks':
-            turbomix.operations = [RemoveChromosome, Split, Extend, Poisson, Cut, RemoveDuplicates] 
+            turbomix.operations = [Split, Extend, Poisson, Cut, RemoveDuplicates] 
             if args.duplicates > 1: #If there is only 1 duplicate,  there is no need to discard artifacts
                 turbomix.operations.append(DiscardArtifacts)
             if args.region:
@@ -380,6 +385,13 @@ class PicosParser:
                raise
             else:
                 print 'Operation Failed.'
+        except IOError as error:
+            if args.debug:
+                raise
+            else:            
+                print error
+        
+
 
 
 

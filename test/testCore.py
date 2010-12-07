@@ -29,7 +29,7 @@ class TestCoreObjects(unittest.TestCase):
             c = Cluster()
             c.read_line('chr4 %s %s 20:1'%(i, i+50))
             tags.append(c)
-        r.add_tags(tags)
+        r.add_tags(tags, True)
         c = Cluster()
         c.read_line('chr4 55555 55558 7:1')
         r.add_tags(c)
@@ -41,15 +41,41 @@ class TestCoreObjects(unittest.TestCase):
         r = Region(1, 1999)
         c = Cluster(read=BED)
         c.read_line('chr4 1 40')
-        r.add_tags(c)
+        r.add_tags(c, True)
         c = Cluster(read=BED, read_half_open=True)
         c.read_line('chr4 400 500')
-        r.add_tags(c)
+        r.add_tags(c, True)
 
         meta = r.get_metacluster()
         self.assertEqual(meta._levels, [[40, 1.0], [360, 0.0], [100, 1.0]])
 
         
+    def test_region_swap_rpkm(self):
+        total_reads = 400000000
+        total_reads_b = 500000000
+        r = Region(1, 1000, "bla", "chr1")
+        c = Cluster(read=BED)
+        c.read_line('chr1 1 40')
+        r.add_tags(c)
+        c = Cluster(read=BED)
+        c.read_line('chr1 2 40')
+        r.add_tags(c)
+        c = Cluster(read=BED)
+        c.read_line('chr1 3 40')
+        r.add_tags(c)
+        r2 = Region(1, 1000, "bla", "chr1")
+        c = Cluster(read=BED)
+        c.read_line('chr1 100 140')
+        r2.add_tags(c)
+        c = Cluster(read=BED)
+        c.read_line('chr1 101 140')
+        r2.add_tags(c)
+        c = Cluster(read=BED)
+        c.read_line('chr1 102 140')
+        r2.add_tags(c)
+
+        swap1, swap2 = r.swap(r2)
+        print len(r.tags), len(r2.tags), len(swap1.tags), len(swap2.tags), r.rpkm(total_reads), r2.rpkm(total_reads_b), swap1.rpkm((total_reads+total_reads_b)/2), swap2.rpkm((total_reads+total_reads_b)/2)
 
     #####################   CONVERSION TESTS     ############################################
     
@@ -85,13 +111,21 @@ class TestCoreObjects(unittest.TestCase):
         cluster.read_line('chr1 10 130 hola 666 +')
         self.assertEqual(cluster.write_line(), 'chr1\t1\t10\t1\nchr1\t10\t100\t2\nchr1\t100\t130\t1\n')
 
-    def test_rounding_bug(self):
+    '''def test_rounding_bug(self):
         """
         In a cluster writing in pk, if there is a level between 0.5 and 0, round to 1 so the cluster is not broken and the position and height info is incorrect
+
+        DEPRECATED: This was a nasty hack, and should not exist
         """
         c = Cluster(rounding=True)
         c.read_line("chr2 3000 34234 10:1.6|10:0.3|10:2.1") 
-        self.assertEqual(c.write_line(), 'chr2\t3000\t3029\t10:2|10:1|10:2\t2.1\t.\t3014\t40.0\n')           
+        #c2 = Cluster(rounding=True)
+        #c2.read_line("chr2 3000 34234 10:1.6|10:0.1|10:2.1|10:0.1|10:2.1|10:0.1|10:2.1|10:0.1|10:2.1|10:0.1|10:2.1") 
+        #print c2.absolute_split(threshold=0)
+        self.assertEqual(c.write_line(), 'chr2\t3000\t3029\t10:2|10:1|10:2\t2.1\t.\t3014\t40.0\n')       '''  
+
+
+
 
 
     def read_and_extend(self, cluster, line, extension):
@@ -439,10 +473,10 @@ class TestCoreObjects(unittest.TestCase):
         """
 
 
-    def test_get_max_height_pos(self):
+    def test_max_height_pos(self):
         cluster = Cluster(rounding=True, read=PK, write=PK)
         cluster.read_line('chr1 101 142 4:1|1:2|2:1|3:4|29:5|2:2|1:1')
-        self.assertEqual(cluster.get_max_height_pos(), 125)
+        self.assertEqual(cluster.max_height_pos(), 125)
     
     def test_bug_contiguous_peaks(self):
         cluster = Cluster(rounding=True, read=PK, write=PK)
@@ -458,9 +492,9 @@ class TestCoreObjects(unittest.TestCase):
         cluster.read_line('chr1    1  1000  10:2|10:4|80:5|500:7|100:7|100:5')
         cluster2.read_line('chr1    11  1000  10:4|80:5|500:6|100:7|99:5|1:4.99')
         cluster2 = cluster - cluster2
-        self.assertEqual(cluster2.write_line(), 'chr1\t1\t10\t10:2.00\t2.0\t.\t5\t520.01\nchr1\t101\t600\t500:1.00\t2.0\t.\t5\t520.01\nchr1\t800\t800\t1:0.01\t2.0\t.\t5\t520.01\n')
-        cluster2.write_as(PK, True)
-        self.assertEqual(cluster2.write_line(), 'chr1\t0\t10\t10:2.00\t2.0\t.\t5\t520.01\nchr1\t100\t600\t500:1.00\t2.0\t.\t5\t520.01\nchr1\t799\t800\t1:0.01\t2.0\t.\t5\t520.01\n')
+        self.assertEqual(cluster2.write_line(), 'chr1\t1\t10\t10:2.00\t2.0\t.\t5\t20.0\nchr1\t101\t600\t500:1.00\t1.0\t.\t350\t500.0\nchr1\t800\t800\t1:0.01\t0.01\t.\t800\t0.01\n')
+        #cluster2.write_as(PK, True)
+        #self.assertEqual(cluster2.write_line(), 'chr1\t1\t10\t10:2.00\t2.0\t.\t5\t520.01\nchr1\t100\t600\t500:1.00\t1.0\t.\t5\t520.01\nchr1\t799\t800\t1:0.01\t0.01\t.\t5\t520.01\n')
 
     def test_intersects(self):
         self.assertTrue(Cluster('chr1', 1, 10).intersects(Cluster('chr1', 10, 14)))
@@ -666,9 +700,9 @@ class TestCoreObjects(unittest.TestCase):
         cluster.add_level(1, 3)
         cluster.add_level(10, 0)
         cluster.add_level(100, 1)
-        self.assertEqual(cluster.write_line(), 'chr5\t0\t300\t100:1|50:2|50:3|100:1\t3.0\t.\t338\t553.0\nchr5\t500\t501\t1:3\t3.0\t.\t338\t553.0\nchr5\t511\t611\t100:1\t3.0\t.\t338\t553.0\n') #HALF OPEN
+        self.assertEqual(cluster.write_line(), 'chr5\t0\t300\t100:1|50:2|50:3|100:1\t3.0\t.\t175\t450.0\nchr5\t500\t501\t1:3\t3.0\t.\t501\t3.0\nchr5\t511\t611\t100:1\t1.0\t.\t561\t100.0\n') #HALF OPEN
         cluster.write_as(PK, False) #Now write it as closed
-        self.assertEqual(cluster.write_line(),'chr5\t1\t300\t100:1|50:2|50:3|100:1\t3.0\t.\t338\t553.0\nchr5\t501\t501\t1:3\t3.0\t.\t338\t553.0\nchr5\t512\t611\t100:1\t3.0\t.\t338\t553.0\n') #Closed
+        self.assertEqual(cluster.write_line(),'chr5\t1\t300\t100:1|50:2|50:3|100:1\t3.0\t.\t175\t450.0\nchr5\t501\t501\t1:3\t3.0\t.\t501\t3.0\nchr5\t512\t611\t100:1\t1.0\t.\t561\t100.0\n') #Closed
 
     def test_read_wig(self):
         cluster1 = Cluster(read=WIG, chromosome='chr5', start=1, rounding=True, read_half_open=True)
@@ -708,7 +742,7 @@ class TestCoreObjects(unittest.TestCase):
     def test_max_height(self):
         cluster = Cluster(read=PK)
         cluster.read_line('chr1 1 15 4:1|1:2|2:10|3:4|2:15|2:2|1:1')
-        self.assertEqual(cluster.get_max_height(), 15)
+        self.assertEqual(cluster.max_height(), 15)
 
 
     def test_add_bed(self):
