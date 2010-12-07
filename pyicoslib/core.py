@@ -425,8 +425,8 @@ class VariableWigWriter(Writer):
         return lines
 
 class PkWriter(Writer):
-    def _format_line(self, cluster, start, acum_length, profile):
-        format_str = '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, cluster.get_max_height(), cluster.strand, cluster.get_max_height_pos(), cluster.get_area())
+    def _format_line(self, cluster, start, acum_length, profile, max_height, max_height_pos, area):
+        format_str = '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, max_height, cluster.strand, max_height_pos, area)
         if cluster.p_value != None: #it can be 0 and we want to print this, so DONT change this to "if cluster.p_value":
             format_str = '%s\t%s\n'%(format_str, cluster.p_value)
         else:
@@ -435,20 +435,20 @@ class PkWriter(Writer):
 
 
     def write_line(self, cluster):
-        """prints a pk line out of the data in the object"""
+        """prints a pk line out of the data in the object
+        Also calculates the max height, max height position and area for all subclusters, replicating the functionality of max_height(), max_height_pos() and area()"""
         profile = ''
         lines = ''
         first = True
         acum_length = 0
         start = cluster.start
+        max_height = -sys.maxint
+        area = 0
+        first_max_pos = 0
+        last_max_pos = 0
         for length, height in cluster:
-            if cluster.rounding:
-                rounded_height = round(height)
-                if height > 0 and rounded_height == 0: #if rounding becomes 0, the cluster will be printed in 2 parts, and we dont want this with bedpk format
-                    rounded_height = 1
-                height = rounded_height
-
-            if height > 0:
+            if height > 0:   
+                area += length*height           
                 if first:
                     if cluster.rounding:
                         profile = '%s%s:%.0f'%(profile, length, height)
@@ -461,20 +461,40 @@ class PkWriter(Writer):
                         profile = '%s|%s:%.2f'%(profile, length, height)
 
                 acum_length += length
+                if height > max_height:
+                    max_height = height
+                    first_max_pos = start + acum_length - length/2 - 1
+                
+                if height == max_height:
+                    last_max_pos = start + acum_length - length/2 - 1
+
                 first = False
 
             elif not first:
-                lines = '%s%s'%(lines, self._format_line(cluster, start, acum_length, profile))
+                lines = '%s%s'%(lines, self._format_line(cluster, start, acum_length, profile, max_height, (first_max_pos + last_max_pos)/2, area))
                 start = start+acum_length+length
                 acum_length = 0
+                area = 0
+                max_height = -sys.maxint
+                first_max_pos = 0
+                last_max_pos = 0
                 first = True
                 profile = ""
 
         if not first:
-            lines = '%s%s'%(lines, self._format_line(cluster, start, acum_length, profile))
+            lines = '%s%s'%(lines, self._format_line(cluster, start, acum_length, profile, max_height, (first_max_pos + last_max_pos)/2, area))
 
         return lines
 
+
+        """
+        BORRAME    
+
+        sum_area = 0
+        for length, height in self:
+            sum_area += length*height
+
+        """
 ######################################
 #    CLUSTER OBJECT                  #
 ######################################
@@ -736,7 +756,7 @@ class Cluster:
     def absolute_split(self, threshold):
         """Returns the original cluster or several clusters if we find subclusters"""
         if threshold is None:
-            threshold=float(self.get_max_height())*percentage
+            threshold=float(self.max_height())*percentage
             if threshold < 1: #or at least 1 nucleotide
                 threshold = 1
 
@@ -767,7 +787,7 @@ class Cluster:
         self._flush_tag_cache()
         if len(self) < 100:
             return True
-        h = self.get_max_height()
+        h = self.max_height()
         max_len = 0.
         for length, height in self:
             if h == height:
@@ -777,7 +797,7 @@ class Cluster:
 
     def is_significant(self, threshold):
         """Returns True if the cluster is significant provided a threshold, otherwise False"""
-        return threshold <= int(round(self.get_max_height()))
+        return threshold <= int(round(self.max_height()))
 
     def intersects(self, other):
         """Returns true if a Cluster intersects with another Cluster"""
@@ -843,7 +863,7 @@ class Cluster:
             dummy_cluster.add_level(self.tag_length, 1)
             dummy_cluster.start = cluster_copy.start
             dummy_cluster.end = cluster_copy.start+self.tag_length-1
-            while cluster_copy.get_max_height() > 0:
+            while cluster_copy.max_height() > 0:
                 cluster_copy -= dummy_cluster
                 tags.append(dummy_cluster.copy_cluster())
                 dummy_cluster.start = cluster_copy.start
@@ -917,7 +937,7 @@ class Cluster:
         return self._levels.__iter__()
 
 
-    def get_max_height(self):
+    def max_height(self):
         """Returns the maximum height in the cluster"""
         max_height = 0.
         for length, height in self:
@@ -925,15 +945,13 @@ class Cluster:
         return max_height
 
 
-    def get_max_height_pos(self):
-	# changed by Sonja (to Juanra's idea)
-	"""
+    def max_height_pos(self):
+        """
         Returns the position where the maximum height is located.
         The central positions of the first and the last maximum are calculated.
         The max_height_pos will be in the middle of these two positions.
         """
         max_height = 0
-        
         acum_length = 0
         first_max = 0
         last_max = 0
@@ -950,8 +968,7 @@ class Cluster:
         return pos 
  
 
-    def get_area(self):
-	# added by Sonja
+    def area(self):
         """
         Returns the area of the peak
         """
@@ -1141,6 +1158,9 @@ class Cluster:
                 previous_height = height
             return False
 
+    def __str__(self):
+        return "<Cluster object> chr: %s start: %s end: %s name: %s "%(self.chromosome, self.start, self.end, self.name)
+
 
 #######################
 #   REGION  OBJECT    #
@@ -1153,6 +1173,30 @@ class Region:
         self.chromosome = chromosome
         self.tags = []
         self.clusters = []
+
+
+    def rpkm(self, total_reads):
+        """Original definition: Reads per kilobase of exon model per million mapped reads. We generalize to: Reads per kilobase of region per million mapped reads.Added 1 pseudocount per region to avoid 0s"""
+        return (10e9*float(len(self)+1))/((len(self.tags)+1)*total_reads)
+
+
+    def __sub_swap(self, region, swap1, swap2):
+        for tag in region.tags:
+            if random.randint(0,1):
+                swap1.add_tags(tag)
+            else:
+                swap2.add_tags(tag)
+
+    def swap(self, region_b):
+        "Given 2 regions, return 2 new regions with the reads of both regions mixed aleatoriely"
+        swap1 = Region(self.start, self.end, self.name, self.chromosome)
+        swap2 = Region(self.start, self.end, self.name, self.chromosome)
+        self.__sub_swap(self, swap1, swap2)
+        self.__sub_swap(region_b, swap1, swap2)
+        return (swap1, swap2)        
+
+    def __str__(self):
+        return "chr: %s start: %s end: %s name: %s number_of_tags: %s"%(self.chromosome, self.start, self.end, self.name, len(self.tags))
 
     def _numpos_higher_than(self, h, nis):
         ret = 0
@@ -1167,13 +1211,28 @@ class Region:
     def __len__(self):
         return self.end-self.start+1
 
+    def copy(self):
+        """Copies a Region object into another"""
+        new_region = Empty()
+        new_region.__class__ = self.__class__
+        new_region.start = self.start
+        new_region.end = self.end
+        new_region.name = self.name
+        new_region.chromosome = self.chromosome
+        new_region.tags = []
+        new_region.clusters = []
+        new_region.add_tags(self.tags)
+        for cluster in self.clusters:
+            new_region.clusters.append(cluster)
+        return new_region
+
     def num_tags(self):
         return len(self.tags)
 
-    def get_max_height(self):
+    def max_height(self):
         max_height = 0
         for cluster in self.clusters:
-            max_height = max(max_height, cluster.get_max_height())
+            max_height = max(max_height, cluster.max_height())
         return max_height
 
     def tag_len_average(self):
@@ -1194,7 +1253,7 @@ class Region:
        
     def get_FDR_clusters(self, repeats=100, masker_tags=[]):
 
-        max_height = int(self.get_max_height())
+        max_height = int(self.max_height())
         #Get the N values and the probabilities for the real and for the simulated random instances
         real_heights = self.get_heights()
         #we do the same calculation but shuffling the tags randomly. We do it as many times as the variable repeats asks for
@@ -1256,7 +1315,7 @@ class Region:
         #add the p_values to the clusters and return them
         ret_clusters = self.get_clusters()
         for i in range(0 , len(ret_clusters)):
-            ret_clusters[i].p_value = p_values_per_height[int(ret_clusters[i].get_max_height())]
+            ret_clusters[i].p_value = p_values_per_height[int(ret_clusters[i].max_height())]
 
         return ret_clusters
 
@@ -1296,7 +1355,7 @@ class Region:
         #recreate the clusters
         self.clusterize()
 
-    def add_tags(self, tags):
+    def add_tags(self, tags, clusterize=False):
         """This method reads a list of tags or a single tag (Cluster objects, not unprocessed lines)"""
         if type(tags)==type(list()):
             self.tags.extend(tags)
@@ -1304,7 +1363,8 @@ class Region:
             self.tags.append(tags)
         else:
             print 'Invalid tag!!!'
-        self.clusterize()
+        if clusterize:
+            self.clusterize()
 
     def clusterize(self):
         """Creates the Cluster objects of the tags in the Region object"""
@@ -1363,7 +1423,7 @@ class Region:
         """Gets the clusters inside the region higher than the marked height. By default returns all clusters with at least 2 reads"""
         significant_clusters = []
         for cluster in self.clusters:
-            if cluster.get_max_height() > height:
+            if cluster.max_height() > height:
                 significant_clusters.append(cluster)
         return significant_clusters
 

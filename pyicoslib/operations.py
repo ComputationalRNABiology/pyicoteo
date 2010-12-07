@@ -19,6 +19,7 @@ import os
 import shutil
 import logging
 import math
+import random
 from collections import defaultdict
 from heapq import heappop, heappush
 from itertools import islice, cycle
@@ -632,7 +633,7 @@ class Turbomix:
             if self.verbose:
                 print 'Temporary file %s removed'%path
 
-    def remove_duplicates_file(self, file_path, temp_name, remove_temp):
+    def _remove_duplicates_file(self, file_path, temp_name, remove_temp):
         new_file_path = "%s/tempfilter%s_%s"%(gettempdir(), os.getpid(), temp_name)
         new_file = file(new_file_path, 'w')
         print "Filtering %s file..."%temp_name
@@ -663,18 +664,16 @@ class Turbomix:
         self.cluster.clear()
         self.cluster_aux.clear()   
         return new_file_path     
-
+    
     def filter_files(self):
-        """Prefilter the files removing the duplicates and generating the random files for the enrichment. TODO Normalize should go here too!"""
+        """Filter the files removing the duplicates, calculates the enrichment based on the reads."""
+        #TODO Normalize should go here too
         if self.do_dupremove:
-            self.current_experiment_path = self.remove_duplicates_file(self.current_experiment_path, "experiment", self.temp_experiment)
+            self.current_experiment_path = self._remove_duplicates_file(self.current_experiment_path, "experiment", self.temp_experiment)
             if self.current_control_path:
-                self.current_control_path = self.remove_duplicates_file(self.current_control_path, "control", self.temp_control)
+                self.current_control_path = self._remove_duplicates_file(self.current_control_path, "control", self.temp_control)
 
-        if Enrichment in self.operations:
-            print "Generar random mixed files!!!"
 
-        
     def get_lambda_func(self, format):
         if self.output_format == SPK:
             if format == ELAND:
@@ -692,6 +691,7 @@ class Turbomix:
 
     def decide_sort(self, experiment_path, control_path=None):
         """Decide if the files need to be sorted or not."""
+        #TODO refractor this, copy pasted code
         if (not self.experiment_format in CLUSTER_FORMATS and self.output_format in CLUSTER_FORMATS) or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations:
             if self.no_sort:
                 if self.verbose:
@@ -703,6 +703,7 @@ class Turbomix:
                 sorted_experiment_file = self.experiment_preprocessor.sort(experiment_path, None, self.get_lambda_func(self.experiment_format))
                 self.current_experiment_path = sorted_experiment_file.name
                 self.temp_experiment = True
+
             if self.do_subtract:
                 if self.no_sort:
                     if self.verbose: print 'Control sort skipped'
@@ -712,7 +713,17 @@ class Turbomix:
                     sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format))
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
-
+            
+            if Enrichment in self.operations:  
+                if self.no_sort:
+                    if self.verbose: print 'Experiment_b sort skipped'
+                    self.current_control_path = control_path
+                else:
+                    if self.verbose: print 'Sorting experiment_b file...'
+                    sorted_control_file = self.experiment_b_preprocessor.sort(control_path, None, self.get_lambda_func(self.experiment_format))
+                    self.current_control_path = sorted_control_file.name
+                    self.temp_control = True
+               
         if self.region_path:
             print "Sorting region file..."
             self.sorted_region_file = self.region_preprocessor.sort(self.region_path, None, self.get_lambda_func(BED))
@@ -754,7 +765,7 @@ class Turbomix:
             if StrandCorrelation in self.operations:
                 self.strand_correlation()
             
-            if self.do_dupremove or Enrichment in self.operations:
+            if self.do_dupremove:
                 self.filter_files()
 
             if Normalize in self.operations:
@@ -764,10 +775,10 @@ class Turbomix:
                 self.cluster.rounding = False
                 self.cluster_aux.rounding = False
 
-            if (not NoWrite in self.operations) or (NoWrite in self.operations and Poisson in self.operations): 
+            if ((not NoWrite in self.operations) or (NoWrite in self.operations and Poisson in self.operations)) and not Enrichment in self.operations: 
                 self.process_file()
             
-            if self.do_poisson: #operate with the last chromosome and print the threadholds
+            if self.do_poisson: #extract info from the last chromosome and print the thresholds
                 self.poisson_analysis(self.previous_chr)
                 print '\nCluster threadsholds for p-value %s:'%self.p_value
                 self.result_log.write('\nCluster threadsholds for p-value %s:\n'%self.p_value)
@@ -775,13 +786,20 @@ class Turbomix:
                     print '%s: %s'%(chromosome, k)
                     self.result_log.write('%s: %s\n'%(chromosome, k))
 
-            if self.do_cut: 
+
+            #Mutually exclusive final operations
+            if Enrichment in self.operations:
+                self.enrichment()
+
+            elif self.do_cut: 
                 self.cut()
 
-            if ModFDR in self.operations:
+            elif ModFDR in self.operations:
                 self.modfdr()
 
             self.success_message(output_path)
+
+            
 
         finally: #Finally try deleting all temporary files, quit silently if they dont exist
             try:
@@ -858,7 +876,7 @@ class Turbomix:
         if self.output_format == WIG or self.output_format == VARIABLE_WIG:
             output.write('track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.label)
 
-        if self.output_format in CLUSTER_FORMATS and not ModFDR in self.operations:
+        if self.output_format in CLUSTER_FORMATS and not ModFDR in self.operations and not Enrichment in self.operations:
             if not self.experiment_format in CLUSTER_FORMATS and self.verbose:
                 print 'Clustering reads...'
             self._to_cluster_conversion(experiment, output)
@@ -875,12 +893,10 @@ class Turbomix:
         for tag in over:
             if self.do_extend:
                 tag.extend(self.frag_size)
-        region.add_tags(over)
+        region.add_tags(over, True)
         meta = region.get_metacluster()
-        #print meta._levels
         cluster -= meta
         return cluster
-
 
     def remove_regions(self, cluster):
         region = Region(cluster.start, cluster.end, cluster.name, cluster.chromosome)
@@ -1002,7 +1018,6 @@ class Turbomix:
             else:
                 self.frag_size = 100 
                 
-    
         acum_numreads = 0.
         self.total_clusters+=1
         for length, height in cluster:
@@ -1010,7 +1025,7 @@ class Turbomix:
             self.total_bp_with_reads+=length
             acum_numreads += length*height
         self.chr_length = max(self.chr_length, cluster.end)
-        max_height = cluster.get_max_height()
+        max_height = cluster.max_height()
         #numreads per cluster
         numreads_in_cluster = acum_numreads/self.frag_size
         self.total_reads += numreads_in_cluster
@@ -1022,13 +1037,11 @@ class Turbomix:
         self.absolute_max_height = max(max_height, self.absolute_max_height)
 
 
-
     def process_cluster(self, cluster, output):
         if self.cluster._tag_cache:
             self.cluster._flush_tag_cache()
 
         if cluster.chromosome not in self.discarded_chromosomes and not cluster.is_empty():
-
             if self.previous_chr != cluster.chromosome: #A new chromosome has been detected
                 if self.is_sorted and self.verbose:
                     print '%s...'%cluster.chromosome,
@@ -1091,7 +1104,7 @@ class Turbomix:
             cut_cluster.clear()
             self.safe_read_line(cut_cluster, line)
             try:
-                cut_cluster.p_value = self.maxheight_to_pvalue[int(round(cut_cluster.get_max_height()))][cut_cluster.chromosome]
+                cut_cluster.p_value = self.maxheight_to_pvalue[int(round(cut_cluster.max_height()))][cut_cluster.chromosome]
             except KeyError:
                 cut_cluster.p_value = 0 #If the cluster is not in the dictionary, it means its too big, so the p_value will be 0
 
@@ -1113,6 +1126,70 @@ class Turbomix:
         self._manage_temp_file(old_output)
 
 
+    def __enrichment_A(self, region_a, total_reads_a, region_b, total_reads_b):
+        return math.log(region_a.rpkm(total_reads_a)/region_b.rpkm(total_reads_b))
+
+
+    def __enrichment_M(self, region_a, total_reads_a, region_b, total_reads_b):
+        return (math.log(region_a.rpkm(total_reads_a))+math.log(region_b.rpkm(total_reads_b))/2)
+
+
+    def enrichment(self):
+        file_a_reader = SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
+        file_b_reader = SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
+        self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
+        self.total_reads_b = sum(1 for line in open(self.current_control_path))     
+        self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2   
+        real_A = []
+        real_M = []
+        swap_A = []
+        swap_M = []
+        for region_line in file(self.sorted_region_path):
+            sregion = region_line.split()
+            region_of_interest = Region(int(sregion[1]), int(sregion[2]), sregion[4], sregion[0])
+            tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
+            tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
+
+            if tags_a or tags_b:
+                region_a = region_of_interest.copy()
+                region_b = region_of_interest.copy()  
+                region_a.add_tags(tags_a)
+                region_b.add_tags(tags_b)
+                swap1, swap2 = region_a.swap(region_b)
+                real_A.append(self.__enrichment_A(region_a, self.total_reads_a, region_b, self.total_reads_b))
+                real_M.append(self.__enrichment_M(region_a, self.total_reads_a, region_b, self.total_reads_b))
+                swap_A.append(self.__enrichment_A(swap1, self.average_total_reads, swap2, self.average_total_reads))
+                swap_M.append(self.__enrichment_M(swap1, self.average_total_reads, swap2, self.average_total_reads))
+            
+        try:
+            from matplotlib.pyplot import plot, hist, show, legend
+            plot(real_M, real_A, 'r.', label='Experiment')
+            plot(swap_M, swap_A, 'b.', label='Swap')
+            legend(loc=2)
+            self._save_figure("enrichment_MA")
+
+            hist(real_A, 100, color="r", histtype="step", label='Experiment')
+            hist(swap_A, 100, color="b", histtype="step", label='Swap')
+            legend(loc=2)
+            self._save_figure("hist_D")
+      
+                        
+
+        except ImportError:
+            print self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library.')
+            
+    def _save_figure(self, figure_name):
+        from matplotlib.pyplot import savefig, clf
+        if os.path.dirname(self.current_output_path):
+            figure_path = '%s/%s_%s.png'%(os.path.dirname(self.current_output_path), figure_name, os.path.basename(self.current_output_path))
+        else:
+            figure_path = '%s_%s.png'%(os.path.basename(figure_name), self.current_output_path)
+
+        savefig(figure_path)
+        clf()
+        if self.verbose: print "%s figure saved to %s"%(figure_name, figure_path)
+
+
     def modfdr(self):
         print "\nRunning modfdr filter with %s p-value threshold and %s repeats..."%(self.p_value, self.repeats)
         old_output = '%s/before_modfdr_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
@@ -1125,7 +1202,7 @@ class Turbomix:
         for region_line in file(self.sorted_region_path):
             split_region_line = region_line.split()
             region = Region(split_region_line[1], split_region_line[2], chromosome=split_region_line[0])
-            region.add_tags(cluster_reader.get_overlaping_clusters(region, overlap=0.000001))
+            region.add_tags(cluster_reader.get_overlaping_clusters(region, overlap=0.000001), True)
             classified_clusters = region.get_FDR_clusters(self.repeats)
             for cluster in  classified_clusters:
                 unfiltered_output.write(cluster.write_line())
@@ -1165,7 +1242,7 @@ class Turbomix:
 
             else:
                 if negative_cluster.is_empty() or not negative_cluster.intersects(line_read):
-                    if positive_cluster.get_max_height() > self.correlation_height and negative_cluster.get_max_height() > self.correlation_height: #if we have big clusters, correlate them
+                    if positive_cluster.max_height() > self.correlation_height and negative_cluster.max_height() > self.correlation_height: #if we have big clusters, correlate them
                         self._correlate_clusters(positive_cluster, negative_cluster)
                         if self.max_correlations < self.analyzed_pairs: #if we analyzed enough clusters, stop
                             break                     
