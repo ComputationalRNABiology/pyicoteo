@@ -20,7 +20,7 @@ import ConfigParser
 from operations import (Turbomix, Extend, Poisson, RemoveRegion,  Normalize, Subtract, Trim,
                         Split, Cut, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation, Enrichment)
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.9.1'
+__version__ = '0.9.1.1'
 from defaults import *
 
 class PicosParser:
@@ -53,7 +53,7 @@ class PicosParser:
         experiment.add_argument('experiment', help='The experiment file or directory')
 
         experiment_flags = self.new_subparser()
-        experiment_flags.add_argument('-o','--open-experiment', action='store_true', dest='experiment_open', default=OPEN_EXPERIMENT, help='Defines if the experiment is half-open or closed notation. [Default %(default)s]')
+        experiment_flags.add_argument('-o','--open-experiment', action='store_true', dest='open_experiment', default=OPEN_EXPERIMENT, help='Defines if the experiment is half-open or closed notation. [Default %(default)s]')
         experiment_flags.add_argument( '-f','--experiment-format',default=EXPERIMENT_FORMAT,  dest='experiment_format', help="""The format the experiment file is written as.
                                  The options are %s. [Default pk]"""%read_formats)
 
@@ -66,11 +66,11 @@ class PicosParser:
         #experiment_b_flags.add_argument( '--experiment-b-format',default=EXPERIMENT_FORMAT,  dest='control_format', help="""The format the experiment file is written as.
         #                         The options are %s. [Default pk]"""%read_formats)
 
-        replicas_a = self.new_subparser()
-        replicas_a.add_argument('--replicas_a', help='The experiment A replicas', nargs='*')
+        replica_a = self.new_subparser()
+        replica_a.add_argument('--replica_a', help='Experiment A replica file')
         
-        replicas_b = self.new_subparser()
-        replicas_b.add_argument('--replicas_b', help='The experiment B replicas', nargs='*')
+        replica_b = self.new_subparser()
+        replica_b.add_argument('--replica_b', help='Experiment B replica file')
 
         control = self.new_subparser()
         control.add_argument('control', help='The control file or directory')
@@ -235,7 +235,7 @@ class PicosParser:
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
         #enrichment operation
-        subparsers.add_parser('enrichment', help='An enrichment test', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replicas_a, replicas_b, region, region_format, output])
+        subparsers.add_parser('enrichment', help='An enrichment test', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, replica_b, region, region_format, output])
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
         #whole exposure
@@ -245,12 +245,12 @@ class PicosParser:
 
     def run_parser(self):
         parser = self.create_parser()
-        parser.set_defaults(experiment=EXPERIMENT, experiment_format=EXPERIMENT_FORMAT, experiment_open=OPEN_EXPERIMENT, debug=DEBUG, discard=DISCARD, output=OUTPUT, control=CONTROL, 
+        parser.set_defaults(experiment=EXPERIMENT, experiment_format=EXPERIMENT_FORMAT, open_experiment=OPEN_EXPERIMENT, debug=DEBUG, discard=DISCARD, output=OUTPUT, control=CONTROL, 
                             label = LABEL, output_format=OUTPUT_FORMAT,open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, 
                             open_region =OPEN_REGION,frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, 
                             correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE, trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, 
                             no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE,
-                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, remlabels=REMLABELS, experiment_b=EXPERIMENT)
+                            max_delta=MAX_DELTA, min_delta=MIN_DELTA, height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT)
 
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the experiment format
@@ -289,12 +289,12 @@ class PicosParser:
                         sys.exit(0)
 
 
-        turbomix = Turbomix(args.experiment, args.output, args.experiment_format, args.output_format, args.label, args.experiment_open, args.open_output, args.debug,
+        turbomix = Turbomix(args.experiment, args.output, args.experiment_format, args.output_format, args.label, args.open_experiment, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.remlabels, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
-                            args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b)
+                            args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b)
 
 
         if sys.argv[1] == 'protocol':
@@ -385,11 +385,11 @@ class PicosParser:
                raise
             else:
                 print 'Operation Failed.'
-        except IOError as error:
+        """except IOError as error:
             if args.debug:
                 raise
             else:            
-                print error
+                print error""" #Not compatible with python 2.5
         
 
 

@@ -368,11 +368,14 @@ class Turbomix:
                  open_region=OPEN_REGION, span = SPAN, frag_size = FRAG_SIZE, p_value = P_VALUE, height_limit = HEIGHT_LIMIT, correction_factor = CORRECTION,
                  trim_percentage=TRIM_PROPORTION, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, 
                  min_delta=MIN_DELTA, correlation_height=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, 
-                 split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, experiment_b_path=EXPERIMENT, **kwargs):
+                 split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, experiment_b_path=EXPERIMENT,
+                 replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, **kwargs):
         self.__dict__.update(locals())
         self.is_sorted = False
-        self.temp_experiment = False #Flag that indicates if temp files where created for the experiment
+        self.temp_experiment = False #Indicates if temp files where created for the experiment
         self.temp_control = False #Indicates if temporary files where created for the control
+        self.temp_replica_a = False 
+        self.temp_replica_b = False 
         self.operations = []
         self.previous_chr = None
         self.open_region = False
@@ -380,16 +383,13 @@ class Turbomix:
         if not self.discarded_chromosomes:
             self.discarded_chromosomes = []
         self.region_cluster = Cluster(read=region_format, read_half_open = open_region)
-        #Clusters and preprocessors
+        #Reusable cluster objects 
         try:
-            self.experiment_preprocessor = Utils.BigSort(experiment_format, open_experiment, frag_size, 'experiment', verbose=self.verbose)
-            self.experiment_b_preprocessor = Utils.BigSort(experiment_format, open_experiment, frag_size, 'experiment_b', verbose=self.verbose)
             self.cluster = Cluster(read=self.experiment_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_experiment, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, verbose=self.verbose, cached=cached)
             self.cluster_aux = Cluster(read=self.experiment_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_experiment, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, verbose=self.verbose, cached=cached)
             self.cluster_aux2 = Cluster(read=self.experiment_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_experiment, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, verbose=self.verbose, cached=cached)
             self.control_cluster = Cluster(read=experiment_format, read_half_open = open_experiment, verbose=self.verbose, cached=cached)
-            self.control_preprocessor = Utils.BigSort(control_format, open_control, frag_size, 'control', verbose=self.verbose)
-            self.region_preprocessor = Utils.BigSort(region_format, open_region, None, 'region', verbose=self.verbose)
+
         except ConversionNotSupported:
             print '\nThe reading "%s" and writing "%s" is not supported. \n\n'%(self.experiment_format, self.output_format)
             Utils.list_available_formats()
@@ -691,8 +691,15 @@ class Turbomix:
 
     def decide_sort(self, experiment_path, control_path=None):
         """Decide if the files need to be sorted or not."""
-        #TODO refractor this, copy pasted code
-        if (not self.experiment_format in CLUSTER_FORMATS and self.output_format in CLUSTER_FORMATS) or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations:
+        #TODO refractor this, copy pasted code (not as easy as it seems)
+
+        if (not self.experiment_format in CLUSTER_FORMATS and self.output_format in CLUSTER_FORMATS) or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations or Enrichment in self.operations:
+            self.experiment_preprocessor = Utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment', verbose=self.verbose)
+            self.experiment_b_preprocessor = Utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment_b', verbose=self.verbose)
+            self.replica_a_preprocessor = Utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'replica_a', verbose=self.verbose)
+            self.replica_b_preprocessor = Utils.BigSort(self.experiment_format, self.open_control, self.frag_size, 'replica_b', verbose=self.verbose)
+            self.control_preprocessor = Utils.BigSort(self.control_format, self.open_control, self.frag_size, 'control', verbose=self.verbose)
+            self.region_preprocessor = Utils.BigSort(self.region_format, self.open_region, None, 'region', verbose=self.verbose)
             if self.no_sort:
                 if self.verbose:
                     print 'Input sort skipped'
@@ -723,6 +730,28 @@ class Turbomix:
                     sorted_control_file = self.experiment_b_preprocessor.sort(control_path, None, self.get_lambda_func(self.experiment_format))
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
+            
+            if self.replica_a_path:
+                if self.no_sort:
+                    if self.verbose: print 'replica_a sort skipped'
+                    self.current_replica_a_path = self.replica_a_path
+                else:
+                    if self.verbose: print 'Sorting replica_a file...'
+                    sorted_replica_a_file = self.replica_a_preprocessor.sort(self.replica_a_path, None, self.get_lambda_func(self.experiment_format))
+                    self.current_replica_a_path = sorted_replica_a_file.name
+                    self.temp_replica_a = True
+
+            if self.replica_b_path:
+                if self.no_sort:
+                    if self.verbose: print 'replica_b sort skipped'
+                    self.current_replica_b_path = self.replica_b_path
+                else:
+                    if self.verbose: print 'Sorting replica_b file...'
+                    sorted_replica_b_file = self.replica_b_preprocessor.sort(self.replica_b_path, None, self.get_lambda_func(self.experiment_format))
+                    self.current_replica_b_path = sorted_replica_b_file.name
+                    self.temp_replica_b = True
+
+
                
         if self.region_path:
             print "Sorting region file..."
@@ -1135,8 +1164,15 @@ class Turbomix:
 
 
     def enrichment(self):
+        if self.verbose: print "Calculating enrichment in regions",
         file_a_reader = SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
         file_b_reader = SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
+        if self.replica_a_path and self.replica_b_path:
+            replica_a_reader = SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)
+            replica_b_reader = SortedFileClusterReader(self.current_replica_b_path, self.experiment_format, cached=self.cached)
+            if self.verbose: print "using replicas..."
+        else:
+            if self.verbose: print "using swap..."
         self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
         self.total_reads_b = sum(1 for line in open(self.current_control_path))     
         self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2   
@@ -1149,17 +1185,17 @@ class Turbomix:
             region_of_interest = Region(int(sregion[1]), int(sregion[2]), sregion[4], sregion[0])
             tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
             tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
-
             if tags_a or tags_b:
-                region_a = region_of_interest.copy()
-                region_b = region_of_interest.copy()  
-                region_a.add_tags(tags_a)
-                region_b.add_tags(tags_b)
-                swap1, swap2 = region_a.swap(region_b)
-                real_A.append(self.__enrichment_A(region_a, self.total_reads_a, region_b, self.total_reads_b))
-                real_M.append(self.__enrichment_M(region_a, self.total_reads_a, region_b, self.total_reads_b))
-                swap_A.append(self.__enrichment_A(swap1, self.average_total_reads, swap2, self.average_total_reads))
-                swap_M.append(self.__enrichment_M(swap1, self.average_total_reads, swap2, self.average_total_reads))
+                for strand in (PLUS_STRAND, MINUS_STRAND):
+                    region_a = region_of_interest.copy()
+                    region_b = region_of_interest.copy()
+                    region_a.add_tags(tags_a, strand=strand)
+                    region_b.add_tags(tags_b, strand=strand)
+                    swap1, swap2 = region_a.swap(region_b)
+                    real_A.append(self.__enrichment_A(region_a, self.total_reads_a, region_b, self.total_reads_b))
+                    real_M.append(self.__enrichment_M(region_a, self.total_reads_a, region_b, self.total_reads_b))
+                    swap_A.append(self.__enrichment_A(swap1, self.average_total_reads, swap2, self.average_total_reads))
+                    swap_M.append(self.__enrichment_M(swap1, self.average_total_reads, swap2, self.average_total_reads))
             
         try:
             from matplotlib.pyplot import plot, hist, show, legend
@@ -1167,14 +1203,11 @@ class Turbomix:
             plot(swap_M, swap_A, 'b.', label='Swap')
             legend(loc=2)
             self._save_figure("enrichment_MA")
-
             hist(real_A, 100, color="r", histtype="step", label='Experiment')
             hist(swap_A, 100, color="b", histtype="step", label='Swap')
             legend(loc=2)
             self._save_figure("hist_D")
       
-                        
-
         except ImportError:
             print self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library.')
             

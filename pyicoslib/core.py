@@ -23,6 +23,7 @@ from defaults import *
 debug = False
 verbose = False
 
+
 class Empty:
     def __init__(self):
         x = 1
@@ -1355,14 +1356,21 @@ class Region:
         #recreate the clusters
         self.clusterize()
 
-    def add_tags(self, tags, clusterize=False):
-        """This method reads a list of tags or a single tag (Cluster objects, not unprocessed lines)"""
+    def _sub_add_tag(self, tag, strand):
+        if not strand or tag.strand == strand:
+            self.tags.append(tag)
+        
+
+    def add_tags(self, tags, clusterize=False, strand=None):
+        """This method reads a list of tags or a single tag (Cluster objects, not unprocessed lines). If strand is set, then only the tags with the selected strand are added"""
         if type(tags)==type(list()):
-            self.tags.extend(tags)
+            for tag in tags:
+                self._sub_add_tag(tag, strand)
         elif type(tags)==type(Cluster()):
-            self.tags.append(tags)
+            self._sub_add_tag(tags, strand)
         else:
-            print 'Invalid tag!!!'
+            print 'Invalid tag. Tags need to be either Cluster or List objects'
+
         if clusterize:
             self.clusterize()
 
