@@ -13,7 +13,10 @@ WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
 
 READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM) #formats that we actually can read as
 
-#Default values for Pyicos
+PLUS_STRAND = "+"
+MINUS_STRAND = "-"
+NO_STRAND = "."
+#Default values for parser
 EXPERIMENT=''
 EXPERIMENT_FORMAT=PK
 OPEN_EXPERIMENT=False
