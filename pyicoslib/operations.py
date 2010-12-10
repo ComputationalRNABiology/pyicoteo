@@ -369,7 +369,7 @@ class Turbomix:
                  trim_percentage=TRIM_PROPORTION, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, 
                  min_delta=MIN_DELTA, correlation_height=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, 
                  split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, experiment_b_path=EXPERIMENT,
-                 replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, **kwargs):
+                 replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, **kwargs):
         self.__dict__.update(locals())
         self.is_sorted = False
         self.temp_experiment = False #Indicates if temp files where created for the experiment
@@ -401,7 +401,7 @@ class Turbomix:
         #poisson stuff
         self.first_chr = True
         self._init_poisson()
-        self.poisson_results = {'basepair': defaultdict(), 'clusterheight': defaultdict(), 'numreads': defaultdict() }
+        self.poisson_results = {'length': defaultdict(), 'height': defaultdict(), 'numreads': defaultdict()}
         self.maxheight_to_pvalue = {}
         #Operation flags
         self.do_poisson = False
@@ -811,7 +811,7 @@ class Turbomix:
                 self.poisson_analysis(self.previous_chr)
                 print '\nCluster threadsholds for p-value %s:'%self.p_value
                 self.result_log.write('\nCluster threadsholds for p-value %s:\n'%self.p_value)
-                for chromosome, k in self.poisson_results["clusterheight"].items():
+                for chromosome, k in self.poisson_results[self.poisson_test].items():
                     print '%s: %s'%(chromosome, k)
                     self.result_log.write('%s: %s\n'%(chromosome, k))
 
@@ -962,20 +962,17 @@ class Turbomix:
         self.absolute_max_height = 0
         self.absolute_max_numreads = 0
         self.chr_length = 0
-        self.heights =  defaultdict(int)
-        self.max_heights =  defaultdict(int)
-        self.numreads_dict =  defaultdict(int)
 
     def poisson_analysis(self, chromosome=''):
         """
-        We do 3 different global poisson statistical tests for each file:
+        We do 3 different poisson statistical tests per chromosome for each experiment file:
         
         Nucleotide analysis:
         This analysis takes the nucleotide as the unit to analize. We give a p-value for each "height"
         of read per nucleotides using an accumulated poisson. With this test we can infer more accurately 
         what nucleotides in the cluster are part of the DNA binding site.
  
-        cluster analysis:
+        Cluster analysis:
         This analysis takes as a basic unit the "cluster" profile and performs a poisson taking into account the height
         of the profile. This will help us to better know witch clusters are statistically significant and which are product of chromatine noise
 
@@ -985,6 +982,7 @@ class Turbomix:
         
         Number of reads analysis:
         We analize the number of reads of the cluster. Number of reads = sum(xi *yi ) / read_length
+
         """
         if os.path.isdir(self.output_path):
            out = self.output_path
@@ -1015,21 +1013,23 @@ class Turbomix:
         p_cluster = 1.
         p_numreads = 1.
         k = 0
-        self.result_log.write('k\tBasepair\tcluster_height\tNumreads\n')
+        self.result_log.write('k\tcluster_length\tcluster_height\tnumreads\n')
         while ((self.absolute_max_numreads > k) or (self.absolute_max_height > k)) and k < self.height_limit:
             p_nucleotide -= Utils.poisson(k, self.reads_per_bp) #analisis nucleotide
             p_cluster -= Utils.poisson(k, self.acum_height/self.total_clusters) #analysis cluster
             p_numreads -= Utils.poisson(k, self.total_reads/self.total_clusters) #analysis numreads
+
             p_nucleotide = self._correct_bias(p_nucleotide)
             p_cluster = self._correct_bias(p_cluster)
             p_numreads = self._correct_bias(p_numreads)
+
             self.result_log.write('%s\t%.8f\t%.8f\t%.8f\n'%(k, p_nucleotide, p_cluster, p_numreads))
             
-            if chromosome not in self.poisson_results['basepair'].keys() and p_nucleotide < self.p_value: #if we don't have a height k that is over the p_value yet, write it.
-                self.poisson_results["basepair"][chromosome] = k
+            if chromosome not in self.poisson_results['length'].keys() and p_nucleotide < self.p_value: #if we don't have a height k that is over the p_value yet, write it.
+                self.poisson_results["length"][chromosome] = k
 
-            if chromosome not in self.poisson_results['clusterheight'].keys() and p_cluster < self.p_value:
-                self.poisson_results["clusterheight"][chromosome] = k
+            if chromosome not in self.poisson_results['height'].keys() and p_cluster < self.p_value:
+                self.poisson_results["height"][chromosome] = k
             
             if chromosome not in self.poisson_results['numreads'].keys() and p_numreads < self.p_value:
                 self.poisson_results["numreads"][chromosome] = k
@@ -1050,7 +1050,6 @@ class Turbomix:
         acum_numreads = 0.
         self.total_clusters+=1
         for length, height in cluster:
-            self.heights[height] += length
             self.total_bp_with_reads+=length
             acum_numreads += length*height
         self.chr_length = max(self.chr_length, cluster.end)
@@ -1059,12 +1058,9 @@ class Turbomix:
         numreads_in_cluster = acum_numreads/self.frag_size
         self.total_reads += numreads_in_cluster
         self.absolute_max_numreads = max(numreads_in_cluster, self.absolute_max_numreads)
-        self.numreads_dict[int(numreads_in_cluster)] += 1
         #maxheight per cluster
-        self.max_heights[max_height] += 1
         self.acum_height += max_height
         self.absolute_max_height = max(max_height, self.absolute_max_height)
-
 
     def process_cluster(self, cluster, output):
         if self.cluster._tag_cache:
@@ -1141,7 +1137,7 @@ class Turbomix:
                 if self.threshold:
                     thres = self.threshold
                 else:
-                    thres = self.poisson_results["clusterheight"][cut_cluster.chromosome]
+                    thres = self.poisson_results[self.poisson_test][cut_cluster.chromosome]
                     
                 if cut_cluster.is_significant(thres):
                     filtered_output.write(cut_cluster.write_line())
