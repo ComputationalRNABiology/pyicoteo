@@ -403,6 +403,7 @@ class Turbomix:
         self._init_poisson()
         self.poisson_results = {'length': defaultdict(), 'height': defaultdict(), 'numreads': defaultdict()}
         self.maxheight_to_pvalue = {}
+        self.numreads_to_pvalue = {}
         #Operation flags
         self.do_poisson = False
         self.do_subtract = False
@@ -1037,6 +1038,12 @@ class Turbomix:
             if k not in self.maxheight_to_pvalue:
                 self.maxheight_to_pvalue[k] = {}
             self.maxheight_to_pvalue[k][chromosome] = p_cluster
+
+            if k not in self.numreads_to_pvalue:
+                self.numreads_to_pvalue[k] = {}
+            self.numreads_to_pvalue[k][chromosome] = p_numreads
+
+
             k+=1
 
     def poisson_retrieve_data(self, cluster):
@@ -1118,6 +1125,13 @@ class Turbomix:
         old_output = '%s/before_cut_%s'%(current_directory, os.path.basename(self.current_output_path))
         shutil.move(os.path.abspath(self.current_output_path), old_output)
         filtered_output = file(self.current_output_path, 'w+')
+        if self.verbose:
+            print "Filtering using",
+            if self.poisson_test == 'height':
+                print "cluster length..."
+            else:
+                print "number of reads per cluster..."
+
         unfiltered_output = file('%s/unfiltered_%s'%(current_directory, os.path.basename(self.current_output_path)), 'w+')
         if self.output_format == WIG or self.output_format == VARIABLE_WIG:
             wig_header = 'track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.label
@@ -1129,7 +1143,10 @@ class Turbomix:
             cut_cluster.clear()
             self.safe_read_line(cut_cluster, line)
             try:
-                cut_cluster.p_value = self.maxheight_to_pvalue[int(round(cut_cluster.max_height()))][cut_cluster.chromosome]
+                if self.poisson_test == 'height':
+                    cut_cluster.p_value = self.maxheight_to_pvalue[int(round(cut_cluster.max_height()))][cut_cluster.chromosome]
+                else:
+                    cut_cluster.p_value = self.numreads_to_pvalue[int(round(cut_cluster.area()/self.frag_size))][cut_cluster.chromosome]
             except KeyError:
                 cut_cluster.p_value = 0 #If the cluster is not in the dictionary, it means its too big, so the p_value will be 0
 
@@ -1181,12 +1198,13 @@ class Turbomix:
             region_of_interest = Region(int(sregion[1]), int(sregion[2]), sregion[4], sregion[0])
             tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
             tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
+
             if tags_a or tags_b:
                 for strand in (PLUS_STRAND, MINUS_STRAND):
                     region_a = region_of_interest.copy()
                     region_b = region_of_interest.copy()
-                    region_a.add_tags(tags_a, strand=strand)
-                    region_b.add_tags(tags_b, strand=strand)
+                    region_a.add_tags(tags_a, strand=strand) #get only the tags of the desired strand
+                    region_b.add_tags(tags_b, strand=strand) #get only the tags of the desired strand
                     swap1, swap2 = region_a.swap(region_b)
                     real_A.append(self.__enrichment_A(region_a, self.total_reads_a, region_b, self.total_reads_b))
                     real_M.append(self.__enrichment_M(region_a, self.total_reads_a, region_b, self.total_reads_b))
