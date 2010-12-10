@@ -487,15 +487,6 @@ class PkWriter(Writer):
 
         return lines
 
-
-        """
-        BORRAME    
-
-        sum_area = 0
-        for length, height in self:
-            sum_area += length*height
-
-        """
 ######################################
 #    CLUSTER OBJECT                  #
 ######################################

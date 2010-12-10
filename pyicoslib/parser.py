@@ -107,6 +107,9 @@ class PicosParser:
         region_format.add_argument('--region-format',default=REGION_FORMAT, help='The format the region file is written as. [default %(default)s]')
         region_format.add_argument('--open-region', action='store_true', default=OPEN_REGION, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
 
+        #enrichment_flags = 
+
+
         label = self.new_subparser()
         label.add_argument('--label', default=LABEL, help='The label that will identify the experiment')
 
@@ -182,7 +185,7 @@ class PicosParser:
 
     
         poisson_test = self.new_subparser()
-        poisson_test.add_argument('--poisson-test', help="Decide what property of the cluster will be used for the poisson analysis. Choices are 'length', 'height' and 'numreads' [Default %(default)%s]", default=POISSONTEST)
+        poisson_test.add_argument('--poisson-test', help="Decide what property of the cluster will be used for the poisson analysis. Choices are 'height' and 'numreads' [Default %(default)s]", default=POISSONTEST)
 
         remlabels = self.new_subparser()
         remlabels.add_argument('--remlabels', help='Discard the reads that have this particular label. Example: --discard chr1 will discard all reads with chr1 as tag. You can specify multiple tags to discard using the following notation --discard chr1 chr2 tagN')
