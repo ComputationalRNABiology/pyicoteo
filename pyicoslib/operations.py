@@ -322,7 +322,8 @@ class SortedFileClusterReader:
         fast_cursor = self.slow_cursor
         while self.cluster_cache[fast_cursor].start <= region.end and self.cluster_cache[fast_cursor].chromosome == region.chromosome:
             if self.cluster_cache[fast_cursor].overlap(region) >= overlap:
-                clusters.append(self.cluster_cache[fast_cursor].copy_cluster())
+                if not region.strand or region.strand == self.cluster_cache[fast_cursor].strand:
+                    clusters.append(self.cluster_cache[fast_cursor].copy_cluster())
             fast_cursor += 1
             if self._read_line_load_cache(fast_cursor):
                 return clusters
@@ -369,7 +370,7 @@ class Turbomix:
                  trim_percentage=TRIM_PROPORTION, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, 
                  min_delta=MIN_DELTA, correlation_height=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, 
                  split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, experiment_b_path=EXPERIMENT,
-                 replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, **kwargs):
+                 replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, stranded_analysis=STRANDED_ANALYSIS, **kwargs):
         self.__dict__.update(locals())
         self.is_sorted = False
         self.temp_experiment = False #Indicates if temp files where created for the experiment
@@ -1128,7 +1129,7 @@ class Turbomix:
         if self.verbose:
             print "Filtering using",
             if self.poisson_test == 'height':
-                print "cluster length..."
+                print "cluster height..."
             else:
                 print "number of reads per cluster..."
 
@@ -1156,7 +1157,7 @@ class Turbomix:
                 else:
                     thres = self.poisson_results[self.poisson_test][cut_cluster.chromosome]
                     
-                if cut_cluster.is_significant(thres):
+                if cut_cluster.is_significant(thres, self.poisson_test):
                     filtered_output.write(cut_cluster.write_line())
                     
             except KeyError:
@@ -1180,47 +1181,64 @@ class Turbomix:
         if self.verbose: print "Calculating enrichment in regions",
         file_a_reader = SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
         file_b_reader = SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
-        if self.replica_a_path and self.replica_b_path:
+        if self.replica_a_path:
             replica_a_reader = SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)
-            replica_b_reader = SortedFileClusterReader(self.current_replica_b_path, self.experiment_format, cached=self.cached)
+            
             if self.verbose: print "using replicas..."
         else:
             if self.verbose: print "using swap..."
+
         self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
         self.total_reads_b = sum(1 for line in open(self.current_control_path))     
         self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2   
         real_A = []
         real_M = []
-        swap_A = []
-        swap_M = []
+        replica_or_swap_A = []
+        replica_or_swap_M = []
         for region_line in file(self.sorted_region_path):
             sregion = region_line.split()
-            region_of_interest = Region(int(sregion[1]), int(sregion[2]), sregion[4], sregion[0])
+            if self.stranded_analysis:
+                 region_of_interest = Region(int(sregion[1]), int(sregion[2]), chromosome=sregion[0], strand=sregion[5])
+            else:
+                region_of_interest = Region(int(sregion[1]), int(sregion[2]), chromosome=sregion[0])
+
             tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
             tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
-
             if tags_a or tags_b:
-                for strand in (PLUS_STRAND, MINUS_STRAND):
-                    region_a = region_of_interest.copy()
-                    region_b = region_of_interest.copy()
-                    region_a.add_tags(tags_a, strand=strand) #get only the tags of the desired strand
-                    region_b.add_tags(tags_b, strand=strand) #get only the tags of the desired strand
+                region_a = region_of_interest.copy()
+                region_b = region_of_interest.copy()
+                region_a.add_tags(tags_a) 
+                region_b.add_tags(tags_b) 
+                if self.replica_a_path:
+                    plot_label = 'Replica'
+                    replica_a = region_of_interest.copy()
+                    replica_a.add_tags(replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)) 
+                    real_A.append(self.__enrichment_A(region_a, self.total_reads_a, region_b, self.total_reads_b))
+                    real_M.append(self.__enrichment_M(region_a, self.total_reads_a, region_b, self.total_reads_b))
+                    replica_or_swap_A.append(self.__enrichment_A(region_a, self.average_total_reads, replica_a, self.average_total_reads))
+                    replica_or_swap_M.append(self.__enrichment_M(region_a, self.average_total_reads, replica_a, self.average_total_reads))
+                else:
+                    plot_label = 'Swap'
                     swap1, swap2 = region_a.swap(region_b)
                     real_A.append(self.__enrichment_A(region_a, self.total_reads_a, region_b, self.total_reads_b))
                     real_M.append(self.__enrichment_M(region_a, self.total_reads_a, region_b, self.total_reads_b))
-                    swap_A.append(self.__enrichment_A(swap1, self.average_total_reads, swap2, self.average_total_reads))
-                    swap_M.append(self.__enrichment_M(swap1, self.average_total_reads, swap2, self.average_total_reads))
-            
+                    replica_or_swap_A.append(self.__enrichment_A(swap1, self.average_total_reads, swap2, self.average_total_reads))
+                    replica_or_swap_M.append(self.__enrichment_M(swap1, self.average_total_reads, swap2, self.average_total_reads))
+
+        print
+        print "Comparison:", real_A, real_M 
+        print "Swap or Replica:", replica_or_swap_A, replica_or_swap_M
+        print
         try:
             from matplotlib.pyplot import plot, hist, show, legend
             plot(real_M, real_A, 'r.', label='Experiment')
-            plot(swap_M, swap_A, 'b.', label='Swap')
+            plot(replica_or_swap_M, replica_or_swap_A, 'b.', label=plot_label)
             legend(loc=2)
             self._save_figure("enrichment_MA")
             hist(real_A, 100, color="r", histtype="step", label='Experiment')
-            hist(swap_A, 100, color="b", histtype="step", label='Swap')
+            hist(replica_or_swap_A, 100, color="b", histtype="step", label='Swap')
             legend(loc=2)
-            self._save_figure("hist_D")
+            self._save_figure("hist_A")
       
         except ImportError:
             print self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library.')

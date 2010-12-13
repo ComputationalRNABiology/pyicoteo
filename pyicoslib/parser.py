@@ -107,8 +107,8 @@ class PicosParser:
         region_format.add_argument('--region-format',default=REGION_FORMAT, help='The format the region file is written as. [default %(default)s]')
         region_format.add_argument('--open-region', action='store_true', default=OPEN_REGION, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
 
-        #enrichment_flags = 
-
+        enrichment_flags = self.new_subparser()
+        enrichment_flags.add_argument('--stranded', action='store_true', default=STRANDED_ANALYSIS, help="Decide if the strand is taken into consideration for the analysis. This requires a region file in bed format with the strand information in its 6th column.")
 
         label = self.new_subparser()
         label.add_argument('--label', default=LABEL, help='The label that will identify the experiment')
@@ -242,7 +242,7 @@ class PicosParser:
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
         #enrichment operation
-        subparsers.add_parser('enrichment', help='An enrichment test', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, replica_b, region, region_format, output])
+        subparsers.add_parser('enrichment', help='An enrichment test', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, replica_b, region, region_format, output, enrichment_flags])
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
         #whole exposure
@@ -259,7 +259,7 @@ class PicosParser:
                             no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, min_delta=MIN_DELTA, 
                             height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION,
                             split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, 
-                            remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST)
+                            remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS)
 
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the experiment format
@@ -303,7 +303,7 @@ class PicosParser:
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
-                            args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test)
+                            args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, args.stranded)
 
 
         if sys.argv[1] == 'protocol':

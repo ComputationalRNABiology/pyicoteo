@@ -787,9 +787,12 @@ class Cluster:
 
         return max_len/len(self) > condition
 
-    def is_significant(self, threshold):
+    def is_significant(self, threshold, poisson_type="height"):
         """Returns True if the cluster is significant provided a threshold, otherwise False"""
-        return threshold <= int(round(self.max_height()))
+        if poisson_type=="height":
+            return threshold <= int(round(self.max_height()))
+        else:
+            return threshold <= int(round(self.area()))
 
     def intersects(self, other):
         """Returns true if a Cluster intersects with another Cluster"""
@@ -1158,14 +1161,14 @@ class Cluster:
 #   REGION  OBJECT    #
 #######################
 class Region:
-    def __init__(self, start=0, end=0, name=None, chromosome=None):
+    def __init__(self, start=0, end=0, name=None, chromosome=None, strand=None):
         self.start = int(start)
         self.end = int(end)
         self.name = name
         self.chromosome = chromosome
+        self.strand = strand
         self.tags = []
         self.clusters = []
-
 
     def rpkm(self, total_reads):
         """Original definition: Reads per kilobase of exon model per million mapped reads. We generalize to: Reads per kilobase of region per million mapped reads.Added 1 pseudocount per region to avoid 0s"""
@@ -1214,6 +1217,7 @@ class Region:
         new_region.tags = []
         new_region.clusters = []
         new_region.add_tags(self.tags)
+        new_region.strand = self.strand
         for cluster in self.clusters:
             new_region.clusters.append(cluster)
         return new_region
@@ -1347,18 +1351,18 @@ class Region:
         #recreate the clusters
         self.clusterize()
 
-    def _sub_add_tag(self, tag, strand):
-        if not strand or tag.strand == strand:
+    def _sub_add_tag(self, tag):
+        if not self.strand or tag.strand == self.strand:
             self.tags.append(tag)
         
 
-    def add_tags(self, tags, clusterize=False, strand=None):
+    def add_tags(self, tags, clusterize=False):
         """This method reads a list of tags or a single tag (Cluster objects, not unprocessed lines). If strand is set, then only the tags with the selected strand are added"""
         if type(tags)==type(list()):
             for tag in tags:
-                self._sub_add_tag(tag, strand)
+                self._sub_add_tag(tag)
         elif type(tags)==type(Cluster()):
-            self._sub_add_tag(tags, strand)
+            self._sub_add_tag(tags)
         else:
             print 'Invalid tag. Tags need to be either Cluster or List objects'
 
