@@ -603,9 +603,14 @@ class TestCoreObjects(unittest.TestCase):
         self.assertFalse(almost_artifact.is_artifact())
 
     def test_is_significant(self):
-        self.assertFalse(self.pk_cluster.is_significant(20))
-        self.assertTrue(self.pk_cluster.is_significant(1))
-        self.assertTrue(self.pk_cluster.is_significant(5))
+        cluster = Cluster(rounding=True)
+        cluster.read_line('chr1 1 15 4:1|1:2|2:1|3:4|2:5|2:2|1:1') #area 35
+        self.assertTrue(cluster.is_significant(5, "numreads"))
+        self.assertTrue(cluster.is_significant(34, "numreads"))
+        self.assertFalse(cluster.is_significant(36, "numreads"))
+        self.assertFalse(cluster.is_significant(20))
+        self.assertTrue(cluster.is_significant(1))
+        self.assertTrue(cluster.is_significant(5))
 
     def test_tag_eq_override(self):
         tag1 = Cluster('M', 1, 100)
