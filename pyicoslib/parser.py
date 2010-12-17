@@ -17,8 +17,9 @@ import sys
 
 from lib import argparse
 import ConfigParser
-from operations import (Turbomix, Extend, Poisson, RemoveRegion,  Normalize, Subtract, Trim,
-                        Split, Cut, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation, Enrichment)
+from turbomix import Turbomix
+from operations import (Extend, Poisson, RemoveRegion,  Normalize, Subtract, Trim,
+                        Split, Filter, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation, Enrichment)
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
 __version__ = '0.9.1.1'
 from defaults import *
