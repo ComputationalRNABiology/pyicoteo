@@ -1171,7 +1171,7 @@ class Region:
         self.clusters = []
 
     def rpkm(self, total_reads):
-        """Original definition: Reads per kilobase of exon model per million mapped reads. We generalize to: Reads per kilobase of region per million mapped reads.Added 1 pseudocount per region to avoid 0s"""
+        """Original definition: Reads per kilobase of exon model per million mapped reads. We generalize to: Reads per kilobase of region per million mapped reads. Added 1 pseudocount per region to avoid 0s"""
         return (10e9*float(len(self)+1))/((len(self.tags)+1)*total_reads)
 
 
@@ -1326,6 +1326,7 @@ class Region:
 
 
     def shuffle_tags(self, masker_tags=[]):
+        """Shuffle the present tags in the region randomly"""
         for tag in self.tags:
             repeat = True
             repeat_count = 0
@@ -1345,7 +1346,7 @@ class Region:
                         break
 
                 if repeat_count > 2000:
-                    print 'I Surrender!'
+                    print 'Couldnt find a suitable randomization spot after 2000 tries, surrendering'
                     break
 
         #recreate the clusters

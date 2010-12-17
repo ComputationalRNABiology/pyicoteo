@@ -1,6 +1,9 @@
 import unittest
 from pyicoslib.core import Cluster, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG
-from pyicoslib.operations import Subtract, Extend, Turbomix, Cut, NoWrite, DiscardArtifacts, Poisson, Utils
+from pyicoslib.turbomix import Turbomix
+from pyicoslib.operations import Subtract, Extend, Filter, NoWrite, DiscardArtifacts, Poisson
+import pyicoslib.utils as utils
+
 import math
 
 class TestOperations(unittest.TestCase):
@@ -152,7 +155,7 @@ class TestOperations(unittest.TestCase):
         k = 5
         lamb = 8
         poisson_naive = (math.e**(-lamb)*lamb**k)/self.fact(k)
-        self.assertAlmostEqual(Utils.poisson(k,lamb), poisson_naive)
+        self.assertAlmostEqual(utils.poisson(k,lamb), poisson_naive)
 
     def test_extend(self):
         self.extend_operation.run()
