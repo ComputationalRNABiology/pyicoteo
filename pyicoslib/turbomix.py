@@ -459,7 +459,7 @@ class Turbomix:
             self.current_output_path = output_path
             self.cluster.clear()
             self.cluster_aux.clear()
-            self.result_log = file('%s/pyicos_report_%s.txt'%(os.path.dirname(os.path.abspath(self.current_output_path)), os.path.basename(self.current_output_path)), 'wb')
+            self.result_log = file('%s/pyicos_report_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path)), 'wb')
             self.result_log.write('Pyicos analysis report\n')
             self.result_log.write('----------------------\n\n')
             self.result_log.write('Date run: %s\n'%datetime.now())
@@ -865,15 +865,37 @@ class Turbomix:
         return (math.log(region_a.rpkm(total_reads_a))+math.log(region_b.rpkm(total_reads_b))/2)
 
 
+    def _output_dir(self):
+        """Returns the output directory"""
+        path = os.path.dirname(os.path.realpath(self.current_output_path))
+        if not os.path.exists(path):
+            os.makedirs(path)
+        return path
+
     def enrichment(self):
         if self.verbose: print "Calculating enrichment in regions",
         file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
         file_b_reader = utils.SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
+        label_main = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
         if self.replica_a_path:
+            label_control = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.replica_a_path))
             replica_a_reader = utils.SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)          
             if self.verbose: print "using replicas..."
         else:
+            label_control = '%s VS Swap'%os.path.basename(self.real_experiment_path)
             if self.verbose: print "using swap..."
+
+        if self.sorted_region_path:
+            print 'Using region file %s'%self.region_path
+        else:
+            print 'Generating region file...'
+            self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))
+            region_file = open(self.sorted_region_path, 'wb')
+            region_cluster = Cluster(read=self.experiment_format, write=BED)
+            for line in open(self.current_experiment_path):
+                region_cluster.read_line(line)      
+                region_file.write(region_cluster.write_line())          
+                region_cluster.clear()                
 
         if self.verbose: print "... counting number of lines in files..."
         self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
@@ -883,7 +905,7 @@ class Turbomix:
         real_M = []
         replica_or_swap_A = []
         replica_or_swap_M = []
-        label_main = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
+
         if self.verbose: print "... analyzing regions..."
         for region_line in file(self.sorted_region_path):
             sregion = region_line.split()
@@ -902,13 +924,11 @@ class Turbomix:
                 real_A.append(self.__enrichment_A(region_a, self.total_reads_a, region_b, self.total_reads_b))
                 real_M.append(self.__enrichment_M(region_a, self.total_reads_a, region_b, self.total_reads_b))
                 if self.replica_a_path:
-                    label_control = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.replica_a_path))
                     replica_a = region_of_interest.copy()
                     replica_a.add_tags(replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)) 
                     replica_or_swap_A.append(self.__enrichment_A(region_a, self.average_total_reads, replica_a, self.average_total_reads))
                     replica_or_swap_M.append(self.__enrichment_M(region_a, self.average_total_reads, replica_a, self.average_total_reads))
                 else:
-                    label_control = '%s VS Swap'%os.path.basename(self.current_experiment_path)
                     swap1, swap2 = region_a.swap(region_b)
                     replica_or_swap_A.append(self.__enrichment_A(swap1, self.average_total_reads, swap2, self.average_total_reads))
                     replica_or_swap_M.append(self.__enrichment_M(swap1, self.average_total_reads, swap2, self.average_total_reads))
@@ -929,11 +949,7 @@ class Turbomix:
             
     def _save_figure(self, figure_name):
         from matplotlib.pyplot import savefig, clf
-        if os.path.dirname(self.current_output_path):
-            figure_path = '%s/%s_%s.png'%(os.path.dirname(self.current_output_path), figure_name, os.path.basename(self.current_output_path))
-        else:
-            figure_path = '%s_%s.png'%(os.path.basename(figure_name), self.current_output_path)
-
+        figure_path = '%s/%s_%s.png'%(self._output_dir(), figure_name, os.path.basename(self.current_output_path))
         savefig(figure_path)
         clf()
         if self.verbose: print "%s figure saved to %s"%(figure_name, figure_path)
