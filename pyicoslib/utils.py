@@ -2,7 +2,7 @@ import math
 import os
 from tempfile import gettempdir
 from heapq import heappop, heappush
-from itertools import islice, cycle
+from itertools import islice, cycle, chain
 
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 
@@ -98,6 +98,29 @@ def list_available_formats():
     for format in WRITE_FORMATS:
         print format
     sys.exit(0)
+
+
+
+class SafeReader:
+    def __init__(self):
+        self.invalid_count = 0
+        self.invalid_limit = 2000
+
+    def safe_read_line(self, cluster, line):
+        """Reads a line in a file safely catching the error for headers.
+        Triggers OperationFailed exception if too many invalid lines are fed to the method"""
+        try:
+            cluster.read_line(line)
+        except InvalidLine:
+            if self.invalid_count > self.invalid_limit:
+                print
+                self.logger.error('Limit of invalid lines: Check the experiment, control, and region file formats, probably the error is in there. Pyicos by default expects bedpk files, except for region files, witch are bed files')
+                print
+                raise OperationFailed
+            else:
+                print "Skipping invalid (%s) line: %s"%(cluster.reader.format, line),
+                self.invalid_count += 1
+    
 
 class BigSort:
     """
@@ -236,15 +259,56 @@ class BigSort:
                 heappush(values,(key(value),index,value,iterator,chunk))
  
 
+class DualSortedReader:
+    """Given two sorted files of tags in a format supported by Pyicos, iterates through them returning them in order"""
+    def __init__(self, file_a_path, file_b_path, format, read_half_open=False):
+        self.file_a = open(file_a_path)
+        self.file_b = open(file_b_path)
+        self.current_a = Cluster(cached=False, read=format, read_half_open=read_half_open)
+        self.current_b = Cluster(cached=False, read=format, read_half_open=read_half_open)
+        
+    def __iter__(self):
+        stop_a = True #indicates if the exception StopIteration is raised by file a (True) or file b (False)
+        safe_reader = SafeReader()
+        try:
+            while 1:
+                if not self.current_a:
+                    stop_a = True
+                    line_a = self.file_a.next()
+                    safe_reader.safe_read_line(self.current_a, line_a)
+                
+                if not self.current_b:
+                    stop_a = False
+                    line_b = self.file_b.next()
+                    safe_reader.safe_read_line(self.current_b, line_b)
+                
+                if self.current_a < self.current_b:
+                    self.current_a.clear()
+                    yield line_a
+                else:
+                    self.current_b.clear()
+                    yield line_b
+        except StopIteration: #we still need to print the reminder of the sorter file
+            if stop_a:
+                while self.file_b:
+                    yield line_b
+                    line_b = self.file_b.next()
+            else:
+                while self.file_a:
+                    yield line_a
+                    line_a = self.file_a.next()
+
 
 class SortedFileClusterReader:
-    """Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
+    """
+    Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
     and retrieves the clusters that overlap with the region specified.
     """
     def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True):
         self.__dict__.update(locals())
         self.file_iterator = file(file_path)
         self.__initvalues()
+        self.safe_reader = SafeReader()
     
     def __initvalues(self):
         self.slow_cursor = 1
@@ -293,19 +357,6 @@ class SortedFileClusterReader:
                 return clusters
         return clusters
 
-    #TODO read_safe_line dentro de Cluster, o Utils...
     def safe_read_line(self, cluster, line):
-        """Reads a line in a file safely catching the error for headers.
-        Triggers OperationFailed exception if too many invalid lines are fed to the method"""
-        try:
-            cluster.read_line(line)
-        except InvalidLine:
-            if self.invalid_count > self.invalid_limit:
-                print
-                self.logger.error('Limit of invalid lines: Check the experiment, control, and region file formats, probably the error is in there. Pyicos by default expects bedpk files, except for region files, witch are bed files')
-                print
-                raise OperationFailed
-            else:
-                print "Skipping invalid (%s) line: %s"%(cluster.reader.format, line),
-                self.invalid_count += 1
+        self.safe_reader.safe_read_line(cluster, line)
 
