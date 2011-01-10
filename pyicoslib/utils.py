@@ -243,16 +243,26 @@ class SortedFileClusterReader:
     """
     def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True):
         self.__dict__.update(locals())
+        self.file_iterator = file(file_path)
+        self.__initvalues()
+    
+    def __initvalues(self):
         self.slow_cursor = 1
         self.cluster_cache = dict() 
         self.invalid_count = 0
         self.invalid_limit = 2000
-        self.file_iterator = file(file_path)
+
+
+    def rewind(self):
+        """Start again reading the file from the start"""
+        self.file_iterator.seek(0)
+        self.__initvalues()
 
     def _read_line_load_cache(self, cursor):
         """Loads the cache if the line read by the cursor is not there yet.
         If the line is empty, it means that the end of file was reached,
-        so this function sends a signal for the parent function to halt """
+        so this function sends a signal for the parent function to halt.
+        If the region is stranded, the only tags returned will be the ones of that strand"""
         if cursor not in self.cluster_cache:
             try:
                 line = self.file_iterator.next()
