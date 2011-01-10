@@ -607,7 +607,7 @@ class Turbomix:
             output.close()
 
     def subtract(self, cluster):
-        region = Region(cluster.start, cluster.end, cluster.name, cluster.chromosome)
+        region = Region(cluster.start, cluster.end, cluster.chromosome)
         over = self.control_reader.get_overlaping_clusters(region, overlap=0.0000001)
         for tag in over:
             if self.do_extend:
@@ -618,7 +618,7 @@ class Turbomix:
         return cluster
 
     def remove_regions(self, cluster):
-        region = Region(cluster.start, cluster.end, cluster.name, cluster.chromosome)
+        region = Region(cluster.start, cluster.end, cluster.chromosome)
         if self.region_reader.get_overlaping_clusters(region, overlap=0.5):
             cluster.clear() 
         return cluster
@@ -872,6 +872,12 @@ class Turbomix:
             os.makedirs(path)
         return path
 
+    def _region_from_sline(self, sline):
+        if self.stranded_analysis:
+            return Region(int(sline[1]), int(sline[2]), chromosome=sline[0], strand=sline[5])
+        else:
+            return Region(int(sline[1]), int(sline[2]), chromosome=sline[0])  
+        
     def enrichment(self):
         if self.verbose: print "Calculating enrichment in regions",
         file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
@@ -892,10 +898,24 @@ class Turbomix:
             self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))
             region_file = open(self.sorted_region_path, 'wb')
             region_cluster = Cluster(read=self.experiment_format, write=BED)
+            calculated_region = None
             for line in open(self.current_experiment_path):
-                region_cluster.read_line(line)      
-                region_file.write(region_cluster.write_line())          
-                region_cluster.clear()                
+                if not calculated_region:
+                    calculated_region = self._region_from_sline(line.split())
+                else:
+                    new_region = self._region_from_sline(line.split())
+                    if calculated_region.overlap(new_region):
+                        calculated_region.join(new_region)
+            
+                    else: #We have all overlapping tags from one file, now get the ones in the other
+                        #PROBLEMA: Regiones "puente" A - B - A no detectadas!! 
+                        #Solucion ultima hora: Get overlapping clusters en ambos ficheros, si no sale ninguno, escribir region. Darle a SortedLoquesea una funcion get_next()
+                        #Mas ideas:
+                        for tag in file_b_reader.get_overlaping_clusters(calculated_region, overlap=0.000001):
+                            calculated_region.join(tag)
+                               
+                        region_file.write(calculated_region.write())                         
+                        calculated_region = None                
 
         if self.verbose: print "... counting number of lines in files..."
         self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
@@ -908,12 +928,7 @@ class Turbomix:
 
         if self.verbose: print "... analyzing regions..."
         for region_line in file(self.sorted_region_path):
-            sregion = region_line.split()
-            if self.stranded_analysis:
-                 region_of_interest = Region(int(sregion[1]), int(sregion[2]), chromosome=sregion[0], strand=sregion[5])
-            else:
-                region_of_interest = Region(int(sregion[1]), int(sregion[2]), chromosome=sregion[0])
-
+            region_of_interest = self._region_from_sline(region_line.split())
             tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
             tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
             if tags_a or tags_b:

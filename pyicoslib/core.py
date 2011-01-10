@@ -46,6 +46,55 @@ class InsufficientData(Exception):
 class DifferentChromosome(Exception):
     pass
 
+
+class AbstractCore:
+    """
+    Do not cast, abstract class
+    """
+    def intersects(self, other):
+        """Returns true if a Cluster/Region intersects with another Cluster/Region"""
+        return ((other.start >= self.start and other.start <= self.end)
+                 or (other.end >= self.start and other.end < self.end)
+                 or (other.start <= self.start and other.end >= self.end)) and (self.chromosome == other.chromosome)
+
+    def overlap(self, other):
+        """Returns the percentage of overlap of the self cluster with another cluster, from 0 to 1"""
+        if self.chromosome != other.chromosome or not self.intersects(other): #different chromosome or no intersection, no overlap
+            return 0
+        if other.start > self.start and other.end >= self.end:
+            #|--------------------| self
+            #           |--------------------| other
+            #OR
+            #|--------------------| self
+            #           |---------| other
+            return float(self.end-other.start+1)/len(self)
+
+        elif other.end < self.end and other.start <= self.start:
+            #      |-------------------| self
+            #|---------------| other
+            #OR
+            #|---------------------| self
+            #|---------------| other
+            return float(other.end-self.start+1)/len(self)
+        elif self.start < other.start and self.end > other.end:
+            #|------------------------| self
+            #    |------------| other
+            return float(len(other))/len(self)
+        else:
+            #    |------------| self
+            #|------------------------| other
+            #OR
+            #|------------------------| self
+            #|------------------------| other
+            #OR
+            return 1
+
+    def is_contiguous(self, other):
+        """Returns true if a Cluster read is contiguous to another one. """
+        return (other.start == self.end+1 or other.end+1 == self.start) and self.chromosome == other.chromosome
+
+    
+
 ###################################
 #   READERS                       #
 ###################################
@@ -492,7 +541,7 @@ class PkWriter(Writer):
 ######################################
 
 
-class Cluster:
+class Cluster(AbstractCore):
     """
     Represents one cluster of overlaping tags or a single Tag. This object can read and write in every format provided.
     It can be added, compared, subtracted to other cluster objects. Several interesting properties can be extracted from it.
@@ -793,48 +842,6 @@ class Cluster:
             return threshold <= int(round(self.max_height()))
         else:
             return threshold <= int(round(self.area()))
-
-    def intersects(self, other):
-        """Returns true if a Cluster intersects with another Cluster"""
-        return ((other.start >= self.start and other.start <= self.end)
-                 or (other.end >= self.start and other.end < self.end)
-                 or (other.start <= self.start and other.end >= self.end)) and (self.chromosome == other.chromosome)
-
-    def overlap(self, other):
-        """Returns the percentage of overlap of the self cluster with another cluster, from 0 to 1"""
-        if self.chromosome != other.chromosome or not self.intersects(other): #different chromosome or no intersection, no overlap
-            return 0
-        if other.start > self.start and other.end >= self.end:
-            #|--------------------| self
-            #           |--------------------| other
-            #OR
-            #|--------------------| self
-            #           |---------| other
-            return float(self.end-other.start+1)/len(self)
-
-        elif other.end < self.end and other.start <= self.start:
-            #      |-------------------| self
-            #|---------------| other
-            #OR
-            #|---------------------| self
-            #|---------------| other
-            return float(other.end-self.start+1)/len(self)
-        elif self.start < other.start and self.end > other.end:
-            #|------------------------| self
-            #    |------------| other
-            return float(len(other))/len(self)
-        else:
-            #    |------------| self
-            #|------------------------| other
-            #OR
-            #|------------------------| self
-            #|------------------------| other
-            #OR
-            return 1
-
-    def is_contiguous(self, other):
-        """Returns true if a Cluster read is contiguous to another one. """
-        return (other.start == self.end+1 or other.end+1 == self.start) and self.chromosome == other.chromosome
 
     def read_line(self, line):
         self.reader.read_line(self, line)
@@ -1160,11 +1167,10 @@ class Cluster:
 #######################
 #   REGION  OBJECT    #
 #######################
-class Region:
-    def __init__(self, start=0, end=0, name=None, chromosome=None, strand=None):
+class Region(AbstractCore):
+    def __init__(self, start=0, end=0, chromosome=None, strand=None):
         self.start = int(start)
         self.end = int(end)
-        self.name = name
         self.chromosome = chromosome
         self.strand = strand
         self.tags = []
@@ -1184,14 +1190,14 @@ class Region:
 
     def swap(self, region_b):
         "Given 2 regions, return 2 new regions with the reads of both regions mixed aleatoriely"
-        swap1 = Region(self.start, self.end, self.name, self.chromosome)
-        swap2 = Region(self.start, self.end, self.name, self.chromosome)
+        swap1 = Region(self.start, self.end, self.chromosome)
+        swap2 = Region(self.start, self.end, self.chromosome)
         self.__sub_swap(self, swap1, swap2)
         self.__sub_swap(region_b, swap1, swap2)
         return (swap1, swap2)        
 
     def __str__(self):
-        return "chr: %s start: %s end: %s name: %s number_of_tags: %s"%(self.chromosome, self.start, self.end, self.name, len(self.tags))
+        return "chr: %s start: %s end: %s number_of_tags: %s"%(self.chromosome, self.start, self.end, len(self.tags))
 
     def _numpos_higher_than(self, h, nis):
         ret = 0
@@ -1212,7 +1218,6 @@ class Region:
         new_region.__class__ = self.__class__
         new_region.start = self.start
         new_region.end = self.end
-        new_region.name = self.name
         new_region.chromosome = self.chromosome
         new_region.tags = []
         new_region.clusters = []
@@ -1246,7 +1251,12 @@ class Region:
 
     def p1(self, l, N):
         return l/N
-       
+    
+    def join(self, other):
+        """Joins two regions. Works with a cluster object too (if flushed properly)"""
+        self.start = min(self.start, other.start)
+        self.end = max(self.end, other.end)
+   
     def get_FDR_clusters(self, repeats=100, masker_tags=[]):
 
         max_height = int(self.max_height())
@@ -1260,7 +1270,7 @@ class Region:
         #Get the repeat regions that overlap with the region
         """
         masker_tags = repeat_reader.get_overlaping_clusters(region, overlap=0.000001) #get all overlaping masker tags
-        masker_region = Region(region.chromosome, region.start, region.end, region.name)
+        masker_region = Region(region.start, region.end, region.chromosome)
         masker_region.add_tags(masker_tags)
         """
 
@@ -1431,5 +1441,11 @@ class Region:
                 significant_clusters.append(cluster)
         return significant_clusters
 
+    def write(self):
+        """Returns a line in bed format"""
+        strand = self.strand
+        if not strand:
+            strand = '.'
+        return "%s\t%s\t%s\t0\tpyicos_region\t%s\n"%(self.chromosome, self.start, self.end, strand)
 
 
