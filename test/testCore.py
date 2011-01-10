@@ -619,6 +619,26 @@ class TestCoreObjects(unittest.TestCase):
         self.assertEqual(tag1, tag2)
         self.assertNotEqual(tag1, tag3)
 
+    def test_nonzero(self):
+        tag = Cluster()
+        self.assertTrue(not tag)
+        tag.read_line("chr1 1 100 100:1")
+        self.assertFalse(not tag)
+
+    def test_comparison(self):
+        cluster = Region(1, 100, "chr1")
+        clusterdup = Cluster(read=BED)
+        clusterdup.read_line("chr1 1 100")
+        cluster2 = Cluster(read=BED)
+        cluster2.read_line("chr4 1000 1010")
+        cluster3 = Cluster(read=BED)
+        cluster3.read_line("chr5 3 103")
+        self.assertTrue(cluster < cluster2)
+        self.assertTrue(cluster2 < cluster3)
+        self.assertFalse(cluster > cluster3)
+        self.assertFalse(cluster < clusterdup)
+        self.assertTrue(cluster <= clusterdup)
+
     def test_eq(self):
         cluster = Cluster(read=PK)
         cluster2 = Cluster(read=PK)

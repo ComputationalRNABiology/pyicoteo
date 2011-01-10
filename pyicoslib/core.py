@@ -57,6 +57,23 @@ class AbstractCore:
                  or (other.end >= self.start and other.end < self.end)
                  or (other.start <= self.start and other.end >= self.end)) and (self.chromosome == other.chromosome)
 
+        
+    def __cmp__(self, other):
+        if self.chromosome < other.chromosome:
+            return -1
+        elif self.chromosome > other.chromosome:
+            return 1
+        elif self.start < other.start:
+            return -1
+        elif self.start > other.start:
+            return 1
+        elif self.end < other.end:
+            return -1
+        elif self.end > other.end:
+            return 1
+        else:
+            return 0     
+
     def overlap(self, other):
         """Returns the percentage of overlap of the self cluster with another cluster, from 0 to 1"""
         if self.chromosome != other.chromosome or not self.intersects(other): #different chromosome or no intersection, no overlap
@@ -614,9 +631,10 @@ class Cluster(AbstractCore):
         self.read_count = 0
 
     def __len__(self):
-        return self.end-self.start+1
+        return self.end-self.start+1    
 
     def __eq__(self, other):
+        #for cluster_a == cluster_b
         if  (self.chromosome != other.chromosome) or (self.start != other.start) or (self.strand != other.strand) or (self.end != other.end) or (self.name !=other.name) or (len(self._levels) != len(other._levels)):
             return False
         for i in xrange (0, len(self._levels)):
@@ -1093,6 +1111,9 @@ class Cluster(AbstractCore):
 
         return ret
 
+    def __nonzero__(self):
+        return not self.is_empty()
+
     def is_empty(self):
         """Returns True if the Cluster object is empty, returns False otherwise."""
         return len(self._levels) == 0 and len(self._tag_cache) == 0
@@ -1110,8 +1131,6 @@ class Cluster(AbstractCore):
                 self._levels.pop(0)
                 if self.is_empty():
                     break
-
-
 
         if len(self._levels) > 0:
             while self._levels[0][1] <= 0: #delete the 0 to the left of the Cluster
@@ -1175,6 +1194,9 @@ class Region(AbstractCore):
         self.strand = strand
         self.tags = []
         self.clusters = []
+
+    def __nonzero__(self):
+        return (self.start is not 0 and self.end is not 0 and self.chromosome is not None)
 
     def rpkm(self, total_reads):
         """Original definition: Reads per kilobase of exon model per million mapped reads. We generalize to: Reads per kilobase of region per million mapped reads. Added 1 pseudocount per region to avoid 0s"""

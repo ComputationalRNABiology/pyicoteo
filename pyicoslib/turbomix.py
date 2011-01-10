@@ -65,7 +65,8 @@ class Turbomix:
         self.operations = []
         self.previous_chr = None
         self.open_region = False
-        
+        self.safe_reader = utils.SafeReader()        
+
         if not self.discarded_chromosomes:
             self.discarded_chromosomes = []
         self.region_cluster = Cluster(read=region_format, read_half_open = open_region)
@@ -219,20 +220,7 @@ class Turbomix:
         return num  
     
     def safe_read_line(self, cluster, line):
-        """Reads a line in a file safely catching the error for headers. 
-        Triggers OperationFailed exception if too many invalid lines are fed to the method"""
-        try:
-            cluster.read_line(line)
-        except InvalidLine:
-            if self.invalid_count > self.invalid_limit:
-                print 
-                self.logger.error('Limit of invalid lines: Incorrect file format? Check the experiment, control, and region formats, probably the error is in there. Pyicos by default expects bedpk files, or regular bed files for the region files.')
-                print
-                utils.list_available_formats()
-                raise OperationFailed
-            else:
-                #if self.verbose: print "Skipping invalid (%s) line: %s"%(cluster.reader.format, line),
-                self.invalid_count += 1
+        self.safe_reader.safe_read_line(cluster, line)
 
     def run(self):
         self.do_subtract = (Subtract in self.operations and self.control_path)
@@ -878,6 +866,29 @@ class Turbomix:
         else:
             return Region(int(sline[1]), int(sline[2]), chromosome=sline[0])  
         
+
+    def _calculate_region(self):
+        print 'Generating region file...'
+        self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))   
+        region_file = open(self.sorted_region_path, 'wb')
+        region_cluster = Cluster(read=self.experiment_format, write=BED)
+        calculated_region = None
+        for line in open(self.current_experiment_path):
+            if not calculated_region:
+                calculated_region = self._region_from_sline(line.split())
+            else:
+                new_region = self._region_from_sline(line.split())
+                if calculated_region.overlap(new_region):
+                    calculated_region.join(new_region)
+        
+                else: #We have all overlapping tags from one file, now get the ones in the other
+                    for tag in file_b_reader.get_overlaping_clusters(calculated_region, overlap=0.000001):
+                        calculated_region.join(tag)
+                           
+                    region_file.write(calculated_region.write())                         
+                    calculated_region = None                
+        
+
     def enrichment(self):
         if self.verbose: print "Calculating enrichment in regions",
         file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
@@ -894,28 +905,7 @@ class Turbomix:
         if self.sorted_region_path:
             print 'Using region file %s'%self.region_path
         else:
-            print 'Generating region file...'
-            self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))
-            region_file = open(self.sorted_region_path, 'wb')
-            region_cluster = Cluster(read=self.experiment_format, write=BED)
-            calculated_region = None
-            for line in open(self.current_experiment_path):
-                if not calculated_region:
-                    calculated_region = self._region_from_sline(line.split())
-                else:
-                    new_region = self._region_from_sline(line.split())
-                    if calculated_region.overlap(new_region):
-                        calculated_region.join(new_region)
-            
-                    else: #We have all overlapping tags from one file, now get the ones in the other
-                        #PROBLEMA: Regiones "puente" A - B - A no detectadas!! 
-                        #Solucion ultima hora: Get overlapping clusters en ambos ficheros, si no sale ninguno, escribir region. Darle a SortedLoquesea una funcion get_next()
-                        #Mas ideas:
-                        for tag in file_b_reader.get_overlaping_clusters(calculated_region, overlap=0.000001):
-                            calculated_region.join(tag)
-                               
-                        region_file.write(calculated_region.write())                         
-                        calculated_region = None                
+            self._calculate_region()
 
         if self.verbose: print "... counting number of lines in files..."
         self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
