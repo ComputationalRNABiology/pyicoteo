@@ -17,9 +17,7 @@ import sys
 
 from lib import argparse
 import ConfigParser
-from turbomix import Turbomix
-from operations import (Extend, Poisson, RemoveRegion,  Normalize, Subtract, Trim,
-                        Split, Filter, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation, Enrichment)
+from turbomix import Turbomix, OperationFailed
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
 __version__ = '0.9.1.1'
 from defaults import *
@@ -68,10 +66,10 @@ class PicosParser:
         #                         The options are %s. [Default pk]"""%read_formats)
 
         replica_a = self.new_subparser()
-        replica_a.add_argument('--replica_a', help='Experiment A replica file')
+        replica_a.add_argument('--replica-a', help='Experiment A replica file')
         
         replica_b = self.new_subparser()
-        replica_b.add_argument('--replica_b', help='Experiment B replica file')
+        replica_b.add_argument('--replica-b', help='Experiment B replica file')
 
         control = self.new_subparser()
         control.add_argument('control', help='The control file or directory')
@@ -91,6 +89,8 @@ class PicosParser:
         basic_parser.add_argument('--silent' ,action='store_false', default=VERBOSE, dest='verbose', help='Run without printing in screen')
         basic_parser.add_argument('--disable-cache' ,action='store_false', default=CACHED, dest='cached', help='Disable internal reading cache. When Clustering low coverage files, it will increase speed and improve memory usage. With very read dense files, the speed will decrease.')
         basic_parser.add_argument('--keep-temp', action='store_true', default=KEEP_TEMP, help='keep the temporary files (for debugging purposes)')
+        basic_parser.add_argument('--postscript', action='store_true', default=POSTSCRIPT, help='get the output graphs in postscript format instead of .png')
+        basic_parser.add_argument('--showplots', action='store_true', default=SHOWPLOTS, help='Show the plots as they are being calculated by matplotlib. Note that the execution will be stopped until you close the window pop up that will arise')
 
         output = self.new_subparser()
         output.add_argument('output', help='The output file or directory')
@@ -103,14 +103,15 @@ class PicosParser:
         region = self.new_subparser()
         region.add_argument('region', help='The region file')
         optional_region = self.new_subparser()
-        optional_region.add_argument('--region', help='The region file or directory')
+        optional_region.add_argument('--region', help='The region file or directory. In the enrichment analysis, if its not specified it will be calculated automatically from the tags in both files and the distance of clustering specified in the --proximity flag')
         region_format = self.new_subparser()
         region_format.add_argument('--region-format',default=REGION_FORMAT, help='The format the region file is written as. [default %(default)s]')
         region_format.add_argument('--open-region', action='store_true', default=OPEN_REGION, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
 
         enrichment_flags = self.new_subparser()
         enrichment_flags.add_argument('--stranded', action='store_true', default=STRANDED_ANALYSIS, help="Decide if the strand is taken into consideration for the analysis. This requires a region file in bed format with the strand information in its 6th column.")
-
+        enrichment_flags.add_argument('--proximity', default=PROXIMITY, type=int, help="Determines if two regions calculated automatically are close enough to be clustered. Default %(default)s nt")
+        
         label = self.new_subparser()
         label.add_argument('--label', default=LABEL, help='The label that will identify the experiment')
 
@@ -146,7 +147,7 @@ class PicosParser:
         normalize.add_argument('--normalize',action='store_true', default=False, help='Normalize to the control before subtracting')
 
         extend = self.new_subparser()
-        extend.add_argument('--extend',action='store_true', default=False, help='Extend')
+        extend.add_argument('--extend',action='store_true', default=False, help='EXTEND')
         subtract = self.new_subparser()
         subtract.add_argument('--subtract',action='store_true', default=False, help='subtract')
         filterop = self.new_subparser()
@@ -226,7 +227,7 @@ class PicosParser:
         #normalize operation
         subparsers.add_parser('normalize', help='Normalize a pk file respect of the control.', parents=[experiment, experiment_flags, basic_parser, control, control_format, output, output_flags, open_control, round, label, span, remlabels])
         #extend operation
-        subparsers.add_parser('extend', help='Extend the reads of a file to the desired length (we currently support only bed and eland files for this operation)', parents=[experiment,experiment_flags,  basic_parser,  output, output_flags, frag_size, round, label, span, remlabels])
+        subparsers.add_parser('extend', help='Extends the reads of a file to the desired length (we currently support only bed and eland files for this operation)', parents=[experiment,experiment_flags,  basic_parser,  output, output_flags, frag_size, round, label, span, remlabels])
         #poisson analysis
         subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.',
                               parents=[experiment,experiment_flags,  basic_parser, output_flags, optional_frag_size, pvalue, height, correction, species, remlabels, poisson_test])
@@ -256,11 +257,11 @@ class PicosParser:
         parser.set_defaults(experiment=EXPERIMENT, experiment_format=EXPERIMENT_FORMAT, open_experiment=OPEN_EXPERIMENT, debug=DEBUG, discard=DISCARD, output=OUTPUT, control=CONTROL, 
                             label = LABEL, output_format=OUTPUT_FORMAT,open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, 
                             open_region =OPEN_REGION,frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, 
-                            correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = NORMALIZE, trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, 
+                            correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = DO_NORMALIZE, trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, 
                             no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, min_delta=MIN_DELTA, 
                             height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION,
-                            split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, 
-                            remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS)
+                            split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, postscript = POSTSCRIPT,
+                            remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS, proximity=PROXIMITY, showplots=SHOWPLOTS)
 
         args = parser.parse_args()
         if not args.control_format: #If not specified, the control format is equal to the experiment format
@@ -304,84 +305,88 @@ class PicosParser:
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
-                            args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, args.stranded)
+                            args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, args.stranded, args.proximity, args.postscript, args.showplots)
 
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
             for operation in operations:
+                print "Adding operation %s to protocol..."%operation
                 turbomix.operations.append(operation.strip())
                 
         elif sys.argv[1] == 'convert':
             if args.frag_size:
-                turbomix.operations = [Extend]
+                turbomix.operations = [EXTEND]
 
         elif sys.argv[1] == 'subtract':
-            turbomix.operations = [Subtract]
+            turbomix.operations = [SUBTRACT]
             if args.normalize:
-                turbomix.operations.append(Normalize)
+                turbomix.operations.append(NORMALIZE)
 
         elif sys.argv[1] == 'normalize':
-            turbomix.operations = [Normalize]
+            turbomix.operations = [NORMALIZE]
 
         elif sys.argv[1] == 'extend':
-            turbomix.operations = [Extend]
+            turbomix.operations = [EXTEND]
 
         elif sys.argv[1] == 'strcorr':
-            turbomix.operations = [StrandCorrelation, NoWrite]
+            turbomix.operations = [STRAND_CORRELATION, NOWRITE]
 
         elif sys.argv[1] == 'poisson':
-            turbomix.operations = [Poisson, NoWrite]
+            turbomix.operations = [POISSON, NOWRITE]
 
         elif sys.argv[1] == 'filter':
-            turbomix.operations = [Poisson, Cut]
+            turbomix.operations = [POISSON, FILTER]
 
         elif sys.argv[1] == 'remove':
-            turbomix.operations = [RemoveRegion]
+            turbomix.operations = [REMOVE_REGION]
 
         elif sys.argv[1] == 'enrichment':
-            turbomix.operations = [Enrichment]
+            turbomix.operations = [ENRICHMENT]
 
         elif sys.argv[1] == 'split':
-            turbomix.operations = [Split]
+            turbomix.operations = [SPLIT]
 
         elif sys.argv[1] == 'trim':
-            turbomix.operations = [Trim]
+            turbomix.operations = [TRIM]
 
         elif sys.argv[1] == 'discard':
-            turbomix.operations = [DiscardArtifacts]
+            turbomix.operations = [DISCARD_ARTIFACTS]
 
         elif sys.argv[1] == 'remduplicates':
-            turbomix.operations = [RemoveDuplicates]
+            turbomix.operations = [REMOVE_DUPLICATES]
+
+        elif sys.argv[1] == 'remregions':
+            turbomix.operations = [REMOVE_REGION]        
 
         elif sys.argv[1] == 'modfdr':
             turbomix.operations = [ModFDR]
 
         elif sys.argv[1] == 'callpeaks':
-            turbomix.operations = [Split, Extend, Poisson, Cut, RemoveDuplicates] 
+            turbomix.operations = [SPLIT, EXTEND, POISSON, FILTER, REMOVE_DUPLICATES] 
             if args.duplicates > 1: #If there is only 1 duplicate,  there is no need to discard artifacts
-                turbomix.operations.append(DiscardArtifacts)
+                turbomix.operations.append(DISCARD_ARTIFACTS)
             if args.region:
-                turbomix.operations.append(RemoveRegion)
+                turbomix.operations.append(REMOVE_REGION)
             if args.control:
-                turbomix.operations.append(Normalize)
+                turbomix.operations.append(NORMALIZE)
                 if not args.no_subtract:
-                    turbomix.operations.append(Subtract)
+                    turbomix.operations.append(SUBTRACT)
 
         
         elif sys.argv[1] == 'all':
-            if args.normalize: turbomix.operations.append(Normalize)
-            if args.extend: turbomix.operations.append(Extend)
-            if args.subtract: turbomix.operations.append(Subtract)
-            if args.filter: turbomix.operations.append(Cut)
-            if args.poisson: turbomix.operations.append(Poisson)
+            if args.normalize: turbomix.operations.append(NORMALIZE)
+            if args.extend: turbomix.operations.append(EXTEND)
+            if args.subtract: turbomix.operations.append(SUBTRACT)
+            if args.filter: turbomix.operations.append(FILTER)
+            if args.poisson: turbomix.operations.append(POISSON)
             if args.modfdr: turbomix.operations.append(ModFDR)
-            if args.remduplicates: turbomix.operations.append(RemoveDuplicates)
-            if args.split: turbomix.operations.append(Split)
-            if args.trim: turbomix.operations.append(Trim)
-            if args.strcorr: turbomix.operations.append(StrandCorrelation)
-            if args.remregions: turbomix.operations.append(RemoveRegion)
-            if args.remartifacts: turbomix.operations.append(DiscardArtifacts)
+            if args.remduplicates: turbomix.operations.append(REMOVE_DUPLICATES)
+            if args.split: turbomix.operations.append(SPLIT)
+            if args.trim: turbomix.operations.append(TRIM)
+            if args.strcorr: turbomix.operations.append(STRAND_CORRELATION)
+            if args.remregions: turbomix.operations.append(REMOVE_REGION)
+            if args.remartifacts: turbomix.operations.append(DISCARD_ARTIFACTS)
 
         #parameters are set, now try running
         try:

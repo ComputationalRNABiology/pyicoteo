@@ -10,12 +10,12 @@ SPK = 'bedspk'
 SAM = 'sam'
 CLUSTER_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG, PK, SPK)
 WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
-
 READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM) #formats that we actually can read as
 
 PLUS_STRAND = "+"
 MINUS_STRAND = "-"
 NO_STRAND = "."
+
 #Default values for parser
 EXPERIMENT=''
 EXPERIMENT_FORMAT=PK
@@ -28,7 +28,7 @@ LABEL = 'noname'
 OUTPUT_FORMAT=PK
 OPEN_OUTPUT=False
 ROUNDING=False
-CONTROL_FORMAT=PK
+CONTROL_FORMAT=None
 REGION=''
 REGION_FORMAT=BED
 OPEN_REGION= False
@@ -39,7 +39,7 @@ P_VALUE=0.01
 HEIGHT_LIMIT=400
 CORRECTION=1.
 NO_SUBTRACT = False
-NORMALIZE = False
+DO_NORMALIZE = False
 SPLIT_PROPORTION=0.9
 SPLIT_ABSOLUTE=0
 TRIM_PROPORTION=0.3
@@ -63,6 +63,30 @@ POISSONTEST = 'height'
 STRANDED_ANALYSIS = False
 WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
 REMLABELS = ''
+PROXIMITY=50
+POSTSCRIPT=False
+SHOWPLOTS=False
 
 """The minimum number of overlapping positive and negative strand reads to include them in the correlation calculation"""
+
+NORMALIZE = 'NORMALIZE'
+EXTEND = 'extend'
+SUBTRACT = 'subtract'
+SPLIT = 'split'
+TRIM = 'trim'
+FILTER = 'filter'
+POISSON = 'poisson'
+NOWRITE = 'nowrite'
+DISCARD_ARTIFACTS = 'discard'
+REMOVE_REGION = 'remove'
+REMOVE_DUPLICATES = 'remove_duplicates'
+ModFDR = 'modfdr'
+STRAND_CORRELATION = 'strand_correlation'
+ENRICHMENT = 'enrichment'
+
+
+
+
+
+
 

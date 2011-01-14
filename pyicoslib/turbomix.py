@@ -26,10 +26,10 @@ from datetime import datetime
 #pyicos stuff
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 from defaults import *
-from operations import (Extend, Poisson, RemoveRegion,  Normalize, Subtract, Trim,
-                        Split, Filter, NoWrite, DiscardArtifacts, RemoveDuplicates, OperationFailed, ModFDR, StrandCorrelation, Enrichment)
 import utils
-                   
+
+class OperationFailed(Exception):
+    pass                 
 
 class Turbomix:
     """
@@ -55,7 +55,8 @@ class Turbomix:
                  trim_percentage=TRIM_PROPORTION, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, 
                  min_delta=MIN_DELTA, correlation_height=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, 
                  split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, experiment_b_path=EXPERIMENT,
-                 replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, stranded_analysis=STRANDED_ANALYSIS, **kwargs):
+                 replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, stranded_analysis=STRANDED_ANALYSIS, proximity=PROXIMITY, postscript=POSTSCRIPT, showplots=SHOWPLOTS, **kwargs):
+
         self.__dict__.update(locals())
         self.is_sorted = False
         self.temp_experiment = False #Indicates if temp files where created for the experiment
@@ -65,7 +66,7 @@ class Turbomix:
         self.operations = []
         self.previous_chr = None
         self.open_region = False
-        self.safe_reader = utils.SafeReader()        
+        self.safe_reader = utils.SafeReader(self.verbose)        
 
         if not self.discarded_chromosomes:
             self.discarded_chromosomes = []
@@ -105,20 +106,30 @@ class Turbomix:
 
     def i_cant_do(self):
         """Quits and exists if exits if the combination of non possible operations"""
-        if Filter in self.operations and Poisson not in self.operations and not self.threshold:
-            print "Can't do Filter without Poisson or a fixed threshold\n"
+        if FILTER in self.operations and POISSON not in self.operations and not self.threshold:
+            print "Can't do FILTER without POISSON or a fixed threshold\n"
             sys.exit(0)
-        elif (Subtract in self.operations or Split in self.operations or Poisson in self.operations) and (self.output_format not in CLUSTER_FORMATS):
-            print 'Cant get the output as tag format (eland, bed) for Subtract, Split, Poisson filtering please use a clustered format %s\n'%CLUSTER_FORMATS
+        elif (SUBTRACT or SPLIT or POISSON) in self.operations and (self.output_format not in CLUSTER_FORMATS):
+            print 'Cant get the output as tag format (eland, bed) for SUBTRACT, SPLIT, POISSON filtering please use a clustered format %s\n'%CLUSTER_FORMATS
             sys.exit(0)
-        elif Extend in self.operations and self.experiment_format in CLUSTER_FORMATS:
+        elif EXTEND in self.operations and self.experiment_format in CLUSTER_FORMATS:
             print "Can't extend if the experiment is a clustered format ",
             print CLUSTER_FORMATS
             sys.exit(0)
-        elif StrandCorrelation in self.operations and self.experiment_format in CLUSTER_FORMATS:
+        elif STRAND_CORRELATION in self.operations and self.experiment_format in CLUSTER_FORMATS:
             print "Can't perform strand correlation operation if the experiment is a clustered format ",
             print CLUSTER_FORMATS
             sys.exit(0)
+        
+        elif (ENRICHMENT and ModFDR) in self.operations:
+            print
+            print "Enrichment and ModFDR operations are not compatible"
+            sys.exit(0)
+
+        elif (ENRICHMENT and POISSON) in self.operations:
+            print
+            print "Enrichment and Poisson operations are not compatible"
+            sys.exit(0)             
     
         
     def _add_slash_to_path(self, path):
@@ -140,20 +151,20 @@ class Turbomix:
             print 'Success!\n'
             print 'Summary of operations:'
         
-            if self.experiment_format != self.output_format and not NoWrite in self.operations:
+            if self.experiment_format != self.output_format and not NOWRITE in self.operations:
                 print 'Convert from %s to %s.'%(self.experiment_format, self.output_format)
 
-        if StrandCorrelation in self.operations:
+        if STRAND_CORRELATION in self.operations:
             self.result_log.write('Strand correlation: %.0f pairs analyzed, estimated a %s nucleotides extension value'%(self.analyzed_pairs, self.frag_size))
             if self.verbose: print 'Strand correlation'
 
-        if Extend in self.operations:
-            self.result_log.write('Extend to %s\n'%self.frag_size)
-            if self.verbose: print 'Extend to %s'%self.frag_size
+        if EXTEND in self.operations:
+            self.result_log.write('EXTEND to %s\n'%self.frag_size)
+            if self.verbose: print 'EXTEND to %s'%self.frag_size
 
         if self.do_subtract:
-            self.result_log.write('Subtract\n')
-            if self.verbose: print 'Subtract'
+            self.result_log.write('SUBTRACT\n')
+            if self.verbose: print 'SUBTRACT'
 
         if self.discarded_chromosomes:
             self.result_log.write('Discard tags: %s\n'%self.discarded_chromosomes)
@@ -164,44 +175,44 @@ class Turbomix:
             if self.verbose: print 'Heuristic Remove from %s'%self.region_path
 
         if self.do_split:
-            self.result_log.write('Split\n')
-            if self.verbose: print 'Split'
+            self.result_log.write('SPLIT\n')
+            if self.verbose: print 'SPLIT'
 
-        if DiscardArtifacts in self.operations:
+        if DISCARD_ARTIFACTS in self.operations:
             self.result_log.write('Discard Artifacts\n')
             if self.verbose: print 'Discard Artifacts'
 
         if self.do_poisson:
-            self.result_log.write('Poisson\n')
-            if self.verbose: print 'Poisson'
+            self.result_log.write('POISSON\n')
+            if self.verbose: print 'POISSON'
 
         if self.do_cut:
-            self.result_log.write('Filter\n')
-            if self.verbose: print 'Filter'
+            self.result_log.write('FILTER\n')
+            if self.verbose: print 'FILTER'
 
         if self.do_dupremove:
             self.result_log.write('Removed %s duplicates\n'%self.duplicates_found)
             if self.verbose: print 'Removed %s duplicates, allowing only up to %s'%(self.duplicates_found, self.duplicates)
 
         self.result_log.write('Date finished: %s'%datetime.now())        
-        if not NoWrite in self.operations and self.verbose:
+        if not NOWRITE in self.operations and self.verbose:
             print 'Output at: %s'%(output_path)
 
     def start_operation_message(self):
         if self.verbose:
-            if self.experiment_format != self.output_format and not NoWrite in self.operations:
+            if self.experiment_format != self.output_format and not NOWRITE in self.operations:
                 print 'Converting file %s from %s to %s...'%(self.current_experiment_path, self.experiment_format, self.output_format)
             else:
                 print 'Reading file %s as a %s file...'%(self.current_experiment_path, self.experiment_format)
 
             if self.current_control_path:
                 print 'Control file:%s'%self.current_control_path
-                if self.do_normalize:
-                    print 'The file %s will be normalized to match %s'%(self.current_experiment_path, self.current_control_path)
+                if self.do_NORMALIZE:
+                    print 'The file %s will be NORMALIZEd to match %s'%(self.current_experiment_path, self.current_control_path)
                 if self.do_subtract:
                     print 'The file %s will be subtracted from %s'%(self.current_control_path, self.current_experiment_path)
 
-    def get_normalize_factor(self, experiment, control):
+    def get_NORMALIZE_factor(self, experiment, control):
         ret = self.numcells(control, self.control_format)/self.numcells(experiment, self.experiment_format)
         self.result_log.write('Normalization factor: %s\n'%(ret))
         print 'Normalization factor: %s\n'%(ret)
@@ -223,16 +234,17 @@ class Turbomix:
         self.safe_reader.safe_read_line(cluster, line)
 
     def run(self):
-        self.do_subtract = (Subtract in self.operations and self.control_path)
-        self.do_normalize = (Normalize in self.operations and self.control_path)
-        self.do_heuremove = (RemoveRegion in self.operations and self.region_path)
-        self.do_poisson = Poisson in self.operations
-        self.do_split = Split in self.operations
-        self.do_trim = Trim in self.operations
-        self.do_cut = Filter in self.operations
-        self.do_extend = Extend in self.operations and not self.sorted_by_pyicos #If the experiment was sorted by Pyicos, it was already extended before, so dont do it again
-        self.do_discard = DiscardArtifacts in self.operations
-        self.do_dupremove = RemoveDuplicates in self.operations
+        self.do_subtract = (SUBTRACT in self.operations and self.control_path)
+        self.do_NORMALIZE = (NORMALIZE in self.operations and self.control_path)
+        self.do_heuremove = (REMOVE_REGION in self.operations and self.region_path)
+        self.do_poisson = POISSON in self.operations
+        self.do_split = SPLIT in self.operations
+        self.do_trim = TRIM in self.operations
+        self.do_cut = FILTER in self.operations
+        self.do_extend = EXTEND in self.operations and not self.sorted_by_pyicos #If the experiment was sorted by Pyicos, it was already extended before, so dont do it again
+        self.do_discard = DISCARD_ARTIFACTS in self.operations
+        self.do_dupremove = REMOVE_DUPLICATES in self.operations
+        self.tag_to_cluster = (not self.experiment_format in CLUSTER_FORMATS and self.output_format in CLUSTER_FORMATS)
         if self.verbose:
             print '\n\nPyicos running...'
         if self.control_path:
@@ -291,12 +303,12 @@ class Turbomix:
 
         return paths
 
-    def normalize(self):
+    def NORMALIZE(self):
         if self.control_path:
             if self.verbose: print 'Calculating normalization factor...'
-            self.normalize_factor = self.get_normalize_factor(self.current_experiment_path, self.current_control_path)
-            self.cluster.normalize_factor = self.normalize_factor
-            self.cluster_aux.normalize_factor = self.normalize_factor
+            self.NORMALIZE_factor = self.get_NORMALIZE_factor(self.current_experiment_path, self.current_control_path)
+            self.cluster.NORMALIZE_factor = self.NORMALIZE_factor
+            self.cluster_aux.NORMALIZE_factor = self.NORMALIZE_factor
 
 
     def _manage_temp_file(self, path):
@@ -311,7 +323,7 @@ class Turbomix:
     def _remove_duplicates_file(self, file_path, temp_name, remove_temp):
         new_file_path = "%s/tempfilter%s_%s"%(gettempdir(), os.getpid(), temp_name)
         new_file = file(new_file_path, 'w')
-        print "Filtering %s file..."%temp_name
+        print "FILTERing %s file..."%temp_name
         previous_line = ''
         equal_lines = 0
         self.cluster.clear()
@@ -341,8 +353,8 @@ class Turbomix:
         return new_file_path     
     
     def filter_files(self):
-        """Filter the files removing the duplicates, calculates the enrichment based on the reads."""
-        #TODO Normalize should go here too
+        """FILTER the files removing the duplicates, calculates the enrichment based on the reads."""
+        #TODO NORMALIZE should go here too
         if self.do_dupremove:
             self.current_experiment_path = self._remove_duplicates_file(self.current_experiment_path, "experiment", self.temp_experiment)
             if self.current_control_path:
@@ -367,14 +379,13 @@ class Turbomix:
     def decide_sort(self, experiment_path, control_path=None):
         """Decide if the files need to be sorted or not."""
         #TODO refractor this, copy pasted code (not as easy as it seems)
-
-        if (not self.experiment_format in CLUSTER_FORMATS and self.output_format in CLUSTER_FORMATS) or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations or Enrichment in self.operations:
+        if self.tag_to_cluster or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations or ENRICHMENT in self.operations or REMOVE_REGION in self.operations:
             self.experiment_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment', verbose=self.verbose)
             self.experiment_b_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment_b', verbose=self.verbose)
             self.replica_a_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'replica_a', verbose=self.verbose)
             self.replica_b_preprocessor = utils.BigSort(self.experiment_format, self.open_control, self.frag_size, 'replica_b', verbose=self.verbose)
             self.control_preprocessor = utils.BigSort(self.control_format, self.open_control, self.frag_size, 'control', verbose=self.verbose)
-            self.region_preprocessor = utils.BigSort(self.region_format, self.open_region, None, 'region', verbose=self.verbose)
+
             if self.no_sort:
                 if self.verbose:
                     print 'Input sort skipped'
@@ -396,7 +407,7 @@ class Turbomix:
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
             
-            if Enrichment in self.operations:  
+            if ENRICHMENT in self.operations:  
                 if self.no_sort:
                     if self.verbose: print 'Experiment_b sort skipped'
                     self.current_control_path = control_path
@@ -431,8 +442,12 @@ class Turbomix:
                
         if self.region_path:
             print "Sorting region file..."
+            self.region_preprocessor = utils.BigSort(self.region_format, self.open_region, None, 'region', verbose=self.verbose)
             self.sorted_region_file = self.region_preprocessor.sort(self.region_path, None, self.get_lambda_func(BED))
             self.sorted_region_path = self.sorted_region_file.name
+
+    def add_operation(self, operation):
+        create_operation(operation)
 
     def operate(self, experiment_path, control_path=None, output_path=None):
         """Operate expects single paths, not directories. Its called from run() several times if the experiment for picos is a directory"""
@@ -469,20 +484,20 @@ class Turbomix:
             if self.region_path:
                 self.region_reader = utils.SortedFileClusterReader(self.sorted_region_path, BED, rounding=self.rounding, cached=self.cached)
 
-            if StrandCorrelation in self.operations:
+            if STRAND_CORRELATION in self.operations:
                 self.strand_correlation()
             
             if self.do_dupremove:
                 self.filter_files()
 
-            if Normalize in self.operations:
-                self.normalize()
+            if NORMALIZE in self.operations:
+                self.NORMALIZE()
 
             if self.do_cut: #if we cut, we will round later
                 self.cluster.rounding = False
                 self.cluster_aux.rounding = False
 
-            if ((not NoWrite in self.operations) or (NoWrite in self.operations and Poisson in self.operations)) and not Enrichment in self.operations: 
+            if ((not NOWRITE in self.operations) or (NOWRITE in self.operations and POISSON in self.operations)) and not ENRICHMENT in self.operations: 
                 self.process_file()
             
             if self.do_poisson: #extract info from the last chromosome and print the thresholds
@@ -495,12 +510,10 @@ class Turbomix:
 
 
             #Mutually exclusive final operations
-            if Enrichment in self.operations:
+            if ENRICHMENT in self.operations:
                 self.enrichment()
-
             elif self.do_cut: 
                 self.cut()
-
             elif ModFDR in self.operations:
                 self.modfdr()
 
@@ -574,7 +587,7 @@ class Turbomix:
     def process_file(self):
         self.cluster.clear()
         self.cluster_aux.clear()
-        if NoWrite in self.operations:
+        if NOWRITE in self.operations:
             output = None
         else:
             output = file(self.current_output_path, 'wb')
@@ -583,14 +596,14 @@ class Turbomix:
         if self.output_format == WIG or self.output_format == VARIABLE_WIG:
             output.write('track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.label)
 
-        if self.output_format in CLUSTER_FORMATS and not ModFDR in self.operations and not Enrichment in self.operations:
+        if self.output_format in CLUSTER_FORMATS and not ModFDR in self.operations and not ENRICHMENT in self.operations:
             if not self.experiment_format in CLUSTER_FORMATS and self.verbose:
                 print 'Clustering reads...'
             self._to_cluster_conversion(experiment, output)
         else:
             self._to_read_conversion(experiment, output)
 
-        if not NoWrite in self.operations:
+        if not NOWRITE in self.operations:
             output.flush()
             output.close()
 
@@ -600,6 +613,8 @@ class Turbomix:
         for tag in over:
             if self.do_extend:
                 tag.extend(self.frag_size)
+
+       
         region.add_tags(over, True)
         meta = region.get_metacluster()
         cluster -= meta
@@ -777,7 +792,7 @@ class Turbomix:
         if self.do_poisson:
             self.poisson_retrieve_data(cluster)
 
-        if not (cluster.is_artifact() and DiscardArtifacts in self.operations) and not NoWrite in self.operations:
+        if not (cluster.is_artifact() and DISCARD_ARTIFACTS in self.operations) and not NOWRITE in self.operations:
             if self.do_trim:
                 cluster.trim(self.trim_absolute)
 
@@ -803,7 +818,7 @@ class Turbomix:
         shutil.move(os.path.abspath(self.current_output_path), old_output)
         filtered_output = file(self.current_output_path, 'w+')
         if self.verbose:
-            print "Filtering using",
+            print "FILTERing using",
             if self.poisson_test == 'height':
                 print "cluster height..."
             else:
@@ -845,12 +860,12 @@ class Turbomix:
         self._manage_temp_file(old_output)
 
 
-    def __enrichment_A(self, region_a, total_reads_a, region_b, total_reads_b):
-        return math.log(region_a.rpkm(total_reads_a)/region_b.rpkm(total_reads_b))
+    def __enrichment_A(self, rpkm_a, rpkm_b):
+        return math.log(rpkm_a/rpkm_b)
 
 
-    def __enrichment_M(self, region_a, total_reads_a, region_b, total_reads_b):
-        return (math.log(region_a.rpkm(total_reads_a))+math.log(region_b.rpkm(total_reads_b))/2)
+    def __enrichment_M(self, rpkm_a, rpkm_b):
+        return (math.log(rpkm_a)+math.log(rpkm_b))/2
 
 
     def _output_dir(self):
@@ -864,39 +879,41 @@ class Turbomix:
         if self.stranded_analysis:
             return Region(int(sline[1]), int(sline[2]), chromosome=sline[0], strand=sline[5])
         else:
-            return Region(int(sline[1]), int(sline[2]), chromosome=sline[0])  
-        
+            return Region(int(sline[1]), int(sline[2]), chromosome=sline[0]) 
+     
 
     def _calculate_region(self):
+        """
+        Calculate a region file using the reads present in the both main files to analyze. 
+        """
         print 'Generating region file...'
-        self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))   
+        self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))
         region_file = open(self.sorted_region_path, 'wb')
-        region_cluster = Cluster(read=self.experiment_format, write=BED)
-        calculated_region = None
-        for line in open(self.current_experiment_path):
+        calculated_region = Region()
+        dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.verbose)
+        for line in dual_reader:
             if not calculated_region:
                 calculated_region = self._region_from_sline(line.split())
+                calculated_region.end += self.proximity
             else:
                 new_region = self._region_from_sline(line.split())
+                new_region.end += self.proximity
                 if calculated_region.overlap(new_region):
                     calculated_region.join(new_region)
-        
-                else: #We have all overlapping tags from one file, now get the ones in the other
-                    for tag in file_b_reader.get_overlaping_clusters(calculated_region, overlap=0.000001):
-                        calculated_region.join(tag)
-                           
+                else: 
+                    calculated_region.end -= self.proximity
                     region_file.write(calculated_region.write())                         
-                    calculated_region = None                
-        
+                    calculated_region = new_region.copy()                
 
     def enrichment(self):
         if self.verbose: print "Calculating enrichment in regions",
         file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
         file_b_reader = utils.SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
         label_main = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
+        out_file = open(self.current_output_path, 'wb')
         if self.replica_a_path:
             label_control = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.replica_a_path))
-            replica_a_reader = utils.SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)          
+            replica_a_reader = utils.SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)
             if self.verbose: print "using replicas..."
         else:
             label_control = '%s VS Swap'%os.path.basename(self.real_experiment_path)
@@ -909,8 +926,9 @@ class Turbomix:
 
         if self.verbose: print "... counting number of lines in files..."
         self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
-        self.total_reads_b = sum(1 for line in open(self.current_control_path))     
-        self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2   
+        self.total_reads_b = sum(1 for line in open(self.current_control_path))
+        self.total_regions = sum(1 for line in open(self.sorted_region_path))
+        self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2
         real_A = []
         real_M = []
         replica_or_swap_A = []
@@ -921,31 +939,55 @@ class Turbomix:
             region_of_interest = self._region_from_sline(region_line.split())
             tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
             tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
+            abs_max_median = 0
             if tags_a or tags_b:
                 region_a = region_of_interest.copy()
                 region_b = region_of_interest.copy()
-                region_a.add_tags(tags_a) 
-                region_b.add_tags(tags_b) 
-                real_A.append(self.__enrichment_A(region_a, self.total_reads_a, region_b, self.total_reads_b))
-                real_M.append(self.__enrichment_M(region_a, self.total_reads_a, region_b, self.total_reads_b))
+                region_a.add_tags(tags_a)
+                region_b.add_tags(tags_b)
+                rpkm_a = region_a.rpkm(self.total_reads_a, self.total_regions)
+                rpkm_b = region_b.rpkm(self.total_reads_b, self.total_regions)
+                average = self.__enrichment_A(rpkm_a, rpkm_b)
+                median = self.__enrichment_M(rpkm_a, rpkm_b)
+                real_A.append(average)
+                real_M.append(median)
+                abs_max_median = max(abs_max_median, abs(median))                
                 if self.replica_a_path:
                     replica_a = region_of_interest.copy()
-                    replica_a.add_tags(replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)) 
-                    replica_or_swap_A.append(self.__enrichment_A(region_a, self.average_total_reads, replica_a, self.average_total_reads))
-                    replica_or_swap_M.append(self.__enrichment_M(region_a, self.average_total_reads, replica_a, self.average_total_reads))
+                    replica_a.add_tags(replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5))
+                    region_rpkm = region_a.rpkm(self.average_total_reads, self.total_regions)
+                    replica_rpkm = replica_a.rpkm(self.average_total_reads, self.total_regions)
                 else:
                     swap1, swap2 = region_a.swap(region_b)
-                    replica_or_swap_A.append(self.__enrichment_A(swap1, self.average_total_reads, swap2, self.average_total_reads))
-                    replica_or_swap_M.append(self.__enrichment_M(swap1, self.average_total_reads, swap2, self.average_total_reads))
+                    region_rpkm = swap1.rpkm(self.average_total_reads, self.total_regions)
+                    replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions)
+
+                replica_or_swap_median = self.__enrichment_M(region_rpkm, replica_rpkm)
+                replica_or_swap_average = self.__enrichment_A(region_rpkm, replica_rpkm)
+                abs_max_median = max(abs_max_median, abs(replica_or_swap_median))                   
+                replica_or_swap_A.append(replica_or_swap_average)
+                replica_or_swap_M.append(replica_or_swap_median)
+                out_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(region_of_interest.chromosome, region_of_interest.start, region_of_interest.end, median, average, replica_or_swap_median, replica_or_swap_average))             
+
 
         try:
+            if self.postscript:
+                import matplotlib
+                matplotlib.use("PS")
+
             from matplotlib.pyplot import plot, hist, show, legend
+            import matplotlib.pyplot as plt
             plot(real_M, real_A, 'r.', label=label_main)
             plot(replica_or_swap_M, replica_or_swap_A, 'b.', label=label_control)
+            plt.xlabel('A')
+            plt.ylabel('M')
+            plt.ylim(-1, 1)
             legend(loc=2)
             self._save_figure("enrichment_MA")
             hist(real_A, 100, color="r", histtype="step", label=label_main)
             hist(replica_or_swap_A, 100, color="b", histtype="step", label=label_control)
+            plt.xlabel('M')
+            plt.ylabel('')
             legend(loc=2)
             self._save_figure("hist_A")
       
@@ -953,11 +995,19 @@ class Turbomix:
             print self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')
             
     def _save_figure(self, figure_name):
-        from matplotlib.pyplot import savefig, clf
-        figure_path = '%s/%s_%s.png'%(self._output_dir(), figure_name, os.path.basename(self.current_output_path))
-        savefig(figure_path)
+        if self.postscript:
+            exten = 'ps'
+        else:
+            exten = 'png'
+        from matplotlib.pyplot import savefig, clf, show
+        if self.showplots:
+            show()
+        else:
+            figure_path = '%s/%s_%s.%s'%(self._output_dir(), figure_name, os.path.basename(self.current_output_path), exten)
+            savefig(figure_path)
+            if self.verbose: print "%s figure saved to %s"%(figure_name, figure_path)
         clf()
-        if self.verbose: print "%s figure saved to %s"%(figure_name, figure_path)
+        
 
 
     def modfdr(self):
@@ -1057,13 +1107,19 @@ class Turbomix:
             if self.verbose: self.logger.warning('Not enough data to plot the correlation graph. Lower the threshold of the --height-filter flag')
         else: 
             try:
+                if self.postscript:
+                    import matplotlib
+                    matplotlib.use("PS")
+
                 import matplotlib.pyplot
                 matplotlib.pyplot.plot(range(self.min_delta, self.max_delta), data)
                 matplotlib.pyplot.plot()
+                plt.xlabel("Shift length between + and - clusters")
+                plt.ylabel("Pearson correlation coefficient")
                 if os.path.dirname(self.current_output_path):
-                    figure_path = '%s/%s.png'%(os.path.dirname(self.current_output_path), os.path.basename(self.current_output_path))
+                    figure_path = '%s/%s.%s'%(os.path.dirname(self.current_output_path), os.path.basename(self.current_output_path), ext)
                 else:
-                    figure_path = '%s.png'%(os.path.basename(self.current_output_path))
+                    figure_path = '%s.%s'%(os.path.basename(self.current_output_path), ext)
 
                 matplotlib.pyplot.savefig(figure_path)
                 matplotlib.pyplot.clf()
