@@ -75,7 +75,7 @@ class TestCoreObjects(unittest.TestCase):
         r2.add_tags(c)
 
         swap1, swap2 = r.swap(r2)
-        print len(r.tags), len(r2.tags), len(swap1.tags), len(swap2.tags), r.rpkm(total_reads), r2.rpkm(total_reads_b), swap1.rpkm((total_reads+total_reads_b)/2), swap2.rpkm((total_reads+total_reads_b)/2)
+        len(r.tags), len(r2.tags), len(swap1.tags), len(swap2.tags), r.rpkm(total_reads), r2.rpkm(total_reads_b), swap1.rpkm((total_reads+total_reads_b)/2), swap2.rpkm((total_reads+total_reads_b)/2) #TODO dont know how to test this
 
     #####################   CONVERSION TESTS     ############################################
     

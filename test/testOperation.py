@@ -1,7 +1,7 @@
 import unittest
 from pyicoslib.core import Cluster, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG
 from pyicoslib.turbomix import Turbomix
-from pyicoslib.operations import Subtract, Extend, Filter, NoWrite, DiscardArtifacts, Poisson
+from pyicoslib.defaults import *
 import pyicoslib.utils as utils
 
 import math
@@ -127,10 +127,10 @@ class TestOperations(unittest.TestCase):
         #self.convert_operation = Turbomix(self.bed_path, self.conversion_subtraction_result_path, input_format=BED, output_format=PK, debug = True, rounding=False)
 
         self.extend_operation = Turbomix(self.bed_path, self.extended_result_path, input_format=BED, output_format=BED, debug = True, rounding=False, frag_size = 100, verbose=False)
-        self.extend_operation.operations = [Extend]
+        self.extend_operation.operations = [EXTEND]
 
         self.subtract_operation = Turbomix(self.notsubtracted_path, self.subtract_result_path, input_format=BED, debug = True, rounding=False, control_path = self.bed_control_path, control_format = BED, verbose=False)
-        self.subtract_operation.operations = [Subtract]
+        self.subtract_operation.operations = [SUBTRACT]
     
     def test_add_slash_to_path(self):
         self.assertEqual(self.convert_operation._add_slash_to_path('/random/path'), '/random/path/')
@@ -168,7 +168,7 @@ class TestOperations(unittest.TestCase):
 
     def test_write_if(self):
         weirdOperation = Turbomix(self.bed_path, self.dummy_path,input_format=BED, output_format=PK, debug = True, rounding=False)
-        weirdOperation.operations = [NoWrite]
+        weirdOperation.operations = [NOWRITE]
         artifact1 = Cluster(read=PK, write=PK)
         artifact1.read_line('chr1     16      40      5:1|10:5|5:7|5:8')
         significant = Cluster(read=PK, write=PK)
@@ -185,7 +185,7 @@ class TestOperations(unittest.TestCase):
             length += 1
         self.assertEqual(length, 0)
 
-        weirdOperation.operations = [Cut, DiscardArtifacts]
+        weirdOperation.operations = [Cut, DISCARD_ARTIFACTS]
         weirdOperation.extract_and_write(artifact1, f)
         weirdOperation.extract_and_write(significant, f)
         weirdOperation.extract_and_write(artifact2, f)

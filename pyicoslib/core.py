@@ -128,7 +128,6 @@ class ReaderFactory:
         elif format == SAM:
             return SamReader(format, half_open, cached)
         else:
-            
             raise ConversionNotSupported
 
 class Reader:
@@ -561,7 +560,7 @@ class PkWriter(Writer):
 class Cluster(AbstractCore):
     """
     Represents one cluster of overlaping tags or a single Tag. This object can read and write in every format provided.
-    It can be added, compared, subtracted to other cluster objects. Several interesting properties can be extracted from it.
+    It can be added, compared, subtracted to other cluster objects.
     """
     def __init__(self, chromosome='', start=0, end=-1, strand='.', name='noname', score=0, rounding = False,
                  read=PK, write=PK, read_half_open=False, write_half_open=False, normalize_factor=1., tag_length=0, sequence=None, span=20, cached=False, verbose=False):
@@ -1198,9 +1197,9 @@ class Region(AbstractCore):
     def __nonzero__(self):
         return (self.start is not 0 and self.end is not 0 and self.chromosome is not None)
 
-    def rpkm(self, total_reads):
+    def rpkm(self, total_reads, total_regions_analyzed=1):
         """Original definition: Reads per kilobase of exon model per million mapped reads. We generalize to: Reads per kilobase of region per million mapped reads. Added 1 pseudocount per region to avoid 0s"""
-        return (10e9*float(len(self)+1))/((len(self.tags)+1)*total_reads)
+        return (10e9*float(len(self)+1))/((len(self.tags)+total_regions_analyzed)*total_reads)
 
 
     def __sub_swap(self, region, swap1, swap2):
@@ -1275,7 +1274,7 @@ class Region(AbstractCore):
         return l/N
     
     def join(self, other):
-        """Joins two regions. Works with a cluster object too (if flushed properly)"""
+        """Joins two regions. Works with a cluster object too (if flushed properly). If the regions dont overlap, the space in between will be included too."""
         self.start = min(self.start, other.start)
         self.end = max(self.end, other.end)
    
@@ -1391,10 +1390,10 @@ class Region(AbstractCore):
 
     def add_tags(self, tags, clusterize=False):
         """This method reads a list of tags or a single tag (Cluster objects, not unprocessed lines). If strand is set, then only the tags with the selected strand are added"""
-        if type(tags)==type(list()):
+        if type(tags) == list:
             for tag in tags:
                 self._sub_add_tag(tag)
-        elif type(tags)==type(Cluster()):
+        elif type(tags) == type(Cluster()):
             self._sub_add_tag(tags)
         else:
             print 'Invalid tag. Tags need to be either Cluster or List objects'
@@ -1408,15 +1407,19 @@ class Region(AbstractCore):
         self.tags.sort(key=lambda x: (x.start, x.end))
         if self.tags:
             #Insert first cluster object
-            self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True))
+            self.clusters.append(Cluster(cached=True))
             for i in xrange(0, len(self.tags)):
                 if not self.tags[i].is_empty():
                     if not self.clusters[-1].overlap(self.tags[i]) > 0 and not self.clusters[-1].is_empty():
-                        self.clusters.append(Cluster(read=self.tags[0].reader.format, cached=True)) #create a new cluster object
+                        self.clusters.append(Cluster(cached=True)) #create a new cluster object
                     try:
+                        prev_format = self.tags[i].reader.format
+                        self.tags[i].write_as(PK)
                         self.clusters[-1].read_line(self.tags[i].write_line())
+                        self.tags[i].write_as(prev_format)
                     except InvalidLine:
-                        print "A VER:", self.tags[i].write_line()
+                    
+                        print self.tags[i].write_line(), self.tags[i].reader.format, self.tags[i].writer.format, self.clusters[-1].reader.format
                         raise
 
 

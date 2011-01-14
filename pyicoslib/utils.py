@@ -102,7 +102,8 @@ def list_available_formats():
 
 
 class SafeReader:
-    def __init__(self):
+    def __init__(self, verbose=False):
+        self.verbose = verbose
         self.invalid_count = 0
         self.invalid_limit = 2000
 
@@ -118,7 +119,8 @@ class SafeReader:
                 print
                 raise OperationFailed
             else:
-                print "Skipping invalid (%s) line: %s"%(cluster.reader.format, line),
+                if self.verbose:
+                    print "Skipping invalid (%s) line: %s"%(cluster.reader.format, line),
                 self.invalid_count += 1
     
 
@@ -168,7 +170,7 @@ class BigSort:
 
         return filtered_chunk
 
-    def sort(self, input,output=None,key=None,buffer_size=320000, tempdirs=[], tempFileSize=8000000):
+    def sort(self, input, output=None, key=None, buffer_size=320000, tempdirs=[], tempFileSize=8000000):
         if key is None:
             key = lambda x : x
 
@@ -223,8 +225,8 @@ class BigSort:
         output_file.close()
         return file(output)
 
-    def merge(self, chunks,key=None):
-        if self.verbose: print "Merging chunks..."
+    def merge(self, chunks, key=None):
+        if self.verbose: print "... Merging chunks..."
         if key is None:
             key = lambda x : x
 
@@ -261,7 +263,8 @@ class BigSort:
 
 class DualSortedReader:
     """Given two sorted files of tags in a format supported by Pyicos, iterates through them returning them in order"""
-    def __init__(self, file_a_path, file_b_path, format, read_half_open=False):
+    def __init__(self, file_a_path, file_b_path, format, read_half_open=False, verbose=True):
+        self.verbose = verbose
         self.file_a = open(file_a_path)
         self.file_b = open(file_b_path)
         self.current_a = Cluster(cached=False, read=format, read_half_open=read_half_open)
@@ -269,7 +272,7 @@ class DualSortedReader:
         
     def __iter__(self):
         stop_a = True #indicates if the exception StopIteration is raised by file a (True) or file b (False)
-        safe_reader = SafeReader()
+        safe_reader = SafeReader(self.verbose)
         try:
             while 1:
                 if not self.current_a:
