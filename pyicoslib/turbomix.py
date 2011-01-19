@@ -860,13 +860,6 @@ class Turbomix:
         self._manage_temp_file(old_output)
 
 
-    def __enrichment_A(self, rpkm_a, rpkm_b):
-        return math.log(rpkm_a/rpkm_b)
-
-
-    def __enrichment_M(self, rpkm_a, rpkm_b):
-        return (math.log(rpkm_a)+math.log(rpkm_b))/2
-
 
     def _output_dir(self):
         """Returns the output directory"""
@@ -886,13 +879,14 @@ class Turbomix:
         """
         Calculate a region file using the reads present in the both main files to analyze. 
         """
+        #TODO stranded support
         print 'Generating region file...'
         self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))
         region_file = open(self.sorted_region_path, 'wb')
         calculated_region = Region()
         dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.verbose)
         for line in dual_reader:
-            if not calculated_region:
+            if not calculated_region: #first region only
                 calculated_region = self._region_from_sline(line.split())
                 calculated_region.end += self.proximity
             else:
@@ -905,95 +899,143 @@ class Turbomix:
                     region_file.write(calculated_region.write())                         
                     calculated_region = new_region.copy()                
 
-    def enrichment(self):
-        if self.verbose: print "Calculating enrichment in regions",
-        file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
-        file_b_reader = utils.SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
-        label_main = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
-        out_file = open(self.current_output_path, 'wb')
-        if self.replica_a_path:
-            label_control = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.replica_a_path))
-            replica_a_reader = utils.SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)
-            if self.verbose: print "using replicas..."
-        else:
-            label_control = '%s VS Swap'%os.path.basename(self.real_experiment_path)
-            if self.verbose: print "using swap..."
-
-        if self.sorted_region_path:
-            print 'Using region file %s'%self.region_path
-        else:
-            self._calculate_region()
-
-        if self.verbose: print "... counting number of lines in files..."
-        self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
-        self.total_reads_b = sum(1 for line in open(self.current_control_path))
-        self.total_regions = sum(1 for line in open(self.sorted_region_path))
-        self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2
-        real_A = []
-        real_M = []
-        replica_or_swap_A = []
-        replica_or_swap_M = []
-
-        if self.verbose: print "... analyzing regions..."
-        for region_line in file(self.sorted_region_path):
-            region_of_interest = self._region_from_sline(region_line.split())
-            tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
-            tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
-            abs_max_median = 0
-            if tags_a or tags_b:
-                region_a = region_of_interest.copy()
-                region_b = region_of_interest.copy()
-                region_a.add_tags(tags_a)
-                region_b.add_tags(tags_b)
-                rpkm_a = region_a.rpkm(self.total_reads_a, self.total_regions)
-                rpkm_b = region_b.rpkm(self.total_reads_b, self.total_regions)
-                average = self.__enrichment_A(rpkm_a, rpkm_b)
-                median = self.__enrichment_M(rpkm_a, rpkm_b)
-                real_A.append(average)
-                real_M.append(median)
-                abs_max_median = max(abs_max_median, abs(median))                
-                if self.replica_a_path:
-                    replica_a = region_of_interest.copy()
-                    replica_a.add_tags(replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5))
-                    region_rpkm = region_a.rpkm(self.average_total_reads, self.total_regions)
-                    replica_rpkm = replica_a.rpkm(self.average_total_reads, self.total_regions)
-                else:
-                    swap1, swap2 = region_a.swap(region_b)
-                    region_rpkm = swap1.rpkm(self.average_total_reads, self.total_regions)
-                    replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions)
-
-                replica_or_swap_median = self.__enrichment_M(region_rpkm, replica_rpkm)
-                replica_or_swap_average = self.__enrichment_A(region_rpkm, replica_rpkm)
-                abs_max_median = max(abs_max_median, abs(replica_or_swap_median))                   
-                replica_or_swap_A.append(replica_or_swap_average)
-                replica_or_swap_M.append(replica_or_swap_median)
-                out_file.write("%s\t%s\t%s\t%s\t%s\t%s\t%s\n"%(region_of_interest.chromosome, region_of_interest.start, region_of_interest.end, median, average, replica_or_swap_median, replica_or_swap_average))             
-
-
+    def plot_enrichment(self, file_path):
         try:
             if self.postscript:
                 import matplotlib
                 matplotlib.use("PS")
 
-            from matplotlib.pyplot import plot, hist, show, legend
-            import matplotlib.pyplot as plt
-            plot(real_M, real_A, 'r.', label=label_main)
-            plot(replica_or_swap_M, replica_or_swap_A, 'b.', label=label_control)
-            plt.xlabel('A')
-            plt.ylabel('M')
-            plt.ylim(-1, 1)
-            legend(loc=2)
+            from matplotlib.pyplot import plot, hist, show, legend, figure, xlabel, ylabel
+            from matplotlib import rcParams
+            rcParams['legend.fontsize'] = 8
+            #decide labels
+            label_main = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
+            if self.replica_a_path:
+                label_control = '%s(A) VS %s(A)'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
+            else:
+                label_control = 'Swap1 VS Swap2'
+            A = []
+            M = []
+            A_prime = []
+            M_prime = []
+            figure(figsize=(8,6))
+            #TODO plot the file in chunks ALTERNATIVE: juntar los puntos parecidos!!
+            for line in open(file_path): #chr, start, end, M, A, total_reads_a, total_reads_b, len(tags_a), len(tags_b), M_prime, A_prime, total_1, total_2, count_1, count_2
+                sline = line.split()
+                M.append(float(sline[3]))
+                A.append(float(sline[4]))
+                M_prime.append(float(sline[9]))
+                A_prime.append(float(sline[10]))
+
+            plot(M, A, 'r.', label=label_main)
+            plot(M_prime, A_prime, 'b.', label=label_control)
+            xlabel('A')
+            ylabel('M')
+            
+            legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
             self._save_figure("enrichment_MA")
-            hist(real_A, 100, color="r", histtype="step", label=label_main)
-            hist(replica_or_swap_A, 100, color="b", histtype="step", label=label_control)
-            plt.xlabel('M')
-            plt.ylabel('')
-            legend(loc=2)
+
+            hist(A, 100, color="r", histtype="step", label=label_main)
+            hist(A_prime, 100, color="b", histtype="step", label=label_control)
+            xlabel('M')
+            ylabel('')
+            legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
             self._save_figure("hist_A")
-      
+
         except ImportError:
             print self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')
-            
+
+    def __enrichment_A(self, rpkm_a, rpkm_b):
+        return math.log(rpkm_a/rpkm_b)
+
+    def __enrichment_M(self, rpkm_a, rpkm_b):
+        return (math.log(rpkm_a)+math.log(rpkm_b))/2
+
+    def enrichment(self):
+        pseudo_flag = True
+        region_bins_flag = 50
+        if self.verbose: print "Calculating enrichment in regions",
+        file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
+        file_b_reader = utils.SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
+        out_file = open(self.current_output_path, 'wb')
+        if self.replica_a_path:
+            replica_a_reader = utils.SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)
+            if self.verbose: print "using replicas..."
+        else:
+            if self.verbose: print "using swap..."
+
+        if self.sorted_region_path:
+            print 'Using region file %s'%self.region_path
+        else:
+            self._calculate_region() #create region file semi automatically
+
+        if self.verbose: print "... counting number of lines in files..."
+        self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
+        self.total_reads_b = sum(1 for line in open(self.current_control_path))
+        if self.replica_a_path:
+            self.total_reads_replica_a = sum(1 for line in open(self.replica_a_path))
+        self.total_regions = sum(1 for line in open(self.sorted_region_path))
+        self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2
+        enrichment_result = [] #This will hold the chromosome, start and end of the region, plus the A, M, 'M and 'A
+        regions_analyzed_count = 0
+        if self.verbose: print "... analyzing regions..."
+        for region_line in file(self.sorted_region_path):
+            region_of_interest = self._region_from_sline(region_line.split())
+            tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
+            tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
+
+            if (tags_a or tags_b) or (not pseudo_flag and tags_a and tags_b): #if we are using pseudocounts, use the intersection, use the intersection otherwise
+                region_a = region_of_interest.copy()
+                region_b = region_of_interest.copy()
+                region_a.add_tags(tags_a)
+                region_b.add_tags(tags_b)
+                rpkm_a = region_a.rpkm(self.total_reads_a, self.total_regions, pseudo_flag)
+                rpkm_b = region_b.rpkm(self.total_reads_b, self.total_regions, pseudo_flag)     
+                A = self.__enrichment_A(rpkm_a, rpkm_b)
+                M = self.__enrichment_M(rpkm_a, rpkm_b)  
+                if self.replica_a_path:
+                    replica_a = region_of_interest.copy()
+                    replica_tags = replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
+                    replica_a.add_tags(replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5))
+                    count_1 = len(tags_a)
+                    count_2 = len(replica_tags)
+                    total_1 = self.total_reads_a
+                    total_2 = self.total_reads_replica_a
+                    region_rpkm = rpkm_a
+                    replica_rpkm = replica_a.rpkm(self.total_reads_replica_a, self.total_regions, pseudo_flag)
+                else:
+                    swap1, swap2 = region_a.swap(region_b)
+                    count_1 = len(swap1.tags)
+                    count_2 = len(swap2.tags)
+                    total_1 = total_2 = self.average_total_reads
+                    region_rpkm = swap1.rpkm(self.average_total_reads, self.total_regions, pseudo_flag)
+                    replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions, pseudo_flag)
+
+                M_prime = self.__enrichment_M(region_rpkm, replica_rpkm)
+                A_prime = self.__enrichment_A(region_rpkm, replica_rpkm)                  
+                enrichment_result.append([region_of_interest.chromosome, region_of_interest.start, region_of_interest.end, M, A, self.total_reads_a, self.total_reads_b, len(tags_a), len(tags_b), M_prime, A_prime, total_1, total_2, count_1, count_2])
+                regions_analyzed_count += 1
+                if regions_analyzed_count > region_bins_flag:
+                    self.__sub_enrich_write(enrichment_result, out_file)
+                    regions_analyzed_count = 0
+                    enrichment_result = []
+
+        if enrichment_result:
+            self.__sub_enrich_write(enrichment_result, out_file)
+
+        out_file.flush()
+        out_file.close()
+        if self.verbose: print "Enrichment result saved to %s \nDrawing plots..."%self.current_output_path
+        self.plot_enrichment(out_file.name)
+
+    def __sub_enrich_write(self, er, out_file):
+        for values in er:
+            line = str(values[0])
+            for i in range(1, len(values)):
+                line = "%s\t%s"%(line, values[i])
+            out_file.write("%s\n"%line)
+
+
     def _save_figure(self, figure_name):
         if self.postscript:
             exten = 'ps'
@@ -1037,8 +1079,8 @@ class Turbomix:
         if self.verbose: print "Strand correlation analysis..."
         self.delta_results = dict()
         self.best_delta = -1
-        positive_cluster = Cluster()
-        negative_cluster = Cluster()
+        positive_cluster = Cluster(cached=True)
+        negative_cluster = Cluster(cached=True)
         positive_cluster_cache = [] #we are trying to hold to the previous cluster
         self.analyzed_pairs = 0.
         acum_length = 0.
@@ -1046,7 +1088,7 @@ class Turbomix:
         for line in file(self.current_experiment_path):
             line_read = Cluster(read=self.experiment_format)
             line_read.read_line(line)
-            if line_read.strand == '+':
+            if line_read.strand == PLUS_STRAND:
                 if  positive_cluster.intersects(line_read):
                      positive_cluster += line_read
                      acum_length += len(line_read)
