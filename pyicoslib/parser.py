@@ -223,11 +223,11 @@ class PicosParser:
         #discard operation
         subparsers.add_parser('discard', help='Discards artifacts from a file. Only accepts pk or wig as output.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, span, label, remlabels])
         #remove duplicates operation
-        subparsers.add_parser('remduplicates', help='Removes the duplicated reads in a file. Only accepts tag files (bed, eland)', parents=[experiment, experiment_flags, basic_parser, output, output_flags, tolerated_duplicates, round, span, label, remlabels])
+        subparsers.add_parser('remduplicates', help='Removes the duplicated reads in a file. Only accepts tag-like files (bed, eland, sam)', parents=[experiment, experiment_flags, basic_parser, output, output_flags, tolerated_duplicates, round, span, label, remlabels])
         #normalize operation
         subparsers.add_parser('normalize', help='Normalize a pk file respect of the control.', parents=[experiment, experiment_flags, basic_parser, control, control_format, output, output_flags, open_control, round, label, span, remlabels])
         #extend operation
-        subparsers.add_parser('extend', help='Extends the reads of a file to the desired length (we currently support only bed and eland files for this operation)', parents=[experiment,experiment_flags,  basic_parser,  output, output_flags, frag_size, round, label, span, remlabels])
+        subparsers.add_parser('extend', help='Extends the reads of a file to the desired length. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags,  basic_parser,  output, output_flags, frag_size, round, label, span, remlabels])
         #poisson analysis
         subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.',
                               parents=[experiment,experiment_flags,  basic_parser, output_flags, optional_frag_size, pvalue, height, correction, species, remlabels, poisson_test])
