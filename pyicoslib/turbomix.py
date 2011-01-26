@@ -1108,28 +1108,32 @@ class Turbomix:
 
     def calculate_zscore(self, enrichment_result):
         if self.verbose: "... calculating z-score..."
-        bin_size = int(len(enrichment_result)/self.numbins) #Make the bins proportionals
+        bin_size = int(len(enrichment_result)/(self.numbins+1)) #Make the bins proportionals #+1, since we are going to fuse the last 2
         enrichment_result.sort(key=lambda x:(x["A_prime"]))
         points = []
         #get the standard deviations
         for i in range(0, len(enrichment_result)-bin_size, bin_size):
-            mean_acum = 0
-            mean_acum_replica = 0
-            sd = []
-            Ms_replica = []
+            #get the slice
             if i+2*bin_size < len(enrichment_result):
-                result_chunk = enrichment_result[i:i+bin_size] #get the slice 
+                result_chunk = enrichment_result[i:i+bin_size]  
             else:
                 result_chunk = enrichment_result[i:] #fuse the last two chunks together so there is not a small minichunk 
 
             #retrieve the values
+            mean_acum = 0
+            Ms_replica = []
             for entry in result_chunk:
                 mean_acum += entry["M_prime"]
                 Ms_replica.append(entry["M_prime"])
 
             #add them to the points of mean and sd
-            mean = mean_acum/self.numbins
-            sd = (sum((x - mean)**2 for x in Ms_replica))/bin_size    
+            mean = mean_acum/len(result_chunk)
+            #sd = (sum((x - mean)**2 for x in Ms_replica))/len(result_chunk) #too fancy 
+            sd_acum = 0  
+            for x in Ms_replica:
+                sd_acum += (x - mean)**2
+
+            sd = sd_acum/len(result_chunk)
             points.append([result_chunk[-1]["A_prime"], mean, sd]) #The maximum A of the chunk, the mean and the standard deviation     
             print result_chunk[-1]["A_prime"], mean, sd
 
@@ -1149,7 +1153,7 @@ class Turbomix:
         if points[i][2] > 0:
             entry["z_score"] = ((entry["M"]-points[i][1])/points[i][2]) 
         else:
-            entry["z_score"] = 0
+            entry["z_score"] = 0 #This points are weird anyway
 
     def __sub_enrich_write(self, er, out_file):
         for d in er:
