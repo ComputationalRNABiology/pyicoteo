@@ -9,13 +9,15 @@ chrdesc/mm9
 pyicoslib/__init__.py
 pyicoslib/core.py
 pyicoslib/defaults.py
-pyicoslib/operations.py
 pyicoslib/parser.py
+pyicoslib/turbomix.py
+pyicoslib/utils.py
 pyicoslib/lib/__init__.py
 pyicoslib/lib/argparse.py
 test/testCore.py
 test/testOperation.py
 test/testParser.py
 test/testSubVisually.py
+test/testUtils.py
 test_files/control.bed
 test_files/p300.bed

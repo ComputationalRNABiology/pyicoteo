@@ -19,7 +19,7 @@ from lib import argparse
 import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.9.1.1'
+__version__ = '0.9.2'
 from defaults import *
 
 class PicosParser:
@@ -37,6 +37,11 @@ class PicosParser:
                 dict1[option] = None
         return dict1
 
+
+    def validate(self, args):
+        if args.numbins < 2:
+            print "\nMinimum value for --numbins is 2"
+            sys.exit(1)
 
     def new_subparser(self, *args):
         return argparse.ArgumentParser(add_help=False)
@@ -91,6 +96,8 @@ class PicosParser:
         basic_parser.add_argument('--keep-temp', action='store_true', default=KEEP_TEMP, help='keep the temporary files (for debugging purposes)')
         basic_parser.add_argument('--postscript', action='store_true', default=POSTSCRIPT, help='get the output graphs in postscript format instead of .png')
         basic_parser.add_argument('--showplots', action='store_true', default=SHOWPLOTS, help='Show the plots as they are being calculated by matplotlib. Note that the execution will be stopped until you close the window pop up that will arise')
+        basic_parser.add_argument('--label1', default=LABEL1, help="Manually define the second label of the graphs.")
+        basic_parser.add_argument('--label2', default=LABEL2, help="Manually define the second label of the graphs.")
 
         output = self.new_subparser()
         output.add_argument('output', help='The output file or directory')
@@ -111,7 +118,13 @@ class PicosParser:
         enrichment_flags = self.new_subparser()
         enrichment_flags.add_argument('--stranded', action='store_true', default=STRANDED_ANALYSIS, help="Decide if the strand is taken into consideration for the analysis. This requires a region file in bed format with the strand information in its 6th column.")
         enrichment_flags.add_argument('--proximity', default=PROXIMITY, type=int, help="Determines if two regions calculated automatically are close enough to be clustered. Default %(default)s nt")
-        
+        enrichment_flags.add_argument('--no-pseudocount', action='store_true', default=NOPSEUDOCOUNT, help="The usage of pseudocounts in the enrichment calculation allows the inclusion of regions that have n reads in one dataset and 0 reads in the other.  [Default %(default)s]")
+        enrichment_flags.add_argument('--simple-counts', action='store_true', default=SIMPLECOUNTS, help="To calculate densities, RPKM values are used by default. This flag changes the calculation to simple read counts. [Default %(default)s]")
+        enrichment_flags.add_argument('--numbins', type=int, default=NUMBINS, help="The number of bins to calculate the Z-score.")        
+
+        zscore = self.new_subparser()  
+        zscore.add_argument('--zscore', type=float, default=ZSCORE, help="Significant Z-score value. [Default %(default)s]")        
+
         label = self.new_subparser()
         label.add_argument('--label', default=LABEL, help='The label that will identify the experiment')
 
@@ -147,7 +160,7 @@ class PicosParser:
         normalize.add_argument('--normalize',action='store_true', default=False, help='Normalize to the control before subtracting')
 
         extend = self.new_subparser()
-        extend.add_argument('--extend',action='store_true', default=False, help='EXTEND')
+        extend.add_argument('--extend',action='store_true', default=False, help='Extend')
         subtract = self.new_subparser()
         subtract.add_argument('--subtract',action='store_true', default=False, help='subtract')
         filterop = self.new_subparser()
@@ -188,7 +201,7 @@ class PicosParser:
     
         poisson_test = self.new_subparser()
         poisson_test.add_argument('--poisson-test', help="Decide what property of the cluster will be used for the poisson analysis. Choices are 'height' and 'numreads' [Default %(default)s]", default=POISSONTEST)
-
+        
         remlabels = self.new_subparser()
         remlabels.add_argument('--remlabels', help='Discard the reads that have this particular label. Example: --discard chr1 will discard all reads with chr1 as tag. You can specify multiple tags to discard using the following notation --discard chr1 chr2 tagN')
 
@@ -199,12 +212,17 @@ class PicosParser:
         species.add_argument('-p', '--species', default=SPECIES,
                              help='The species that you are analyzing. This will read the length of the chromosomes of this species from the files inside the folder "chrdesc". If the species information is not known, the filtering step will assume that the chromosomes are as long as the position of the furthest read.')
 
+
+        plot_path = self.new_subparser()
+        plot_path.add_argument('plot_path', default=PLOT_PATH, help='The path of the file to plot [Default %(default)s]')
+
         correlation_flags = self.new_subparser()
         correlation_flags.add_argument('--max-delta',type=int, default=MAX_DELTA, help='Maximum delta [Default %(default)s]')
         correlation_flags.add_argument('--min-delta',type=int, default=MIN_DELTA, help='Minimum delta [Default %(default)s]')
         correlation_flags.add_argument('--height-filter',type=int, default=HEIGHT_FILTER, help='Height to filter the peaks [Default %(default)s]')
         correlation_flags.add_argument('--delta-step',type=int, default=DELTA_STEP, help='The step of the delta values to test [Default %(default)s]')
-        correlation_flags.add_argument('--max-correlations',type=int, default=MAX_CORRELATIONS, help='The maximum of clusters that will be enough to calculate the strand correlation shift. Lower this parameter to increase time performance [Default %(default)s]')
+        correlation_flags.add_argument('--max-correlations',type=int, default=MAX_CORRELATIONS, help='The maximum of clusters that will be enough to calculate the strand correlation shift. Lower this parameter to increase time performance [Default %(default)s]')    
+
 
         protocol_name = self.new_subparser()
         protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
@@ -244,9 +262,12 @@ class PicosParser:
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
         #enrichment operation
-        subparsers.add_parser('enrichment', help='An enrichment test', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, replica_b, optional_region, region_format, output, enrichment_flags])
+        subparsers.add_parser('enrichment', help='An enrichment test', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, replica_b, optional_region, region_format, output, enrichment_flags, zscore])
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
+
+        subparsers.add_parser('plot', help="Plot a file with pyicos plotting utilities. Requires matplotlib installed.", parents=[basic_parser, plot_path, output, zscore])
+
         #whole exposure
         subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
 
@@ -261,11 +282,16 @@ class PicosParser:
                             no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, min_delta=MIN_DELTA, 
                             height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION,
                             split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, postscript = POSTSCRIPT,
-                            remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS, proximity=PROXIMITY, showplots=SHOWPLOTS)
+                            remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS,
+                            proximity=PROXIMITY, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
+                            label2=LABEL2, numbins=NUMBINS, zscore=ZSCORE)
 
         args = parser.parse_args()
+
+        self.validate(args)
         if not args.control_format: #If not specified, the control format is equal to the experiment format
             args.control_format = args.experiment_format
+            args.open_control = args.open_experiment
 
         #Add any parameters found in the config file. Override them with anything found in the args later
         if sys.argv[1] == 'protocol':
@@ -305,8 +331,9 @@ class PicosParser:
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
-                            args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, args.stranded, args.proximity, args.postscript, args.showplots)
-
+                            args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, 
+                            args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.no_pseudocount, args.simple_counts, args.label1, 
+                            args.label2, args.numbins, args.zscore)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
@@ -342,7 +369,7 @@ class PicosParser:
             turbomix.operations = [REMOVE_REGION]
 
         elif sys.argv[1] == 'enrichment':
-            turbomix.operations = [ENRICHMENT]
+            turbomix.operations = [ENRICHMENT, PLOT]
 
         elif sys.argv[1] == 'split':
             turbomix.operations = [SPLIT]
@@ -357,7 +384,7 @@ class PicosParser:
             turbomix.operations = [REMOVE_DUPLICATES]
 
         elif sys.argv[1] == 'remregions':
-            turbomix.operations = [REMOVE_REGION]        
+            turbomix.operations = [REMOVE_REGION]      
 
         elif sys.argv[1] == 'modfdr':
             turbomix.operations = [ModFDR]
@@ -373,6 +400,8 @@ class PicosParser:
                 if not args.no_subtract:
                     turbomix.operations.append(SUBTRACT)
 
+        elif sys.argv[1] == 'plot':
+            turbomix.operations = [PLOT, NOWRITE]      
         
         elif sys.argv[1] == 'all':
             if args.normalize: turbomix.operations.append(NORMALIZE)
