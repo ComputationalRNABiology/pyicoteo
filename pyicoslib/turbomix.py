@@ -22,6 +22,7 @@ import math
 import random
 from collections import defaultdict
 from datetime import datetime
+from tempfile import gettempdir
 
 #pyicos stuff
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
@@ -55,9 +56,12 @@ class Turbomix:
                  trim_percentage=TRIM_PROPORTION, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, 
                  min_delta=MIN_DELTA, correlation_height=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, 
                  split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, experiment_b_path=EXPERIMENT,
-                 replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, stranded_analysis=STRANDED_ANALYSIS, proximity=PROXIMITY, postscript=POSTSCRIPT, showplots=SHOWPLOTS, **kwargs):
+                 replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, stranded_analysis=STRANDED_ANALYSIS, proximity=PROXIMITY, 
+                 postscript=POSTSCRIPT, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
+                 label2=LABEL2, numbins=NUMBINS, zscore=ZSCORE):
 
         self.__dict__.update(locals())
+
         self.is_sorted = False
         self.temp_experiment = False #Indicates if temp files where created for the experiment
         self.temp_control = False #Indicates if temporary files where created for the control
@@ -89,9 +93,9 @@ class Turbomix:
         #poisson stuff
         self.first_chr = True
         self._init_poisson()
-        self.poisson_results = {'length': defaultdict(), 'height': defaultdict(), 'numreads': defaultdict()}
+        self.poisson_results = {'length': defaultdict(), 'height': defaultdict(), 'numtags': defaultdict()}
         self.maxheight_to_pvalue = {}
-        self.numreads_to_pvalue = {}
+        self.numtags_to_pvalue = {}
         #Operation flags
         self.do_poisson = False
         self.do_subtract = False
@@ -107,10 +111,10 @@ class Turbomix:
     def i_cant_do(self):
         """Quits and exists if exits if the combination of non possible operations"""
         if FILTER in self.operations and POISSON not in self.operations and not self.threshold:
-            print "Can't do FILTER without POISSON or a fixed threshold\n"
+            print "Can't do Filter without Poisson or a fixed threshold\n"
             sys.exit(0)
         elif (SUBTRACT or SPLIT or POISSON) in self.operations and (self.output_format not in CLUSTER_FORMATS):
-            print 'Cant get the output as tag format (eland, bed) for SUBTRACT, SPLIT, POISSON filtering please use a clustered format %s\n'%CLUSTER_FORMATS
+            print "Can't get the output as tag format (eland, bed) for Subtract, Split, Poisson filtering please use a clustered format %s\n"%CLUSTER_FORMATS
             sys.exit(0)
         elif EXTEND in self.operations and self.experiment_format in CLUSTER_FORMATS:
             print "Can't extend if the experiment is a clustered format ",
@@ -183,12 +187,12 @@ class Turbomix:
             if self.verbose: print 'Discard Artifacts'
 
         if self.do_poisson:
-            self.result_log.write('POISSON\n')
-            if self.verbose: print 'POISSON'
+            self.result_log.write('Poisson\n')
+            if self.verbose: print 'Poisson'
 
         if self.do_cut:
-            self.result_log.write('FILTER\n')
-            if self.verbose: print 'FILTER'
+            self.result_log.write('Filter\n')
+            if self.verbose: print 'Filter'
 
         if self.do_dupremove:
             self.result_log.write('Removed %s duplicates\n'%self.duplicates_found)
@@ -207,12 +211,12 @@ class Turbomix:
 
             if self.current_control_path:
                 print 'Control file:%s'%self.current_control_path
-                if self.do_NORMALIZE:
-                    print 'The file %s will be NORMALIZEd to match %s'%(self.current_experiment_path, self.current_control_path)
+                if self.do_normalize:
+                    print 'The file %s will be normalized to match %s'%(self.current_experiment_path, self.current_control_path)
                 if self.do_subtract:
                     print 'The file %s will be subtracted from %s'%(self.current_control_path, self.current_experiment_path)
 
-    def get_NORMALIZE_factor(self, experiment, control):
+    def get_normalize_factor(self, experiment, control):
         ret = self.numcells(control, self.control_format)/self.numcells(experiment, self.experiment_format)
         self.result_log.write('Normalization factor: %s\n'%(ret))
         print 'Normalization factor: %s\n'%(ret)
@@ -235,7 +239,7 @@ class Turbomix:
 
     def run(self):
         self.do_subtract = (SUBTRACT in self.operations and self.control_path)
-        self.do_NORMALIZE = (NORMALIZE in self.operations and self.control_path)
+        self.do_normalize = (NORMALIZE in self.operations and self.control_path)
         self.do_heuremove = (REMOVE_REGION in self.operations and self.region_path)
         self.do_poisson = POISSON in self.operations
         self.do_split = SPLIT in self.operations
@@ -251,8 +255,11 @@ class Turbomix:
             self.process_all_files_paired(self.experiment_path, self.control_path)
         elif self.experiment_b_path:
             self.process_all_files_paired(self.experiment_path, self.experiment_b_path)
+        elif self.plot_path:
+            self.process_all_files_recursive(self.plot_path, self.output_path)
         else:
             self.process_all_files_recursive(self.experiment_path, self.output_path)
+
 
     def process_all_files_paired(self, path_a, path_b):
         if os.path.isdir(path_a):
@@ -303,12 +310,12 @@ class Turbomix:
 
         return paths
 
-    def NORMALIZE(self):
+    def normalize(self):
         if self.control_path:
             if self.verbose: print 'Calculating normalization factor...'
-            self.NORMALIZE_factor = self.get_NORMALIZE_factor(self.current_experiment_path, self.current_control_path)
-            self.cluster.NORMALIZE_factor = self.NORMALIZE_factor
-            self.cluster_aux.NORMALIZE_factor = self.NORMALIZE_factor
+            self.normalize_factor = self.get_normalize_factor(self.current_experiment_path, self.current_control_path)
+            self.cluster.normalize_factor = self.normalize_factor
+            self.cluster_aux.normalize_factor = self.normalize_factor
 
 
     def _manage_temp_file(self, path):
@@ -323,7 +330,7 @@ class Turbomix:
     def _remove_duplicates_file(self, file_path, temp_name, remove_temp):
         new_file_path = "%s/tempfilter%s_%s"%(gettempdir(), os.getpid(), temp_name)
         new_file = file(new_file_path, 'w')
-        print "FILTERing %s file..."%temp_name
+        print "Filtering %s file..."%temp_name
         previous_line = ''
         equal_lines = 0
         self.cluster.clear()
@@ -353,8 +360,8 @@ class Turbomix:
         return new_file_path     
     
     def filter_files(self):
-        """FILTER the files removing the duplicates, calculates the enrichment based on the reads."""
-        #TODO NORMALIZE should go here too
+        """Filter the files removing the duplicates, calculates the enrichment based on the reads."""
+        #TODO normalize should go here too
         if self.do_dupremove:
             self.current_experiment_path = self._remove_duplicates_file(self.current_experiment_path, "experiment", self.temp_experiment)
             if self.current_control_path:
@@ -491,7 +498,7 @@ class Turbomix:
                 self.filter_files()
 
             if NORMALIZE in self.operations:
-                self.NORMALIZE()
+                self.normalize()
 
             if self.do_cut: #if we cut, we will round later
                 self.cluster.rounding = False
@@ -511,11 +518,18 @@ class Turbomix:
 
             #Mutually exclusive final operations
             if ENRICHMENT in self.operations:
-                self.enrichment()
+                self.plot_path = self.enrichment()
+
             elif self.do_cut: 
                 self.cut()
+
             elif ModFDR in self.operations:
                 self.modfdr()
+
+            #Plot and summary operations
+            if PLOT in self.operations:
+                  if self.verbose: print "Plotting..."
+                  self.plot_enrichment(self.plot_path)              
 
             self.success_message(output_path)
 
@@ -556,6 +570,7 @@ class Turbomix:
 
 
     def _to_cluster_conversion(self, experiment, output):
+        #load the first read
         while self.cluster.is_empty():
             self.cluster_aux2.clear()
             self.read_and_preprocess(self.cluster_aux2, experiment.next())
@@ -566,7 +581,7 @@ class Turbomix:
             self.cluster_aux.clear()
             self.read_and_preprocess(self.cluster_aux, line)
             if not self.cluster_aux.is_empty():
-                if self.cluster_aux2.intersects(self.cluster_aux) or self.cluster_aux.is_contiguous(self.cluster_aux2) or self.cluster_aux2.is_contiguous(self.cluster_aux):
+                if self.cluster.intersects(self.cluster_aux) or self.cluster_aux.is_contiguous(self.cluster) or self.cluster.is_contiguous(self.cluster_aux):
                     self.cluster += self.cluster_aux 
                     self.cluster_aux2.clear()
                     self.cluster_aux2 = self.cluster_aux.copy_cluster()
@@ -653,7 +668,7 @@ class Turbomix:
         self.total_reads = 0.
         self.acum_height = 0.
         self.absolute_max_height = 0
-        self.absolute_max_numreads = 0
+        self.absolute_max_numtags = 0
         self.chr_length = 0
 
     def poisson_analysis(self, chromosome=''):
@@ -704,19 +719,19 @@ class Turbomix:
         
         p_nucleotide = 1.
         p_cluster = 1.
-        p_numreads = 1.
+        p_numtags = 1.
         k = 0
-        self.result_log.write('k\tcluster_length\tcluster_height\tnumreads\n')
-        while ((self.absolute_max_numreads > k) or (self.absolute_max_height > k)) and k < self.height_limit:
+        self.result_log.write('k\tcluster_length\tcluster_height\tnumtags\n')
+        while ((self.absolute_max_numtags > k) or (self.absolute_max_height > k)) and k < self.height_limit:
             p_nucleotide -= utils.poisson(k, self.reads_per_bp) #analisis nucleotide
             p_cluster -= utils.poisson(k, self.acum_height/self.total_clusters) #analysis cluster
-            p_numreads -= utils.poisson(k, self.total_reads/self.total_clusters) #analysis numreads
+            p_numtags -= utils.poisson(k, self.total_reads/self.total_clusters) #analysis numtags
 
             p_nucleotide = self._correct_bias(p_nucleotide)
             p_cluster = self._correct_bias(p_cluster)
-            p_numreads = self._correct_bias(p_numreads)
+            p_numtags = self._correct_bias(p_numtags)
 
-            self.result_log.write('%s\t%.8f\t%.8f\t%.8f\n'%(k, p_nucleotide, p_cluster, p_numreads))
+            self.result_log.write('%s\t%.8f\t%.8f\t%.8f\n'%(k, p_nucleotide, p_cluster, p_numtags))
             
             if chromosome not in self.poisson_results['length'].keys() and p_nucleotide < self.p_value: #if we don't have a height k that is over the p_value yet, write it.
                 self.poisson_results["length"][chromosome] = k
@@ -724,16 +739,16 @@ class Turbomix:
             if chromosome not in self.poisson_results['height'].keys() and p_cluster < self.p_value:
                 self.poisson_results["height"][chromosome] = k
             
-            if chromosome not in self.poisson_results['numreads'].keys() and p_numreads < self.p_value:
-                self.poisson_results["numreads"][chromosome] = k
+            if chromosome not in self.poisson_results['numtags'].keys() and p_numtags < self.p_value:
+                self.poisson_results["numtags"][chromosome] = k
 
             if k not in self.maxheight_to_pvalue:
                 self.maxheight_to_pvalue[k] = {}
             self.maxheight_to_pvalue[k][chromosome] = p_cluster
 
-            if k not in self.numreads_to_pvalue:
-                self.numreads_to_pvalue[k] = {}
-            self.numreads_to_pvalue[k][chromosome] = p_numreads
+            if k not in self.numtags_to_pvalue:
+                self.numtags_to_pvalue[k] = {}
+            self.numtags_to_pvalue[k][chromosome] = p_numtags
 
 
             k+=1
@@ -746,17 +761,17 @@ class Turbomix:
             else:
                 self.frag_size = 100 
                 
-        acum_numreads = 0.
+        acum_numtags = 0.
         self.total_clusters+=1
         for length, height in cluster:
             self.total_bp_with_reads+=length
-            acum_numreads += length*height
+            acum_numtags += length*height
         self.chr_length = max(self.chr_length, cluster.end)
         max_height = cluster.max_height()
-        #numreads per cluster
-        numreads_in_cluster = acum_numreads/self.frag_size
-        self.total_reads += numreads_in_cluster
-        self.absolute_max_numreads = max(numreads_in_cluster, self.absolute_max_numreads)
+        #numtags per cluster
+        numtags_in_cluster = acum_numtags/self.frag_size
+        self.total_reads += numtags_in_cluster
+        self.absolute_max_numtags = max(numtags_in_cluster, self.absolute_max_numtags)
         #maxheight per cluster
         self.acum_height += max_height
         self.absolute_max_height = max(max_height, self.absolute_max_height)
@@ -818,7 +833,7 @@ class Turbomix:
         shutil.move(os.path.abspath(self.current_output_path), old_output)
         filtered_output = file(self.current_output_path, 'w+')
         if self.verbose:
-            print "FILTERing using",
+            print "Filtering using",
             if self.poisson_test == 'height':
                 print "cluster height..."
             else:
@@ -838,7 +853,7 @@ class Turbomix:
                 if self.poisson_test == 'height':
                     cut_cluster.p_value = self.maxheight_to_pvalue[int(round(cut_cluster.max_height()))][cut_cluster.chromosome]
                 else:
-                    cut_cluster.p_value = self.numreads_to_pvalue[int(round(cut_cluster.area()/self.frag_size))][cut_cluster.chromosome]
+                    cut_cluster.p_value = self.numtags_to_pvalue[int(round(cut_cluster.area()/self.frag_size))][cut_cluster.chromosome]
             except KeyError:
                 cut_cluster.p_value = 0 #If the cluster is not in the dictionary, it means its too big, so the p_value will be 0
 
@@ -859,8 +874,6 @@ class Turbomix:
 
         self._manage_temp_file(old_output)
 
-
-
     def _output_dir(self):
         """Returns the output directory"""
         path = os.path.dirname(os.path.realpath(self.current_output_path))
@@ -875,16 +888,20 @@ class Turbomix:
             return Region(int(sline[1]), int(sline[2]), chromosome=sline[0]) 
      
 
-    def _calculate_region(self):
+    def calculate_region(self):
         """
         Calculate a region file using the reads present in the both main files to analyze. 
         """
         #TODO stranded support
-        print 'Generating region file...'
+        if self.verbose: print 'Generating region file...'
         self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))
         region_file = open(self.sorted_region_path, 'wb')
-        calculated_region = Region()
-        dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.verbose)
+        dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.verbose) 
+
+        self.calculate_region_notstranded(dual_reader, region_file)    
+
+    def calculate_region_notstranded(self, dual_reader, region_file):
+        calculated_region = Region()        
         for line in dual_reader:
             if not calculated_region: #first region only
                 calculated_region = self._region_from_sline(line.split())
@@ -897,7 +914,26 @@ class Turbomix:
                 else: 
                     calculated_region.end -= self.proximity
                     region_file.write(calculated_region.write())                         
-                    calculated_region = new_region.copy()                
+                    calculated_region = new_region.copy()
+
+    def calculate_region_stranded(self, dual_reader, region_file):
+        region_file = open(self.sorted_region_path, 'wb')
+        calculated_region = Region()        
+        dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.verbose)     
+        for line in dual_reader:
+            if not calculated_region: #first region only
+                calculated_region = self._region_from_sline(line.split())
+                calculated_region.end += self.proximity
+            else:
+                new_region = self._region_from_sline(line.split())
+                new_region.end += self.proximity
+                if calculated_region.overlap(new_region):
+                    calculated_region.join(new_region)
+                else: 
+                    calculated_region.end -= self.proximity
+                    region_file.write(calculated_region.write())                         
+                    calculated_region = new_region.copy()           
+
 
     def plot_enrichment(self, file_path):
         try:
@@ -909,56 +945,76 @@ class Turbomix:
             from matplotlib import rcParams
             rcParams['legend.fontsize'] = 8
             #decide labels
-            label_main = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
-            if self.replica_a_path:
-                label_control = '%s(A) VS %s(A)'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
+            if self.label1:
+                label_main = self.label1
             else:
-                label_control = 'Swap1 VS Swap2'
+                if self.real_control_path and self.real_experiment_path:
+                    label_main = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
+                else:
+                    label_main = "A VS B"
+
+            if self.label2:
+                label_control = self.label2
+            else:                
+                if self.replica_a_path:
+                    label_control = '%s(A) VS %s(A)'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
+                else:
+                    label_control = 'Swap1 VS Swap2'
+
             A = []
-            M = []
             A_prime = []
+            M = []
+            M_significant = []
+            A_significant = []
             M_prime = []
             figure(figsize=(8,6))
-            #TODO plot the file in chunks ALTERNATIVE: juntar los puntos parecidos!!
-            for line in open(file_path): #chr, start, end, M, A, total_reads_a, total_reads_b, len(tags_a), len(tags_b), M_prime, A_prime, total_1, total_2, count_1, count_2
-                sline = line.split()
-                M.append(float(sline[3]))
-                A.append(float(sline[4]))
-                M_prime.append(float(sline[9]))
-                A_prime.append(float(sline[10]))
 
-            plot(M, A, 'r.', label=label_main)
-            plot(M_prime, A_prime, 'b.', label=label_control)
+            for line in open(file_path): 
+                sline = line.split()
+                if abs(float(sline[16])) < self.zscore:
+                    M.append(float(sline[5]))                
+                    A.append(float(sline[4]))
+                else:
+                    M_significant.append(float(sline[5]))                
+                    A_significant.append(float(sline[4]))     
+               
+                M_prime.append(float(sline[11]))    
+                A_prime.append(float(sline[10]))
+ 
+            plot(A, M, 'y.', label=label_main)
+            plot(A_significant, M_significant, 'r.', label="%s (significant)"%label_main)
+            plot(A_prime, M_prime, 'b.', label=label_control)
             xlabel('A')
             ylabel('M')
-            
-            legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+            legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
             self._save_figure("enrichment_MA")
 
-            hist(A, 100, color="r", histtype="step", label=label_main)
-            hist(A_prime, 100, color="b", histtype="step", label=label_control)
+            M.extend(M_significant)
+            hist(M, 100, color="r", histtype="step", label=label_main)
+            hist(M_prime, 100, color="b", histtype="step", label=label_control)
             xlabel('M')
             ylabel('')
-            legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=2, mode="expand", borderaxespad=0.)
+            legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=1, mode="expand", borderaxespad=0.)
             self._save_figure("hist_A")
 
         except ImportError:
             print self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')
 
-    def __enrichment_A(self, rpkm_a, rpkm_b):
-        return math.log(rpkm_a/rpkm_b)
-
     def __enrichment_M(self, rpkm_a, rpkm_b):
-        return (math.log(rpkm_a)+math.log(rpkm_b))/2
+        return math.log(rpkm_a/float(rpkm_b), 2)
+
+    def __enrichment_A(self, rpkm_a, rpkm_b):
+        return (math.log(float(rpkm_a), 2)+math.log(float(rpkm_b), 2))/2
 
     def enrichment(self):
-        pseudo_flag = True
-        region_bins_flag = 50
+        use_pseudocount = not self.no_pseudocount
+        use_replica = bool(self.replica_a_path)
+
         if self.verbose: print "Calculating enrichment in regions",
         file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
         file_b_reader = utils.SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
         out_file = open(self.current_output_path, 'wb')
-        if self.replica_a_path:
+        if use_replica:
             replica_a_reader = utils.SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)
             if self.verbose: print "using replicas..."
         else:
@@ -967,74 +1023,139 @@ class Turbomix:
         if self.sorted_region_path:
             print 'Using region file %s'%self.region_path
         else:
-            self._calculate_region() #create region file semi automatically
+            self.calculate_region() #create region file semi automatically
 
         if self.verbose: print "... counting number of lines in files..."
         self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
         self.total_reads_b = sum(1 for line in open(self.current_control_path))
-        if self.replica_a_path:
+        if use_replica:
             self.total_reads_replica_a = sum(1 for line in open(self.replica_a_path))
         self.total_regions = sum(1 for line in open(self.sorted_region_path))
         self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2
         enrichment_result = [] #This will hold the chromosome, start and end of the region, plus the A, M, 'M and 'A
+        
         regions_analyzed_count = 0
         if self.verbose: print "... analyzing regions..."
         for region_line in file(self.sorted_region_path):
             region_of_interest = self._region_from_sline(region_line.split())
             tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
             tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
+            replica_a = None
+            replica_tags = None
+            swap1 = None
+            swap2 = None
+            if use_replica:            
+                replica_tags = replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
 
-            if (tags_a or tags_b) or (not pseudo_flag and tags_a and tags_b): #if we are using pseudocounts, use the intersection, use the intersection otherwise
+            #if we are using pseudocounts, use the union, use the intersection otherwise
+            if (use_pseudocount and (tags_a or tags_b)) or (not use_pseudocount and tags_a and tags_b): 
                 region_a = region_of_interest.copy()
                 region_b = region_of_interest.copy()
                 region_a.add_tags(tags_a)
                 region_b.add_tags(tags_b)
-                rpkm_a = region_a.rpkm(self.total_reads_a, self.total_regions, pseudo_flag)
-                rpkm_b = region_b.rpkm(self.total_reads_b, self.total_regions, pseudo_flag)     
+                if self.simple_counts:
+                    rpkm_a = region_a.numtags(use_pseudocount)/self.total_reads_a
+                    rpkm_b = region_b.numtags(use_pseudocount)/self.total_reads_b
+                else:
+                    rpkm_a = region_a.rpkm(self.total_reads_a, self.total_regions, use_pseudocount)
+                    rpkm_b = region_b.rpkm(self.total_reads_b, self.total_regions, use_pseudocount)    
+
+
                 A = self.__enrichment_A(rpkm_a, rpkm_b)
                 M = self.__enrichment_M(rpkm_a, rpkm_b)  
-                if self.replica_a_path:
+                if use_replica:
                     replica_a = region_of_interest.copy()
-                    replica_tags = replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
-                    replica_a.add_tags(replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5))
+                    replica_a.add_tags(replica_tags)
                     count_1 = len(tags_a)
                     count_2 = len(replica_tags)
                     total_1 = self.total_reads_a
                     total_2 = self.total_reads_replica_a
                     region_rpkm = rpkm_a
-                    replica_rpkm = replica_a.rpkm(self.total_reads_replica_a, self.total_regions, pseudo_flag)
+                    if self.simple_counts:
+                        replica_a.numtags(use_pseudocount)
+                    else:
+                        replica_rpkm = replica_a.rpkm(self.total_reads_replica_a, self.total_regions, use_pseudocount)
                 else:
                     swap1, swap2 = region_a.swap(region_b)
                     count_1 = len(swap1.tags)
                     count_2 = len(swap2.tags)
                     total_1 = total_2 = self.average_total_reads
-                    region_rpkm = swap1.rpkm(self.average_total_reads, self.total_regions, pseudo_flag)
-                    replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions, pseudo_flag)
+                    if self.simple_counts: 
+                        region_rpkm = swap1.numtags(use_pseudocount)/self.average_total_reads
+                        replica_rpkm = swap2.numtags(use_pseudocount)/self.average_total_reads                     
+                    else:                  
+                        region_rpkm = swap1.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
+                        replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
 
-                M_prime = self.__enrichment_M(region_rpkm, replica_rpkm)
-                A_prime = self.__enrichment_A(region_rpkm, replica_rpkm)                  
-                enrichment_result.append([region_of_interest.chromosome, region_of_interest.start, region_of_interest.end, M, A, self.total_reads_a, self.total_reads_b, len(tags_a), len(tags_b), M_prime, A_prime, total_1, total_2, count_1, count_2])
-                regions_analyzed_count += 1
-                if regions_analyzed_count > region_bins_flag:
-                    self.__sub_enrich_write(enrichment_result, out_file)
-                    regions_analyzed_count = 0
-                    enrichment_result = []
+                #if there is no data in the replica or in the swap and we are not using pseudocounts, dont write the data 
+                if use_pseudocount or (use_replica and replica_tags) or (not use_replica and swap1.tags and swap2.tags):
+                    M_prime = self.__enrichment_M(region_rpkm, replica_rpkm)
+                    A_prime = self.__enrichment_A(region_rpkm, replica_rpkm)             
+                    enrichment_result.append({'chr':region_of_interest.chromosome, 'start':region_of_interest.start, 'end':region_of_interest.end, 'strand': region_of_interest.strand,
+                                              'A':A, 'M':M, 'total_A': self.total_reads_a, 'total_b':self.total_reads_b, 'num_tags_a':len(tags_a), 
+                                              'num_tags_b':len(tags_b), 'A_prime':A_prime, 'M_prime':M_prime, 'total_1':total_1, 'total_2':total_2, 
+                                              'count_1':count_1, 'count_2':count_2, 'z_score': 0})
+                    regions_analyzed_count += 1
 
-        if enrichment_result:
-            self.__sub_enrich_write(enrichment_result, out_file)
 
+        points = self.calculate_zscore(enrichment_result)
+        self.__sub_enrich_write(enrichment_result, out_file)
         out_file.flush()
         out_file.close()
-        if self.verbose: print "Enrichment result saved to %s \nDrawing plots..."%self.current_output_path
-        self.plot_enrichment(out_file.name)
+        if self.verbose: 
+            print "%s regions analyzed.\nEnrichment result saved to %s"%(regions_analyzed_count, self.current_output_path)
+        return out_file.name
+
+    def calculate_zscore(self, enrichment_result):
+        if self.verbose: "... calculating z-score..."
+        bin_size = int(len(enrichment_result)/self.numbins) #Make the bins proportionals
+        enrichment_result.sort(key=lambda x:(x["A_prime"]))
+        points = []
+        #get the standard deviations
+        for i in range(0, len(enrichment_result)-bin_size, bin_size):
+            mean_acum = 0
+            mean_acum_replica = 0
+            sd = []
+            Ms_replica = []
+            if i+2*bin_size < len(enrichment_result):
+                result_chunk = enrichment_result[i:i+bin_size] #get the slice 
+            else:
+                result_chunk = enrichment_result[i:] #fuse the last two chunks together so there is not a small minichunk 
+
+            #retrieve the values
+            for entry in result_chunk:
+                mean_acum += entry["M_prime"]
+                Ms_replica.append(entry["M_prime"])
+
+            #add them to the points of mean and sd
+            mean = mean_acum/self.numbins
+            sd = (sum((x - mean)**2 for x in Ms_replica))/bin_size    
+            points.append([result_chunk[-1]["A_prime"], mean, sd]) #The maximum A of the chunk, the mean and the standard deviation     
+            print result_chunk[-1]["A_prime"], mean, sd
+
+        #update z scores
+        for entry in enrichment_result:
+            for i in range(0, len(points)):
+                if entry["A"] < points[i][0]:
+                    self.__sub_zscore(entry, points, i)
+                    continue #found it, leave go to the next
+               
+                self.__sub_zscore(entry, points, -1) #the value is the biggest, use the last break
+
+        enrichment_result.sort(key=lambda x:(x["chr"], x["start"], x["end"]))
+        #return points
+        
+    def __sub_zscore(self, entry, points, i):
+        if points[i][2] > 0:
+            entry["z_score"] = ((entry["M"]-points[i][1])/points[i][2]) 
+        else:
+            entry["z_score"] = 0
 
     def __sub_enrich_write(self, er, out_file):
-        for values in er:
-            line = str(values[0])
-            for i in range(1, len(values)):
-                line = "%s\t%s"%(line, values[i])
-            out_file.write("%s\n"%line)
-
+        for d in er:
+            out_file.write("%s\n"%"\t".join([d['chr'], str(d['start']), str(d['end']), str(d['strand']), str(d['A']), str(d['M']), str(d['total_A']), str(d['total_b']), str(d['num_tags_a']), 
+                                            str(d['num_tags_b']), str(d['A_prime']), str(d['M_prime']), str(d['total_1']), str(d['total_2']), str(d['count_1']), 
+                                            str(d['count_2']), str(d['z_score'])]))
 
     def _save_figure(self, figure_name):
         if self.postscript:

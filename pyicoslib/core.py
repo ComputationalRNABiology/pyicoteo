@@ -1008,6 +1008,8 @@ class Cluster(AbstractCore):
         """
         if other._tag_cache:
             self._tag_cache.extend(other._tag_cache)
+            self.start = min(self.start, other.start)
+            self.end = max(self.end, other.end)
             return self
         else: 
             result = self.copy_cluster()
@@ -1199,13 +1201,20 @@ class Region(AbstractCore):
 
     def rpkm(self, total_reads, total_regions_analyzed=0, pseudocount=False):
         """Original definition: Reads per kilobase of exon model per million mapped reads. We generalize to: Reads per kilobase of region per million mapped reads. Added 1 pseudocount per region to avoid 0s"""
-        
         if not pseudocount:
             total_regions_analyzed=0
             pseudo = 0
         else:
             pseudo = 1
-        return (10e9*float(len(self.tags)+pseudo))/(len(self)*(total_regions_analyzed+total_reads))
+        return (1e9*float(len(self.tags)+pseudo))/(len(self)*(total_regions_analyzed+total_reads))
+
+
+    def numtags(self, pseudocount=False):
+        """Returns the number of reads in the region, gives the possibility of returning +1 reads if pseudocounts are being used"""
+        if pseudocount:
+            return len(self.tags)+1
+        else:
+            return len(self.tags)
 
 
     def __sub_swap(self, region, swap1, swap2):
