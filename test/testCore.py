@@ -427,7 +427,7 @@ class TestCoreObjects(unittest.TestCase):
     def test_trim(self):
         cluster = Cluster(rounding=True)
         cluster.read_line('chr21 1 10 1:1|1:2|3:5|1:1|1:4|1:3|2:1')
-        cluster.trim(3)
+        cluster.trim(absolute=3)
         self.assertEqual(cluster.write_line(), 'chr21\t3\t8\t3:5|1:1|1:4|1:3\t5.0\t.\t4\t23.0\n')
 
     def test_eland_read_write(self):
