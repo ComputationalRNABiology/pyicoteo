@@ -5,6 +5,8 @@ from heapq import heappop, heappush
 from itertools import islice, cycle, chain
 
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
+from defaults import *
+import sys
 
 def add_slash_to_path(path):
     if path[-1] != '/':
@@ -98,42 +100,9 @@ def list_available_formats():
         print format
     sys.exit(0)
 
-"""
-From Simple Recipes in Python - William Park 1999. 
-
-Returns coefficients to the regression line "y=ax+b" from x[] and y[]. 
-""" 
-
-def linreg(X, Y): 
-    from math import sqrt   
-    if len(X) != len(Y): 
-        raise ValueError, 'unequal length' 
-    N = len(X) 
-    Sx = Sy = Sxx = Syy = Sxy = 0.0 
-    for x, y in map(None, X, Y): 
-        Sx = Sx + x 
-        Sy = Sy + y 
-        Sxx = Sxx + x*x 
-        Syy = Syy + y*y 
-        Sxy = Sxy + x*y 
-    det = Sxx * N - Sx * Sx 
-    a, b = (Sxy * N - Sy * Sx)/det, (Sxx * Sy - Sx * Sxy)/det 
-
-    meanerror = residual = 0.0 
-    for x, y in map(None, X, Y): 
-        meanerror = meanerror + (y - Sy/N)**2 
-        residual = residual + (y - a * x - b)**2 
-        RR = 1 - residual/meanerror 
-        ss = residual / (N-2) 
-        Var_a, Var_b = ss * N / det, ss * Sxx / det 
-    return a, b 
-
-
-
-
 class SafeReader:
-    def __init__(self, verbose=False):
-        self.verbose = verbose
+    def __init__(self, logger=None):
+        self.logger = logger
         self.invalid_count = 0
         self.invalid_limit = 2000
 
@@ -144,13 +113,14 @@ class SafeReader:
             cluster.read_line(line)
         except InvalidLine:
             if self.invalid_count > self.invalid_limit:
-                print
-                self.logger.error('Limit of invalid lines: Check the experiment, control, and region file formats, probably the error is in there. Pyicos by default expects bedpk files, except for region files, witch are bed files')
+
+                if self.logger:
+                    self.logger.error('Limit of invalid lines: Check the experiment, control, and region file formats, probably the error is in there. Pyicos by default expects bedpk files, except for region files, witch are bed files')
                 print
                 raise OperationFailed
             else:
-                if self.verbose:
-                    print "Skipping invalid (%s) line: %s"%(cluster.reader.format, line),
+                if self.logger:
+                    self.logger.info("Skipping invalid (%s) line: %s"%(cluster.reader.format, line))
                 self.invalid_count += 1
     
 
@@ -162,12 +132,18 @@ class BigSort:
     NOTE: This class is becoming a preprocessing module. This is a good thing, I think! But its not
     only a sorting class then. We have to think about renaming it, or extracting functionality from it...
     """
-    def __init__(self, file_format=None, read_half_open=False, frag_size=0, id=0, verbose=True):
-        self.verbose = verbose
+    def __init__(self, file_format=None, read_half_open=False, frag_size=0, id=0, logger=True):
+        self.logger = logger
         self.file_format = file_format
         self.frag_size = frag_size
-        if self.file_format:
-            self.cluster = Cluster(read=self.file_format, write=self.file_format, read_half_open=read_half_open, write_half_open=read_half_open)
+        try:
+            if self.file_format:
+                self.cluster = Cluster(read=self.file_format, write=self.file_format, read_half_open=read_half_open, write_half_open=read_half_open, logger=self.logger)
+        except ConversionNotSupported:
+            self.logger.error('')
+            self.logger.error('Reading "%s" is not supported (unknown format).\n'%self.file_format)
+            list_available_formats()
+
         self.id = id
         
     def skipHeaderLines(self, key, experiment_file):
@@ -256,7 +232,7 @@ class BigSort:
         return file(output)
 
     def merge(self, chunks, key=None):
-        if self.verbose: print "... Merging chunks..."
+        if self.logger: self.logger.info("... Merging chunks...")
         if key is None:
             key = lambda x : x
 
@@ -293,16 +269,16 @@ class BigSort:
 
 class DualSortedReader:
     """Given two sorted files of tags in a format supported by Pyicos, iterates through them returning them in order"""
-    def __init__(self, file_a_path, file_b_path, format, read_half_open=False, verbose=True):
-        self.verbose = verbose
+    def __init__(self, file_a_path, file_b_path, format, read_half_open=False, logger=None):
+        self.logger = logger
         self.file_a = open(file_a_path)
         self.file_b = open(file_b_path)
-        self.current_a = Cluster(cached=False, read=format, read_half_open=read_half_open)
-        self.current_b = Cluster(cached=False, read=format, read_half_open=read_half_open)
+        self.current_a = Cluster(cached=False, read=format, read_half_open=read_half_open, logger=self.logger)
+        self.current_b = Cluster(cached=False, read=format, read_half_open=read_half_open, logger=self.logger)
         
     def __iter__(self):
         stop_a = True #indicates if the exception StopIteration is raised by file a (True) or file b (False)
-        safe_reader = SafeReader(self.verbose)
+        safe_reader = SafeReader(self.logger)
         try:
             while 1:
                 if not self.current_a:
@@ -337,7 +313,7 @@ class SortedFileClusterReader:
     Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
     and retrieves the clusters that overlap with the region specified.
     """
-    def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True):
+    def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
         self.__dict__.update(locals())
         self.file_iterator = file(file_path)
         self.__initvalues()
@@ -365,7 +341,7 @@ class SortedFileClusterReader:
                 line = self.file_iterator.next()
             except StopIteration:
                 return True
-            self.cluster_cache[cursor] = Cluster(read=self.experiment_format, read_half_open=self.read_half_open, rounding=self.rounding, cached=self.cached)
+            self.cluster_cache[cursor] = Cluster(read=self.experiment_format, read_half_open=self.read_half_open, rounding=self.rounding, cached=self.cached, logger=self.logger)
             self.safe_read_line(self.cluster_cache[cursor], line)
         return False
 

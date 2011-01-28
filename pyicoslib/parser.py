@@ -19,7 +19,7 @@ from lib import argparse
 import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.9.2'
+__version__ = '0.9.5'
 from defaults import *
 
 class PicosParser:
@@ -188,7 +188,7 @@ class PicosParser:
         trim_proportion = self.new_subparser()
         trim_proportion.add_argument('--trim-proportion', default=TRIM_PROPORTION, help='Fraction of the cluster height below which the peak is trimmed. Example: For a cluster of height 40, if the flag is 0.05, 40*0.05=2. Every cluster will be trimmed to that height. A position of height 1 is always considered insignificant, no matter what the cluster height is. [Default %(default)s]', type=float)
         trim_absolute = self.new_subparser()
-        trim_absolute.add_argument('--trim-absolute', help='The height threshold to trim the clusters.', type=int)
+        trim_absolute.add_argument('--trim-absolute', default=TRIM_ABSOLUTE, help='The height threshold to trim the clusters. Overrides the trim proportion. [Default %(default)s]', type=int)
 
         split_absolute = self.new_subparser()
         split_absolute.add_argument('--split-absolute', default=SPLIT_ABSOLUTE, help='The height threshold to split the clusters. [Default %(default)s]', type=int)
@@ -237,7 +237,7 @@ class PicosParser:
         #split operation
         subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, split_proportion, split_absolute, label, remlabels])
         #trim operation
-        subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, trim_absolute, label, remlabels])
+        subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, trim_absolute, trim_proportion, label, remlabels])
         #discard operation
         subparsers.add_parser('discard', help='Discards artifacts from a file. Only accepts pk or wig as output.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, span, label, remlabels])
         #remove duplicates operation
@@ -262,11 +262,11 @@ class PicosParser:
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
         #enrichment operation
-        subparsers.add_parser('enrichment', help='An enrichment test', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, replica_b, optional_region, region_format, output, enrichment_flags, zscore])
+        subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, replica_b, optional_region, region_format, output, enrichment_flags, zscore])
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
 
-        subparsers.add_parser('plot', help="Plot a file with pyicos plotting utilities. Requires matplotlib installed.", parents=[basic_parser, plot_path, output, zscore])
+        subparsers.add_parser('plot', help="(UNDER DEVELOPMENT) Plot a file with pyicos plotting utilities. Requires matplotlib installed.", parents=[basic_parser, plot_path, output, zscore])
 
         #whole exposure
         subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
@@ -289,9 +289,6 @@ class PicosParser:
         args = parser.parse_args()
 
         self.validate(args)
-        if not args.control_format: #If not specified, the control format is equal to the experiment format
-            args.control_format = args.experiment_format
-            args.open_control = args.open_experiment
 
         #Add any parameters found in the config file. Override them with anything found in the args later
         if sys.argv[1] == 'protocol':
@@ -325,6 +322,10 @@ class PicosParser:
                         print 'ERROR: There is an error in your protocol file.  "%s" is not a Pyicos parameter'%key
                         sys.exit(0)
 
+
+        if not args.control_format: #If not specified, the control format is equal to the experiment format
+            args.control_format = args.experiment_format
+            args.open_control = args.open_experiment
 
         turbomix = Turbomix(args.experiment, args.output, args.experiment_format, args.output_format, args.label, args.open_experiment, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.remlabels, args.control, args.control_format, args.open_control, args.region,

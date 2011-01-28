@@ -21,7 +21,6 @@ from collections import defaultdict
 from defaults import *
 
 debug = False
-verbose = False
 
 
 class Empty:
@@ -290,7 +289,8 @@ class WigReader(Reader):
             raise InvalidLine
 
 class ElandReader(Reader):
-    eland_filter = re.compile(r'chr\w{1,2}.fa')
+    """Convertor for the eland export format"""
+    eland_filter = re.compile(r'\w+.fa')
 
     def read_line(self, cluster, line):
         if line is not None and line != '\n' and self.quality_filter(line):
@@ -348,8 +348,6 @@ class PkReader(Reader):
 
         except (ValueError, IndexError):
             raise InvalidLine
-
-
 
 
 
@@ -563,10 +561,10 @@ class Cluster(AbstractCore):
     It can be added, compared, subtracted to other cluster objects.
     """
     def __init__(self, chromosome='', start=0, end=-1, strand='.', name='noname', score=0, rounding = False,
-                 read=PK, write=PK, read_half_open=False, write_half_open=False, normalize_factor=1., tag_length=0, sequence=None, span=20, cached=False, verbose=False):
+                 read=PK, write=PK, read_half_open=False, write_half_open=False, normalize_factor=1., tag_length=0, sequence=None, span=20, cached=False, logger=None):
         """If you want the object to operate with integers instead
         of floats, set the rounding flag to True."""
-        self.verbose = verbose
+        self.logger = logger
         self.chromosome = chromosome
         self.start = int(start)
         self.end = int(end)
@@ -671,7 +669,7 @@ class Cluster(AbstractCore):
             ret_cluster.tag_length = self.tag_length
             ret_cluster.sequence = self.sequence
             ret_cluster.read_count = self.read_count
-            ret_cluster.verbose = self.verbose
+            ret_cluster.logger = self.logger
             ret_cluster.p_value = self.p_value
             return ret_cluster
 
@@ -692,8 +690,9 @@ class Cluster(AbstractCore):
 
                     if self.start < 1:
                         self.clear()
-                        if self.verbose:
-                            print 'Extending the line invalidates the read. Discarding ', self.chromosome, self.start, self.end
+
+                        if self.logger: 
+                            self.logger.info('Extending the line invalidates the read. Discarding %s %s %s'%(self.chromosome, self.start, self.end))
                         
                 else:
                     previous_end = self.end
@@ -712,12 +711,16 @@ class Cluster(AbstractCore):
                 else:
                     self.end -= self._levels[end][0]
                 self._levels.pop(end)
-
             else:
                 break
     
-    def trim(self, threshold):
+    def trim(self, percentage=0.3, absolute=0):
         """Trims the cluster to a given threshold"""
+        if absolute > 0:
+            threshold = absolute
+        else:
+            threshold = int(round(self.max_height()*percentage))
+        #print "THRESHOLD:", threshold
         self._subtrim(threshold, 0, True) #trim the left side of the cluster
         self._subtrim(threshold, -1, False) #trim the right side of the cluster
 
