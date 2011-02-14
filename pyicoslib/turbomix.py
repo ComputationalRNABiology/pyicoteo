@@ -69,7 +69,7 @@ class Turbomix:
                  split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, experiment_b_path=EXPERIMENT,
                  replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, stranded_analysis=STRANDED_ANALYSIS, proximity=PROXIMITY, 
                  postscript=POSTSCRIPT, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
-                 label2=LABEL2, numbins=NUMBINS, zscore=ZSCORE):
+                 label2=LABEL2, numbins=NUMBINS, zscore=ZSCORE, blacklist=BLACKLIST):
 
         self.__dict__.update(locals())
         self.set_logger(verbose, debug)
@@ -115,7 +115,6 @@ class Turbomix:
         self.do_split = False
         self.do_trim = False
         self.do_cut = False
-        self.do_extend = False
         self.do_dupremove = False
         self.sorted_by_pyicos = False
         self.sorted_region_path = ''
@@ -123,42 +122,33 @@ class Turbomix:
     def i_cant_do(self):
         """Quits and exists if exits if the combination of non possible operations"""
         if FILTER in self.operations and POISSON not in self.operations and not self.threshold:
-            print "Can't do Filter without Poisson or a fixed threshold\n"
+            self.logger.error("Can't do Filter without Poisson or a fixed threshold\n")
             sys.exit(0)
         elif (SUBTRACT or SPLIT or POISSON) in self.operations and (self.output_format not in CLUSTER_FORMATS):
-            print "Can't get the output as tag format (eland, bed) for Subtract, Split, Poisson filtering please use a clustered format %s\n"%CLUSTER_FORMATS
+            self.logger.error("Can't get the output as tag format (eland, bed) for Subtract, Split, Poisson filtering please use a clustered format %s\n"%CLUSTER_FORMATS)
             sys.exit(0)
         elif EXTEND in self.operations and self.experiment_format in CLUSTER_FORMATS:
-            print "Can't extend if the experiment is a clustered format ",
+            self.logger.error("Can't extend if the experiment is a clustered format ")
             print CLUSTER_FORMATS
             sys.exit(0)
         elif STRAND_CORRELATION in self.operations and self.experiment_format in CLUSTER_FORMATS:
-            print "Can't perform strand correlation operation if the experiment is a clustered format ",
+            self.logger.error("Can't perform strand correlation operation if the experiment is a clustered format ")
             print CLUSTER_FORMATS
             sys.exit(0)
         
         elif ENRICHMENT in self.operations and POISSON in self.operations:
             print
-            print "Enrichment and ModFDR operations are not compatible"
+            self.logger.error("Enrichment and ModFDR operations are not compatible")
             sys.exit(0)
 
         elif ENRICHMENT in self.operations and POISSON in self.operations:
             print
-            print "Enrichment and Poisson operations are not compatible"
+            self.logger.error("Enrichment and Poisson operations are not compatible")
             sys.exit(0)             
     
         
     def _add_slash_to_path(self, path):
         return utils.add_slash_to_path(path)
-
-    def read_and_preprocess(self, cluster, line):
-        self.safe_read_line(cluster, line)
-        if not cluster.is_empty():
-            if self.do_heuremove:
-                cluster = self.remove_regions(cluster)
-            if self.do_extend:
-                cluster.extend(self.frag_size)
-
 
     def success_message(self, output_path):
         self.result_log.write('\nSummary of operations\n')
@@ -230,7 +220,7 @@ class Turbomix:
     def get_normalize_factor(self, experiment, control):
         ret = self.numcells(control, self.control_format)/self.numcells(experiment, self.experiment_format)
         self.result_log.write('Normalization factor: %s\n'%(ret))
-        print 'Normalization factor: %s\n'%(ret)
+        self.logger.info('Normalization factor: %s\n'%(ret))
         return ret
     
     def numcells(self, file_path, file_format):
@@ -250,12 +240,11 @@ class Turbomix:
     def run(self):
         self.do_subtract = (SUBTRACT in self.operations and self.control_path)
         self.do_normalize = (NORMALIZE in self.operations and self.control_path)
-        self.do_heuremove = (REMOVE_REGION in self.operations and self.region_path)
+        self.do_heuremove = (REMOVE_REGION in self.operations and self.blacklist)
         self.do_poisson = POISSON in self.operations
         self.do_split = SPLIT in self.operations
         self.do_trim = TRIM in self.operations
         self.do_cut = FILTER in self.operations
-        self.do_extend = EXTEND in self.operations and not self.sorted_by_pyicos #If the experiment was sorted by Pyicos, it was already extended before, so don't do it again
         self.do_discard = DISCARD_ARTIFACTS in self.operations
         self.do_dupremove = REMOVE_DUPLICATES in self.operations
         self.tag_to_cluster = (not self.experiment_format in CLUSTER_FORMATS and self.output_format in CLUSTER_FORMATS)
@@ -337,34 +326,53 @@ class Turbomix:
             os.remove(path)
             self.logger.info('Temporary file %s removed'%path)
 
-    def _remove_duplicates_file(self, file_path, temp_name, remove_temp):
+    def _filter_file(self, file_path, temp_name, remove_temp, file_format, file_open):
+        """Assumes sorted file. Extend and removal of duplicates go here"""
         new_file_path = "%s/tempfilter%s_%s"%(gettempdir(), os.getpid(), temp_name)
         new_file = file(new_file_path, 'w')
         self.logger.info("Filtering %s file..."%temp_name)
         previous_line = ''
         equal_lines = 0
         self.cluster.clear()
-        self.cluster_aux.clear()
+
+        cluster_same = Cluster(read=file_format, write=file_format, rounding=self.rounding, read_half_open = file_open, write_half_open = file_open, tag_length=self.tag_length, span = self.span, logger=self.logger, cached=self.cached)
+
         for line in file(file_path):
             self.cluster.clear()
             self.cluster.read_line(line)
-            if self.cluster.start == self.cluster_aux.start and self.cluster.end == self.cluster_aux.end and self.cluster.chromosome == self.cluster_aux.chromosome and self.cluster.strand == self.cluster_aux.strand:
+
+            if self.cluster.start == cluster_same.start and self.cluster.end == cluster_same.end and self.cluster.chromosome == cluster_same.chromosome and self.cluster.strand == cluster_same.strand:
                 equal_lines+=1
             else:
                 equal_lines=0
-            self.cluster_aux.clear()
-            self.cluster_aux.read_line(line)
-           
+
+            cluster_same.clear()
+            cluster_same.read_line(line)        
+            if self.do_heuremove:
+                cluster_same = self.remove_regions(cluster_same)
+
             if self.duplicates >= equal_lines:
-                new_file.write(line)
+                if EXTEND in self.operations:
+                    cluster_same.extend(self.frag_size)
+
+                new_file.write(cluster_same.write_line())
             else:
                 self.duplicates_found += 1
 
         new_file.flush()
         new_file.close()
+
+        if EXTEND in self.operations:
+            self.logger.info("Resorting %s after extension..."%temp_name)
+            sorter = utils.BigSort(file_format, file_open, 0, 'fisort%s'%temp_name, logger=self.logger)
+            old_path = new_file_path
+            sorted_new = sorter.sort(old_path, None, self.get_lambda_func(file_format))
+            new_file_path = sorted_new.name
+            self._manage_temp_file(old_path)
+
         if remove_temp:
             self._manage_temp_file(file_path) 
-    
+
         self.cluster.clear()
         self.cluster_aux.clear()   
         return new_file_path     
@@ -372,10 +380,12 @@ class Turbomix:
     def filter_files(self):
         """Filter the files removing the duplicates, calculates the enrichment based on the reads."""
         #TODO normalize should go here too
-        if self.do_dupremove:
-            self.current_experiment_path = self._remove_duplicates_file(self.current_experiment_path, "experiment", self.temp_experiment)
-            if self.current_control_path:
-                self.current_control_path = self._remove_duplicates_file(self.current_control_path, "control", self.temp_control)
+        self.current_experiment_path = self._filter_file(self.current_experiment_path, "experiment", self.temp_experiment, self.experiment_format, self.open_experiment)
+        self.temp_experiment = True
+        if self.current_control_path:
+            self.current_control_path = self._filter_file(self.current_control_path, "control", self.temp_control, self.control_format, self.open_control)
+            self.temp_control = True
+
 
 
     def get_lambda_func(self, format):
@@ -396,7 +406,7 @@ class Turbomix:
     def decide_sort(self, experiment_path, control_path=None):
         """Decide if the files need to be sorted or not."""
         #TODO refractor this, copy pasted code (not as easy as it seems)
-        if self.tag_to_cluster or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations or ENRICHMENT in self.operations or REMOVE_REGION in self.operations:
+        if self.tag_to_cluster or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations or ENRICHMENT in self.operations or REMOVE_REGION in self.operations or STRAND_CORRELATION in self.operations or self.frag_size:
             self.experiment_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment', logger=self.logger)
             self.experiment_b_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment_b', logger=self.logger)
             self.replica_a_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'replica_a', logger=self.logger)
@@ -404,7 +414,7 @@ class Turbomix:
             self.control_preprocessor = utils.BigSort(self.control_format, self.open_control, self.frag_size, 'control', logger=self.logger)
 
             if self.no_sort:
-                self.logger.info('Input sort skipped')
+                self.logger.warning('Input sort skipped. Results might be wrong.')
                 self.current_experiment_path = experiment_path
             else:
                 self.logger.info('Sorting experiment file...')
@@ -415,7 +425,7 @@ class Turbomix:
 
             if self.do_subtract:
                 if self.no_sort:
-                    self.logger.info('Control sort skipped')
+                    self.logger.warning('Control sort skipped. Results might be wrong.')
                     self.current_control_path = control_path
                 else:
                     self.logger.info('Sorting control file...')
@@ -425,10 +435,10 @@ class Turbomix:
             
             if ENRICHMENT in self.operations:  
                 if self.no_sort:
-                    self.logger.info('Experiment_b sort skipped')
+                    self.logger.warning('Experiment_b sort skipped. Results might be wrong.')
                     self.current_control_path = control_path
                 else:
-                    self.logger.info('Sorting experiment_b file...')
+                    self.logger.warning('Sorting experiment_b file...')
                     sorted_control_file = self.experiment_b_preprocessor.sort(control_path, None, self.get_lambda_func(self.experiment_format))
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
@@ -454,16 +464,13 @@ class Turbomix:
                     self.current_replica_b_path = sorted_replica_b_file.name
                     self.temp_replica_b = True
 
-
-               
         if self.region_path:
             self.logger.info("Sorting region file...")
             self.region_preprocessor = utils.BigSort(self.region_format, self.open_region, None, 'region', logger=self.logger)
             self.sorted_region_file = self.region_preprocessor.sort(self.region_path, None, self.get_lambda_func(BED))
             self.sorted_region_path = self.sorted_region_file.name
 
-    def add_operation(self, operation):
-        create_operation(operation)
+
 
     def operate(self, experiment_path, control_path=None, output_path=None):
         """Operate expects single paths, not directories. Its called from run() several times if the experiment for picos is a directory"""
@@ -493,17 +500,21 @@ class Turbomix:
             self.decide_sort(experiment_path, control_path)
 
             self.estimate_frag_size = self.do_poisson and not self.frag_size
+         
+            if self.control_path:
+                self.control_reader_simple = utils.SortedFileReader(self.current_control_path, self.control_format, rounding=self.rounding, logger=self.logger)
+                self.control_reader = utils.SortedFileClusterReader(self.current_control_path, self.control_format, rounding=self.rounding, cached=self.cached, logger=self.logger)
 
-            if self.current_control_path:
-                self.control_reader = utils.SortedFileClusterReader(self.current_control_path, self.control_format, rounding=self.rounding, cached=self.cached)
-            
             if self.region_path:
-                self.region_reader = utils.SortedFileClusterReader(self.sorted_region_path, BED, rounding=self.rounding, cached=self.cached)
+                self.region_reader = utils.SortedFileClusterReader(self.sorted_region_path, BED, rounding=self.rounding, cached=self.cached, logger=self.logger)
+
+            if self.blacklist:
+                self.blacklist_reader = utils.SortedFileClusterReader(self.blacklist, BED, rounding=self.rounding, cached=self.cached, logger=self.logger)
 
             if STRAND_CORRELATION in self.operations:
                 self.strand_correlation()
             
-            if self.do_dupremove:
+            if self.do_dupremove or (EXTEND in self.operations and STRAND_CORRELATION in self.operations) or self.do_heuremove:
                 self.filter_files()
 
             if NORMALIZE in self.operations:
@@ -569,7 +580,7 @@ class Turbomix:
     def _to_read_conversion(self, experiment, output):
         for line in experiment:
             try:
-                self.read_and_preprocess(self.cluster, line)
+                self.safe_read_line(self.cluster, line)
                 if not self.cluster.is_empty():
                     self.process_cluster(self.cluster, output)
                 self.cluster.clear()
@@ -580,33 +591,37 @@ class Turbomix:
 
     def _to_cluster_conversion(self, experiment, output):
         #load the first read
+        self.logger.debug("_to_cluster_conversion: running clustering...")
         while self.cluster.is_empty():
             self.cluster_aux2.clear()
-            self.read_and_preprocess(self.cluster_aux2, experiment.next())
+            self.safe_read_line(self.cluster_aux2, experiment.next())
             if not self.cluster_aux2.is_empty():
-                self.cluster = self.cluster_aux2.copy_cluster()
-            
+                self.cluster_aux2.copy_cluster_data(self.cluster)
+
         for line in experiment:
             self.cluster_aux.clear()
-            self.read_and_preprocess(self.cluster_aux, line)
+            self.safe_read_line(self.cluster_aux, line)
             if not self.cluster_aux.is_empty():
-                if self.cluster.intersects(self.cluster_aux) or self.cluster_aux.is_contiguous(self.cluster) or self.cluster.is_contiguous(self.cluster_aux):
-                    self.cluster += self.cluster_aux 
+                if self.cluster_aux.touches(self.cluster_aux2):
+                    self.cluster += self.cluster_aux
                     self.cluster_aux2.clear()
-                    self.cluster_aux2 = self.cluster_aux.copy_cluster()
+                    self.cluster_aux.copy_cluster_data(self.cluster_aux2)
+
                 else:
                     if not self.cluster.is_empty():
                         self.process_cluster(self.cluster, output)
+
                     self.cluster.clear()
                     self.cluster_aux2.clear()
-                    self.read_and_preprocess(self.cluster_aux2, line)
+                    self.safe_read_line(self.cluster_aux2, line)
                     if not self.cluster_aux2.is_empty():
-                        self.cluster = self.cluster_aux2.copy_cluster()  
+                        self.cluster_aux2.copy_cluster_data(self.cluster)  
 
-        if not self.cluster.is_empty():
+        if not self.cluster.is_empty(): #Process the last cluster
             self.process_cluster(self.cluster, output)
             self.cluster.clear()
 
+        self.logger.debug("_to_cluster_conversion: Done clustering.")
 
     def process_file(self):
         self.cluster.clear()
@@ -632,21 +647,37 @@ class Turbomix:
             output.close()
 
     def subtract(self, cluster):
-        region = Region(cluster.start, cluster.end, cluster.chromosome)
-        over = self.control_reader.get_overlaping_clusters(region, overlap=0.0000001)
-        for tag in over:
-            if self.do_extend:
-                tag.extend(self.frag_size)
+        region = Region(cluster.start, cluster.end, cluster.chromosome, logger=self.logger)
+        self.logger.debug("Getting overlapping clusters...")
+        self.cluster_aux.clear()
+        for c in self.control_reader_simple.overlapping_clusters(region, overlap=EPSILON):
+            if self.cluster_aux.is_empty(): #first one
+               c.copy_cluster_data(self.cluster_aux)
+           
+            elif self.cluster_aux.touches(c):
+                self.cluster_aux += c
 
-       
-        region.add_tags(over, True)
+            else:
+                region.clusters.append(self.cluster_aux.copy_cluster())
+                self.logger.debug("Region clusters length: %s "%len(region.clusters))
+                c.copy_cluster_data(self.cluster_aux)
+
+        if self.cluster_aux: #last one
+            region.clusters.append(self.cluster_aux.copy_cluster())
+            self.logger.debug("region clusters length: %s Last cluster cache: %s"%(len(region.clusters), region.clusters[-1]._tag_cache))
+            self.cluster_aux.clear()
+
+        self.logger.debug("Done adding tags!")
+        self.logger.debug("Clustering control (metacluster)...")
         meta = region.get_metacluster()
+        del region
         cluster -= meta
+        self.logger.debug("OPERATION: Done subtracting (for real)")       
         return cluster
 
     def remove_regions(self, cluster):
         region = Region(cluster.start, cluster.end, cluster.chromosome)
-        if self.region_reader.get_overlaping_clusters(region, overlap=0.5):
+        if self.blacklist_reader.get_overlaping_clusters(region, overlap=EPSILON):
             cluster.clear() 
         return cluster
 
@@ -804,13 +835,13 @@ class Turbomix:
 
             if self.do_subtract:
                 cluster = self.subtract(cluster)
-
+                self.logger.debug("Absolute split and post subtract...")
                 for cluster in cluster.absolute_split(threshold=0):
                     self._post_subtract_process_cluster(cluster, output)
             else:
                 self._post_subtract_process_cluster(cluster, output)
 
-
+            #self.logger.debug("Finished process_cluster")
 
     def _post_subtract_process_cluster(self, cluster, output):
         if self.do_poisson:
@@ -910,6 +941,9 @@ class Turbomix:
         else:
             self.calculate_region_notstranded(dual_reader, region_file)    
 
+
+    def __cr_append(self, regions, region):
+        regions.append(region)
 
     def calculate_region_notstranded(self, dual_reader, region_file):
         calculated_region = Region()        
@@ -1038,7 +1072,7 @@ class Turbomix:
             self._save_figure("hist_A")
 
         except ImportError:
-            print self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')
+            self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')
 
     def __enrichment_M(self, rpkm_a, rpkm_b):
         return math.log(rpkm_a/float(rpkm_b), 2)
@@ -1049,7 +1083,7 @@ class Turbomix:
     def enrichment(self):
         use_pseudocount = not self.no_pseudocount
         use_replica = bool(self.replica_a_path)
-
+        over = 1./sys.maxint #minimum overlap
         msg = "Calculating enrichment in regions"
         file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
         file_b_reader = utils.SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
@@ -1079,21 +1113,21 @@ class Turbomix:
         self.logger.info("... analyzing regions...")
         for region_line in file(self.sorted_region_path):
             region_of_interest = self._region_from_sline(region_line.split())
-            tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
-            tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
+            tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=over)
+            tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=over)
             replica_a = None
             replica_tags = None
             swap1 = None
             swap2 = None
             if use_replica:            
-                replica_tags = replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=0.5)
+                replica_tags = replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=over)
 
             #if we are using pseudocounts, use the union, use the intersection otherwise
             if (use_pseudocount and (tags_a or tags_b)) or (not use_pseudocount and tags_a and tags_b): 
                 region_a = region_of_interest.copy()
                 region_b = region_of_interest.copy()
-                region_a.add_tags(tags_a)
-                region_b.add_tags(tags_b)
+                region_a.add_tags(tags_a, clusterize=False)
+                region_b.add_tags(tags_b, clusterize=False)
                 if self.simple_counts:
                     rpkm_a = region_a.numtags(use_pseudocount)/self.total_reads_a
                     rpkm_b = region_b.numtags(use_pseudocount)/self.total_reads_b
@@ -1134,7 +1168,7 @@ class Turbomix:
                     enrichment_result.append({'chr':region_of_interest.chromosome, 'start':region_of_interest.start, 'end':region_of_interest.end, 'strand': region_of_interest.strand,
                                               'A':A, 'M':M, 'total_A': self.total_reads_a, 'total_b':self.total_reads_b, 'num_tags_a':len(tags_a), 
                                               'num_tags_b':len(tags_b), 'A_prime':A_prime, 'M_prime':M_prime, 'total_1':total_1, 'total_2':total_2, 
-                                              'count_1':count_1, 'count_2':count_2, 'z_score': 0, 'sd': 0})
+                                              'count_1':count_1, 'count_2':count_2, 'z_score': 0, 'mean': 0, 'sd': 0})
                     regions_analyzed_count += 1
 
 
@@ -1180,7 +1214,7 @@ class Turbomix:
 
             sd = (sd_acum/len(Ms_replica))"""
             points.append([result_chunk[-1]["A_prime"], mean, sd]) #The maximum A of the chunk, the mean and the standard deviation     
-            #print result_chunk[-1]["A_prime"], mean, sd
+            print result_chunk[-1]["A_prime"], mean, sd
 
         #update z scores
         for entry in enrichment_result:
@@ -1195,6 +1229,7 @@ class Turbomix:
         #return points
         
     def __sub_zscore(self, entry, points, i):
+        entry["mean"] = points[i][1]
         entry["sd"] = points[i][2]
         if points[i][2] > 0:
             entry["z_score"] = ((entry["M"]-points[i][1])/points[i][2])  
@@ -1207,7 +1242,7 @@ class Turbomix:
         for d in er:
             out_file.write("%s\n"%"\t".join([d['chr'], str(d['start']), str(d['end']), str(d['strand']), str(d['A']), str(d['M']), str(d['total_A']), str(d['total_b']), str(d['num_tags_a']), 
                                             str(d['num_tags_b']), str(d['A_prime']), str(d['M_prime']), str(d['total_1']), str(d['total_2']), str(d['count_1']), 
-                                            str(d['count_2']), str(d['z_score']), str(d['sd'])]))
+                                            str(d['count_2']), str(d['z_score']), str(d['mean']), str(d['sd'])]))
 
     def _save_figure(self, figure_name):
         if self.postscript:
@@ -1236,17 +1271,15 @@ class Turbomix:
         unfiltered_output = file('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
         for region_line in file(self.sorted_region_path):
             split_region_line = region_line.split()
-            region = Region(split_region_line[1], split_region_line[2], chromosome=split_region_line[0])
-            region.add_tags(cluster_reader.get_overlaping_clusters(region, overlap=0.000001), True)
+            region = Region(split_region_line[1], split_region_line[2], chromosome=split_region_line[0], logger=self.logger, cached=self.cached)
+            region.add_tags(cluster_reader.get_overlaping_clusters(region, overlap=EPSILON), True)
             classified_clusters = region.get_FDR_clusters(self.repeats)
-            for cluster in  classified_clusters:
+            for cluster in classified_clusters:
                 unfiltered_output.write(cluster.write_line())
                 if cluster.p_value < self.p_value:
                     filtered_output.write(cluster.write_line())
 
         self._manage_temp_file(old_output)
-
-
 
     def strand_correlation(self):
         self.logger.info("Strand correlation analysis...")
@@ -1303,7 +1336,7 @@ class Turbomix:
             average_len = acum_length/num_analyzed
             self.result_log.write("Strand Correlation\n")
             self.result_log.write("------------------\n\n")
-            self.logger.info("Average analyzed length", average_len)
+            self.logger.info("Average analyzed length %s"%average_len)
             self.result_log.write("Average analyzed length:%s\n"%average_len)
             for delta in range(self.min_delta, self.max_delta, self.delta_step):
                 if delta in self.delta_results:
@@ -1326,23 +1359,15 @@ class Turbomix:
                     import matplotlib
                     matplotlib.use("PS")
 
-                import matplotlib.pyplot
-                matplotlib.pyplot.plot(range(self.min_delta, self.max_delta), data)
-                matplotlib.pyplot.plot()
+                import matplotlib.pyplot as plt
+                plt.plot(range(self.min_delta, self.max_delta), data)
+                plt.plot()
                 plt.xlabel("Shift length between + and - clusters")
                 plt.ylabel("Pearson correlation coefficient")
-                if os.path.dirname(self.current_output_path):
-                    figure_path = '%s/%s.%s'%(os.path.dirname(self.current_output_path), os.path.basename(self.current_output_path), ext)
-                else:
-                    figure_path = '%s.%s'%(os.path.basename(self.current_output_path), ext)
+                self._save_figure("correlation")
 
-                matplotlib.pyplot.savefig(figure_path)
-                matplotlib.pyplot.clf()
-                self.logger.info("Correlation figure saved to %s"%figure_path)
-                #matplotlib.pyplot.show()
-                matplotlib.pyplot.clf()
             except ImportError:
-                self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library.')
+                self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library (version >1.0.1).')
 
 
     def _correlate_clusters(self, positive_cluster, negative_cluster):

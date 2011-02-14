@@ -166,10 +166,11 @@ class BigSort:
                 self.cluster.clear()
                 try:           
                     self.cluster.read_line(line)
-                    self.cluster.extend(self.frag_size)
+                    if self.frag_size:
+                        self.cluster.extend(self.frag_size)
 
                 except InvalidLine:
-                    print 'Discarding middle invalid line: %s'%line
+                    if self.logger: self.logger.debug('Discarding middle invalid line: %s'%line)
                                    
                 if not self.cluster.is_empty():
                     filtered_chunk.append(self.cluster.write_line())
@@ -306,6 +307,75 @@ class DualSortedReader:
                 while self.file_a:
                     yield line_a
                     line_a = self.file_a.next()
+
+
+class SortedFileReader:
+    """
+    Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
+    and yields the clusters that overlap with the region specified. The cursor will be left behind the position of the last region fed to the SortedFileReader.
+    """
+    def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, logger=None):
+        self.__dict__.update(locals())
+        self.file_iterator = file(file_path, 'rb')
+        self.safe_reader = SafeReader()
+        self.cursor = self.file_iterator.tell()
+        self.initial_tell =  self.file_iterator.tell() 
+    
+    def restart(self):
+        """Start again reading the file from the start"""
+        self.logger.debug("Rewinding to %s"%self.cursor)
+        self.file_iterator.seek(self.initial_tell)
+        self.cursor = self.initial_tell
+
+    def rewind(self):
+        """Move back to cursor position"""
+        #print "REWIND"
+        self.file_iterator.seek(self.cursor)
+    
+    def _read_line(self):
+        """Reads the next line of the file. If advance, the cursor will get the position of the file"""
+        self.line = self.file_iterator.readline()
+        if self.line == '':
+            return True
+
+        return False
+
+    def _advance(self):
+        #print "ADVANCE"
+        self.cursor = self.file_iterator.tell()
+
+    def _get_cluster(self):
+        """Returns line in a cluster ignoring the count of lines. Assumes that the cursor position exists"""
+        c = Cluster(read=self.experiment_format, read_half_open=self.read_half_open, rounding=self.rounding, cached=True, logger=self.logger) 
+        if self.line:
+            self.safe_read_line(c, self.line)
+        return c
+
+
+    def overlapping_clusters(self, region, overlap=1):
+        if self.logger: self.logger.debug("YIELD OVER: Started...")
+        self.rewind()
+        if self._read_line(): return
+        cached_cluster = self._get_cluster()
+        while (cached_cluster.chromosome < region.chromosome) or (cached_cluster.chromosome == region.chromosome and region.start > cached_cluster.end) or cached_cluster.is_empty():
+            #print "old:",cached_cluster.chromosome, cached_cluster.start, cached_cluster.end
+            self._advance()
+            if self._read_line(): return
+            cached_cluster = self._get_cluster()
+            #print "NEW:", cached_cluster.chromosome, cached_cluster.start, cached_cluster.end
+ 
+        #get intersections
+        while cached_cluster.start <= region.end and cached_cluster.chromosome == region.chromosome:
+            if cached_cluster.overlap(region) >= overlap:
+                if not region.strand or region.strand == cached_cluster.strand: #dont include the clusters with different strand from the region  
+                    yield cached_cluster
+
+            if self._read_line(): return
+            cached_cluster = self._get_cluster()
+ 
+    def safe_read_line(self, cluster, line):
+        self.safe_reader.safe_read_line(cluster, line)
+
 
 
 class SortedFileClusterReader:
