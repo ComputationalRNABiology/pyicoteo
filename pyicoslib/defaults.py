@@ -70,11 +70,14 @@ LABEL1=""
 LABEL2=""
 NUMBINS=40
 ZSCORE=4
+BLACKLIST=None
+
 
 #CONSTANTS
 PLUS_STRAND = "+"
 MINUS_STRAND = "-"
 NO_STRAND = "."
+EPSILON=1.0842021724855044e-19 #The smallest number above 0. Got from running 1./sys.maxint
 PLOT='plot'
 NORMALIZE = 'normalize'
 EXTEND = 'extend'

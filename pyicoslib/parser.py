@@ -19,7 +19,7 @@ from lib import argparse
 import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.9.5'
+__version__ = '0.9.7.1'
 from defaults import *
 
 class PicosParser:
@@ -107,8 +107,17 @@ class PicosParser:
         output_flags.add_argument('-F','--output-format',default=OUTPUT_FORMAT, help='Format desired for the output. You can choose between %s. WARNING, for some operations, some outputs are not valid. See operation help for more info. [default pk]'%write_formats)
 
 
+        blacklist_help = 'Reads a bed file with coordinates that you want to exclude from the analysis. Useful for discarding "noisy" probable artifactual regions like centromeres and repeat regions. [Default %s]'
+        blacklist = self.new_subparser()
+        blacklist.add_argument('blacklist', default=BLACKLIST, help=blacklist_help)
+        optional_blacklist = self.new_subparser()
+        optional_blacklist.add_argument('--blacklist', default=BLACKLIST, help=blacklist_help)
+
+
         region = self.new_subparser()
         region.add_argument('region', help='The region file')
+
+
         optional_region = self.new_subparser()
         optional_region.add_argument('--region', help='The region file or directory. In the enrichment analysis, if its not specified it will be calculated automatically from the tags in both files and the distance of clustering specified in the --proximity flag')
         region_format = self.new_subparser()
@@ -214,7 +223,7 @@ class PicosParser:
 
 
         plot_path = self.new_subparser()
-        plot_path.add_argument('plot_path', default=PLOT_PATH, help='The path of the file to plot [Default %(default)s]')
+        plot_path.add_argument('plot_path', default=PLOT_PATH, help='The path of the file to plot.')
 
         correlation_flags = self.new_subparser()
         correlation_flags.add_argument('--max-delta',type=int, default=MAX_DELTA, help='Maximum delta [Default %(default)s]')
@@ -228,7 +237,7 @@ class PicosParser:
         protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
         #callpeaks operation
         subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.',
-                              parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, species, tolerated_duplicates, poisson_test])
+                              parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_blacklist, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, species, tolerated_duplicates, poisson_test])
         #convert operation
         subparsers.add_parser('convert', help='Convert a file to another file type.',
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, label, tag_length, span, optional_frag_size, remlabels])
@@ -257,7 +266,7 @@ class PicosParser:
                               parents=[experiment, experiment_flags, basic_parser, region, output, output_flags, round, pvalue, repeats, masker_file, remlabels])
         #remove operation
         subparsers.add_parser('remregions', help='Removes regions that overlap with another the coordinates in the "black list" file.',
-                              parents=[experiment, experiment_flags, basic_parser, output_flags, region, region_format, output, remlabels])
+                              parents=[experiment, experiment_flags, basic_parser, output_flags, blacklist, region_format, output, remlabels])
         #strcorr operation
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
@@ -284,7 +293,7 @@ class PicosParser:
                             split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, postscript = POSTSCRIPT,
                             remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS,
                             proximity=PROXIMITY, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
-                            label2=LABEL2, numbins=NUMBINS, zscore=ZSCORE)
+                            label2=LABEL2, numbins=NUMBINS, zscore=ZSCORE, blacklist=BLACKLIST)
 
         args = parser.parse_args()
 
@@ -334,7 +343,7 @@ class PicosParser:
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
                             args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, 
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.no_pseudocount, args.simple_counts, args.label1, 
-                            args.label2, args.numbins, args.zscore)
+                            args.label2, args.numbins, args.zscore, args.blacklist)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
@@ -392,9 +401,9 @@ class PicosParser:
 
         elif sys.argv[1] == 'callpeaks':
             turbomix.operations = [SPLIT, EXTEND, POISSON, FILTER, REMOVE_DUPLICATES] 
-            if args.duplicates > 1: #If there is only 1 duplicate,  there is no need to discard artifacts
+            if args.duplicates > 1: #If there is only 1 duplicate, there is no need to discard artifacts
                 turbomix.operations.append(DISCARD_ARTIFACTS)
-            if args.region:
+            if args.blacklist:
                 turbomix.operations.append(REMOVE_REGION)
             if args.control:
                 turbomix.operations.append(NORMALIZE)

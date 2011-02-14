@@ -111,18 +111,7 @@ class TestCoreObjects(unittest.TestCase):
         cluster.read_line('chr1 10 130 hola 666 +')
         self.assertEqual(cluster.write_line(), 'chr1\t1\t10\t1\nchr1\t10\t100\t2\nchr1\t100\t130\t1\n')
 
-    '''def test_rounding_bug(self):
-        """
-        In a cluster writing in pk, if there is a level between 0.5 and 0, round to 1 so the cluster is not broken and the position and height info is incorrect
 
-        DEPRECATED: This was a nasty hack, and should not exist
-        """
-        c = Cluster(rounding=True)
-        c.read_line("chr2 3000 34234 10:1.6|10:0.3|10:2.1") 
-        #c2 = Cluster(rounding=True)
-        #c2.read_line("chr2 3000 34234 10:1.6|10:0.1|10:2.1|10:0.1|10:2.1|10:0.1|10:2.1|10:0.1|10:2.1|10:0.1|10:2.1") 
-        #print c2.absolute_split(threshold=0)
-        self.assertEqual(c.write_line(), 'chr2\t3000\t3029\t10:2|10:1|10:2\t2.1\t.\t3014\t40.0\n')       '''  
 
 
 
@@ -133,11 +122,11 @@ class TestCoreObjects(unittest.TestCase):
         if cluster.is_empty():
             cluster.read_line(line)
             cluster.extend(extension)
-            #print cluster.write_line(), cluster._levels
+            #print cluster.write_line(), cluster._profile
         else:
             cluster_aux.read_line(line)
             cluster_aux.extend(extension)
-            #print cluster_aux.write_line(), cluster_aux._levels
+            #print cluster_aux.write_line(), cluster_aux._profile
             cluster += cluster_aux
 
         #print cluster.write_line()
@@ -199,6 +188,41 @@ class TestCoreObjects(unittest.TestCase):
         result.read_line('chr1    102     106     2')
         result.read_line('chr1    106     108     1')
         self.assertEqual(cluster.write_line(), result.write_line())
+
+    def test_sub_fast(self):
+       #random/experiment.pk 
+       experiment = Cluster(rounding=True)       
+       experiment.read_line("chr1   1     1107     101:2|7:1  2.0     .       263     238.0")   
+       control = Cluster() 
+       control.read_line(  "chr1   46    1222      47:1|54:2|47:1 2.0     .       71331   202.0")
+       experiment -= control
+       self.assertEqual(experiment.write_line(), 'chr1\t1\t92\t45:2|47:1\t2.0\t.\t23\t137.0\n')#chr1    1       92      45:2|47:1       2.0     .       23      137.0
+
+
+
+    """
+    def test_sub_fast(self): BACUP
+       #random/experiment.pk 
+       experiment = Cluster(rounding=True)       
+       experiment.read_line("chr17   60   320   59:1.00|42:2.00|52:1.00|101:2.00|7:1.00 2.0     .       71201   404.0")
+       print experiment.write_line()
+       control = Cluster() 
+       #random/control.pk 
+       control.read_line("chr17   83   183   101:1.00        1.0     .       71133   101.0")
+
+       experiment -= control
+       print experiment._levels
+       print experiment.write_line()
+       control2 = Cluster() 
+       control2.read_line("chr17   258   405   47:1.00|54:2.00|47:1.00 2.0     .       71331   202.0")
+       experiment -= control2
+       print experiment._levels
+       print experiment.write_line()
+
+       #Correcto       
+       #chr17 184   304   29:1.00|45:2.00|47:1.00 2.0     .       71235   166.0"""
+
+
 
     def test_internal_representations(self):
         "Este test prueba la integridad interna de los datos. Si no pasa, MAL"
@@ -520,7 +544,7 @@ class TestCoreObjects(unittest.TestCase):
         cluster1.read_line("chr2 1 100 30:1|50:2|40:1|3000:3")
         cluster2.read_line("chr2 1 100 30:1|50:0|40:1|200:0|5000:1")
         cluster1 -= cluster2
-        self.assertEqual(cluster1._levels, [[50, 2.0], [40, 0.0], [200, 3.0], [2800, 2.0]])
+        self.assertEqual(cluster1._profile, [[50, 2.0], [40, 0.0], [200, 3.0], [2800, 2.0]])
 
     def test_subtract_with_gaps(self):
         """
@@ -566,7 +590,7 @@ class TestCoreObjects(unittest.TestCase):
 
         r.add_tags([control1, control2])
         meta = r.get_metacluster()
-        #print meta._levels
+        #print meta._profile
         exp_cached -= meta
         #print "CACHED:\n", exp_cached.write_line()
 
@@ -717,14 +741,14 @@ class TestCoreObjects(unittest.TestCase):
 
     def test_write_pk(self):
         cluster = Cluster(write=PK, chromosome='chr5', start=1, rounding=True, write_half_open=True)
-        cluster.add_level(100, 1)
-        cluster.add_level(50, 2)
-        cluster.add_level(50, 3)
-        cluster.add_level(100, 1)
-        cluster.add_level(200, 0)
-        cluster.add_level(1, 3)
-        cluster.add_level(10, 0)
-        cluster.add_level(100, 1)
+        cluster.append_level(100, 1)
+        cluster.append_level(50, 2)
+        cluster.append_level(50, 3)
+        cluster.append_level(100, 1)
+        cluster.append_level(200, 0)
+        cluster.append_level(1, 3)
+        cluster.append_level(10, 0)
+        cluster.append_level(100, 1)
         self.assertEqual(cluster.write_line(), 'chr5\t0\t300\t100:1|50:2|50:3|100:1\t3.0\t.\t175\t450.0\nchr5\t500\t501\t1:3\t3.0\t.\t501\t3.0\nchr5\t511\t611\t100:1\t1.0\t.\t561\t100.0\n') #HALF OPEN
         cluster.write_as(PK, False) #Now write it as closed
         self.assertEqual(cluster.write_line(),'chr5\t1\t300\t100:1|50:2|50:3|100:1\t3.0\t.\t175\t450.0\nchr5\t501\t501\t1:3\t3.0\t.\t501\t3.0\nchr5\t512\t611\t100:1\t1.0\t.\t561\t100.0\n') #Closed
