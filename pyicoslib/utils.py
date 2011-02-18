@@ -119,8 +119,7 @@ class SafeReader:
                 print
                 raise OperationFailed
             else:
-                if self.logger:
-                    self.logger.info("Skipping invalid (%s) line: %s"%(cluster.reader.format, line))
+                if self.logger: self.logger.debug("Skipping invalid (%s) line: %s"%(cluster.reader.format, line))
                 self.invalid_count += 1
     
 
@@ -136,6 +135,9 @@ class BigSort:
         self.logger = logger
         self.file_format = file_format
         self.frag_size = frag_size
+        self.buffer_size = 32000
+        self.temp_file_size = 800000
+
         try:
             if self.file_format:
                 self.cluster = Cluster(read=self.file_format, write=self.file_format, read_half_open=read_half_open, write_half_open=read_half_open, logger=self.logger)
@@ -159,6 +161,13 @@ class BigSort:
             except:
                 count += 1
 
+    def remove_chunks(self, chunks):
+        for chunk in chunks:
+            try:
+                os.remove(chunk)
+            except:
+                pass
+    
     def filter_chunk(self, chunk):
         filtered_chunk = []
         for line in chunk:
@@ -177,38 +186,34 @@ class BigSort:
 
         return filtered_chunk
 
-    def sort(self, input, output=None, key=None, buffer_size=320000, tempdirs=[], tempFileSize=8000000):
+    def sort(self, input, output=None, key=None, tempdirs=[]):
         if key is None:
             key = lambda x : x
 
         if not tempdirs:
             tempdirs.append(gettempdir())
-        input_file = file(input,'rb',tempFileSize)
+        input_file = file(input,'rb',self.temp_file_size)
         self.skipHeaderLines(key, input_file)
         try:
             input_iterator = iter(input_file)
             chunks = []
             for tempdir in cycle(tempdirs):
-                current_chunk = list(islice(input_iterator,buffer_size))
+                current_chunk = list(islice(input_iterator, self.buffer_size))
                 current_chunk = self.filter_chunk(current_chunk) #Now we always filter the chunks, so no empty and invalid lines appear. This used to be optional
                 if current_chunk:
+                    if self.logger: self.logger.debug("Chunk: len current_chunk: %s chunks: %s temp_file_size %s buffer_size %s"%(len(current_chunk), len(chunks), self.temp_file_size, self.buffer_size))
                     current_chunk.sort(key=key)
-                    output_chunk = file(os.path.join(tempdir,'%06i_%s_%s'%(len(chunks), os.getpid(), self.id)),'w+b',tempFileSize)
+                    output_chunk = file(os.path.join(tempdir,'%06i_%s_%s'%(len(chunks), os.getpid(), self.id)),'w+b',self.temp_file_size)
                     output_chunk.writelines(current_chunk)
                     output_chunk.flush()
                     output_chunk.seek(0)
-                    chunks.append(output_chunk)
+                    chunks.append(output_chunk.name)
                 else:
                     break
 
         except KeyboardInterrupt: #If there is an interruption, delete all temporary files and raise the exception for further processing.
             print 'Removing temporary files...'
-            for chunk in chunks:
-                try:
-                    chunk.close()
-                    os.remove(chunk.name)
-                except:
-                    pass
+            self.remove_chunks(chunks)
             raise
 
         finally:
@@ -217,17 +222,12 @@ class BigSort:
         if output is None:
             output = "%s/tempsort%s_%s"%(gettempdir(), os.getpid(), self.id)
         
-        output_file = file(output,'wb',tempFileSize)
+        output_file = file(output,'wb',self.temp_file_size)
         
         try:
             output_file.writelines(self.merge(chunks,key))
         finally:
-            for chunk in chunks:
-                try:
-                    chunk.close()
-                    os.remove(chunk.name)
-                except:
-                    pass
+            self.remove_chunks(chunks)
 
         output_file.close()
         return file(output)
@@ -240,17 +240,14 @@ class BigSort:
         values = []
         for index, chunk in enumerate(chunks):
             try:
-                iterator = iter(chunk)
+                chunk_file = open(chunk)
+                iterator = iter(chunk_file)
                 value = iterator.next()
             except StopIteration:
-                try:
-                    chunk.close()
-                    os.remove(chunk.name)
-                    chunks.remove(chunk)
-                except:
-                    pass
+                self.remove_chunks(chunks)
+                #try: chunks.remove(chunk) except: pass # igual hay algo magico aqui que se me ha pasado, pero creo que no vale para nada 
             else:
-                heappush(values,((key(value),index,value,iterator,chunk)))
+                heappush(values,((key(value), index, value, iterator, chunk_file)))
 
         while values:
             k, index, value, iterator, chunk = heappop(values)
@@ -258,12 +255,8 @@ class BigSort:
             try:
                 value = iterator.next()
             except StopIteration:
-                try:
-                    chunk.close()
-                    os.remove(chunk.name)
-                    chunks.remove(chunk)
-                except:
-                    pass
+                self.remove_chunks(chunks)
+                #aqui tambien habia magia remove chunks
             else:
                 heappush(values,(key(value),index,value,iterator,chunk))
  

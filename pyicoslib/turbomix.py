@@ -69,7 +69,7 @@ class Turbomix:
                  split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, experiment_b_path=EXPERIMENT,
                  replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, stranded_analysis=STRANDED_ANALYSIS, proximity=PROXIMITY, 
                  postscript=POSTSCRIPT, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
-                 label2=LABEL2, numbins=NUMBINS, zscore=ZSCORE, blacklist=BLACKLIST):
+                 label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE):
 
         self.__dict__.update(locals())
         self.set_logger(verbose, debug)
@@ -105,7 +105,11 @@ class Turbomix:
         #poisson stuff
         self.first_chr = True
         self._init_poisson()
-        self.poisson_results = {'length': defaultdict(), 'height': defaultdict(), 'numtags': defaultdict()}
+        self.poisson_results = {}
+        for test in POISSON_OPTIONS:
+            self.poisson_results[test] = defaultdict()
+        
+        #self.poisson_results = {'length': defaultdict(), 'height': defaultdict(), 'numtags': defaultdict()}
         self.maxheight_to_pvalue = {}
         self.numtags_to_pvalue = {}
         #Operation flags
@@ -438,7 +442,7 @@ class Turbomix:
                     self.logger.warning('Experiment_b sort skipped. Results might be wrong.')
                     self.current_control_path = control_path
                 else:
-                    self.logger.warning('Sorting experiment_b file...')
+                    self.logger.info('Sorting experiment_b file...')
                     sorted_control_file = self.experiment_b_preprocessor.sort(control_path, None, self.get_lambda_func(self.experiment_format))
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
@@ -535,7 +539,6 @@ class Turbomix:
                     self.logger.info('%s: %s'%(chromosome, k))
                     self.result_log.write('%s: %s\n'%(chromosome, k))
 
-
             #Mutually exclusive final operations
             if ENRICHMENT in self.operations:
                 self.plot_path = self.enrichment()
@@ -552,8 +555,6 @@ class Turbomix:
                   self.plot_enrichment(self.plot_path)              
 
             self.success_message(output_path)
-
-            
 
         finally: #Finally try deleting all temporary files, quit silently if they dont exist
             try:
@@ -872,11 +873,12 @@ class Turbomix:
         old_output = '%s/before_cut_%s'%(current_directory, os.path.basename(self.current_output_path))
         shutil.move(os.path.abspath(self.current_output_path), old_output)
         filtered_output = file(self.current_output_path, 'w+')
-        msg = "Filtering using"
+
         if self.poisson_test == 'height':
-            msg = "%s cluster height..."%msg
+            msg = "Filtering using cluster height..."
         else:
-            msg = "number of reads per cluster..."%msg
+            msg = "number of reads per cluster..."
+
         self.logger.info(msg)
         unfiltered_output = file('%s/unfiltered_%s'%(current_directory, os.path.basename(self.current_output_path)), 'w+')
         if self.output_format == WIG or self.output_format == VARIABLE_WIG:
@@ -947,6 +949,8 @@ class Turbomix:
 
     def calculate_region_notstranded(self, dual_reader, region_file):
         calculated_region = Region()        
+        flag_minreads = 4
+        readcount = 0
         for line in dual_reader:
             if not calculated_region: #first region only
                 calculated_region = self._region_from_sline(line.split())
@@ -956,11 +960,14 @@ class Turbomix:
                 new_region.end += self.proximity
                 if calculated_region.overlap(new_region):
                     calculated_region.join(new_region)
-                else: 
+                    readcount += 1
+                else:
                     calculated_region.end -= self.proximity
-                    region_file.write(calculated_region.write())                         
+                    if readcount > flag_minreads:
+                        region_file.write(calculated_region.write())                         
                     calculated_region = new_region.copy()
-    
+                    readcount = 0
+
         if calculated_region:
             calculated_region.end -= self.proximity
             region_file.write(calculated_region.write())                         
@@ -971,6 +978,9 @@ class Turbomix:
         region_plus = Region()
         region_minus = Region()
         regions = []
+        flag_minreads = 4
+        numreads_plus = 0
+        numreads_minus = 0
         dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.logger)
         for line in dual_reader:
             new_region = self._region_from_sline(line.split())
@@ -983,17 +993,23 @@ class Turbomix:
             else:
                 if region_plus.overlap(new_region) and region_plus.strand == new_region.strand:
                     region_plus.join(new_region)
+                    numreads_plus += 1
                 elif region_minus.overlap(new_region) and region_minus.strand == new_region.strand:
                     region_minus.join(new_region)
+                    numreads_minus += 1
                 else:
                     if new_region.strand == region_plus.strand:
                         region_plus.end -= self.proximity
-                        regions.append(region_plus)                         
-                        region_plus = new_region.copy()      
+                        if numreads_plus < flag_minreads: 
+                            regions.append(region_plus)                         
+                        region_plus = new_region.copy()  
+                        numreads_plus = 0    
                     else:
                         region_minus.end -= self.proximity
-                        regions.append(region_minus)                       
-                        region_minus = new_region.copy()      
+                        if numreads_minus < flag_minreads:
+                            regions.append(region_minus)                       
+                        region_minus = new_region.copy()  
+                        numreads_minus = 0    
 
         if region_plus:
             region_plus.end -= self.proximity
@@ -1007,7 +1023,14 @@ class Turbomix:
         for region in regions:
             region_file.write(region.write())  
        
+
+    def get_zscore(self, x, mean, sd):    
+        if sd > 0:
+            return float(x-mean)/sd
+        else:
+            return 0 #This points are weird anyway 
         
+
 
     def plot_enrichment(self, file_path):
         try:
@@ -1029,7 +1052,7 @@ class Turbomix:
 
             if self.label2:
                 label_control = self.label2
-            else:                
+            else:         
                 if self.replica_a_path:
                     label_control = '%s(A) VS %s(A)'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
                 else:
@@ -1042,22 +1065,30 @@ class Turbomix:
             A_significant = []
             M_prime = []
             figure(figsize=(8,6))
-            for line in open(file_path): 
+            fold_flag = 4      
+            self.logger.info("Loading table...")
+            for line in open(file_path):
+                print line
                 sline = line.split()
-                if abs(float(sline[16])) < self.zscore:
-                #if abs(float(sline[5])) < abs(float(sline[1]))*self.zscore:
-                    M.append(float(sline[5]))                
-                    A.append(float(sline[4]))
+                ratio = float(sline[5])
+                average = float(sline[4])
+                mean = float(sline[16])
+                sd = float(sline[17])
+                #if abs(self.get_zscore(ratio, sd*self.sdfold, mean)) < self.zscore:
+                if abs(float(sline[18])) < self.zscore:
+                    M.append(ratio)
+                    A.append(average)
                 else:
-                    M_significant.append(float(sline[5]))                
-                    A_significant.append(float(sline[4]))     
-               
+                    M_significant.append(ratio)                
+                    A_significant.append(average)  
+   
                 M_prime.append(float(sline[11]))    
                 A_prime.append(float(sline[10]))
- 
+            
+            self.logger.info("Plotting points...")
             plot(A, M, 'y.', label=label_main)
             plot(A_significant, M_significant, 'r.', label="%s (significant)"%label_main)
-            plot(A_prime, M_prime, 'b.', label=label_control)
+            plot(A_prime, M_prime, 'bo', label=label_control)
             xlabel('A')
             ylabel('M')
             legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
@@ -1108,7 +1139,6 @@ class Turbomix:
         self.total_regions = sum(1 for line in open(self.sorted_region_path))
         self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2
         enrichment_result = [] #This will hold the chromosome, start and end of the region, plus the A, M, 'M and 'A
-        
         regions_analyzed_count = 0
         self.logger.info("... analyzing regions...")
         for region_line in file(self.sorted_region_path):
@@ -1171,7 +1201,6 @@ class Turbomix:
                                               'count_1':count_1, 'count_2':count_2, 'z_score': 0, 'mean': 0, 'sd': 0})
                     regions_analyzed_count += 1
 
-
         points = self.calculate_zscore(enrichment_result)
         self.__sub_enrich_write(enrichment_result, out_file)
         out_file.flush()
@@ -1180,23 +1209,28 @@ class Turbomix:
         self.logger.info("Enrichment result saved to %s"%self.current_output_path)
         return out_file.name
 
+
+
+
     def calculate_zscore(self, enrichment_result):
-        self.logger.info("... calculating z-score...")
-        bin_size = int(len(enrichment_result)/(self.numbins+1)) #Make the bins proportionals #+1, since we are going to fuse the last 2
-        if bin_size < 100:
-            real_number = int(round(len(enrichment_result)/100.))+1
-            self.logger.warning("You have too few regions to divide them in %s bins. Readjusting this to have bins of at least 100 regions, number of bins = %s"%(self.numbins, real_number))
-            bin_size = 100
+        
+        print len(enrichment_result)
+        bin_size = int(self.binsize*len(enrichment_result))
+        flag_step = int(bin_size/4)
+        
+        print "BIN:", bin_size, "STEP:", flag_step
+        self.logger.info("... calculating zscore...")
         enrichment_result.sort(key=lambda x:(x["A_prime"]))
         points = []
         #get the standard deviations
-        for i in range(0, len(enrichment_result)-bin_size, bin_size):
+        for i in range(0, len(enrichment_result)-bin_size+flag_step, flag_step):
             #get the slice
-            if i+2*bin_size < len(enrichment_result):
+
+            if i+bin_size < len(enrichment_result):
                 result_chunk = enrichment_result[i:i+bin_size]  
             else:
-                result_chunk = enrichment_result[i:] #fuse the last two chunks together so there is not a small minichunk 
-
+                result_chunk = enrichment_result[i:] #last chunk
+            print "CHUNK:", len(result_chunk), 
             #retrieve the values
             mean_acum = 0
             Ms_replica = []
@@ -1204,37 +1238,28 @@ class Turbomix:
                 mean_acum += entry["M_prime"]
                 Ms_replica.append(entry["M_prime"])
 
-            #print Ms_replica
             #add them to the points of mean and sd
             mean = mean_acum/len(result_chunk)
-            sd = (sum((x - mean)**2 for x in Ms_replica))/len(Ms_replica) #too fancy 
-            """sd_acum = 0  
-            for x in Ms_replica:
-                sd_acum += (x - mean)**2
-
-            sd = (sd_acum/len(Ms_replica))"""
+            sd = (sum((x - mean)**2 for x in Ms_replica))/len(Ms_replica) 
             points.append([result_chunk[-1]["A_prime"], mean, sd]) #The maximum A of the chunk, the mean and the standard deviation     
-            print result_chunk[-1]["A_prime"], mean, sd
+            print points[-1]
 
         #update z scores
         for entry in enrichment_result:
             for i in range(0, len(points)):
                 if entry["A"] < points[i][0]:
-                    self.__sub_zscore(entry, points, i)
+                    self.__sub_zscore(entry, points[i]) # take into consideration binsize
                     break #found it, leave go to the next
                
-                self.__sub_zscore(entry, points, -1) #the value is the biggest, use the last break
+                self.__sub_zscore(entry, points[-1]) #the value is the biggest, use the last break
 
         enrichment_result.sort(key=lambda x:(x["chr"], x["start"], x["end"]))
-        #return points
+        return points
         
-    def __sub_zscore(self, entry, points, i):
-        entry["mean"] = points[i][1]
-        entry["sd"] = points[i][2]
-        if points[i][2] > 0:
-            entry["z_score"] = ((entry["M"]-points[i][1])/points[i][2])  
-        else:
-            entry["z_score"] = 0 #This points are weird anyway
+    def __sub_zscore(self, entry, point):
+        entry["mean"] = point[1]
+        entry["sd"] = point[2]
+        entry["z_score"] = self.get_zscore(entry["M"], self.sdfold*entry["mean"], entry["sd"])
 
 
 
@@ -1242,7 +1267,7 @@ class Turbomix:
         for d in er:
             out_file.write("%s\n"%"\t".join([d['chr'], str(d['start']), str(d['end']), str(d['strand']), str(d['A']), str(d['M']), str(d['total_A']), str(d['total_b']), str(d['num_tags_a']), 
                                             str(d['num_tags_b']), str(d['A_prime']), str(d['M_prime']), str(d['total_1']), str(d['total_2']), str(d['count_1']), 
-                                            str(d['count_2']), str(d['z_score']), str(d['mean']), str(d['sd'])]))
+                                            str(d['count_2']), str(d['mean']), str(d['sd']), str(d['z_score'])]))
 
     def _save_figure(self, figure_name):
         if self.postscript:

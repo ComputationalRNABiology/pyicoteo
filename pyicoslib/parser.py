@@ -19,11 +19,10 @@ from lib import argparse
 import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.9.7.1'
+__version__ = '0.9.8'
 from defaults import *
 
 class PicosParser:
-
     def config_section_map(self, section, config_file):
         dict1 = {}
         options = config_file.options(section)
@@ -39,8 +38,12 @@ class PicosParser:
 
 
     def validate(self, args):
-        if args.numbins < 2:
-            print "\nMinimum value for --numbins is 2"
+        if args.binsize < 0 or args.binsize > 1:
+            print "\nBinsize is a ratio, it should be between 0 and 1"
+            sys.exit(1)
+
+        if args.poisson_test not in POISSON_OPTIONS:
+            print "\n%s is not a valid pyicos poisson test. Please use one of the following: %s"%(args.poisson_test, POISSON_OPTIONS)
             sys.exit(1)
 
     def new_subparser(self, *args):
@@ -129,8 +132,10 @@ class PicosParser:
         enrichment_flags.add_argument('--proximity', default=PROXIMITY, type=int, help="Determines if two regions calculated automatically are close enough to be clustered. Default %(default)s nt")
         enrichment_flags.add_argument('--no-pseudocount', action='store_true', default=NOPSEUDOCOUNT, help="The usage of pseudocounts in the enrichment calculation allows the inclusion of regions that have n reads in one dataset and 0 reads in the other.  [Default %(default)s]")
         enrichment_flags.add_argument('--simple-counts', action='store_true', default=SIMPLECOUNTS, help="To calculate densities, RPKM values are used by default. This flag changes the calculation to simple read counts. [Default %(default)s]")
-        enrichment_flags.add_argument('--numbins', type=int, default=NUMBINS, help="The number of bins to calculate the Z-score.")        
-
+        enrichment_flags.add_argument('--binsize', type=float, default=BINSIZE, help="The size of the bins to calculate the local sd and mean for the background model. [Default %(default)s]")        
+        enrichment_flags.add_argument('--sdfold', type=float, default=SDFOLD, help="The standard deviation fold used to generate the background model. [Default %(default)s]")  
+        enrichment_flags.add_argument('--recalculate', type=bool, default=RECALCULATE, help="Recalculate the z-score when plotting. Useful for doing different plots with 'pyicos plot' [Default %(default)s]")         
+        
         zscore = self.new_subparser()  
         zscore.add_argument('--zscore', type=float, default=ZSCORE, help="Significant Z-score value. [Default %(default)s]")        
 
@@ -207,9 +212,8 @@ class PicosParser:
         masker_file = self.new_subparser()
         masker_file.add_argument('--masker', help='You can provide a masker file that will be used by the modfdr operation background generation so that randomized reads will not fall in this areas')
 
-    
         poisson_test = self.new_subparser()
-        poisson_test.add_argument('--poisson-test', help="Decide what property of the cluster will be used for the poisson analysis. Choices are 'height' and 'numreads' [Default %(default)s]", default=POISSONTEST)
+        poisson_test.add_argument('--poisson-test', help="Decide what property of the cluster will be used for the poisson analysis. Choices are %s [Default %s]"%(POISSON_OPTIONS, POISSONTEST), default=POISSONTEST)
         
         remlabels = self.new_subparser()
         remlabels.add_argument('--remlabels', help='Discard the reads that have this particular label. Example: --discard chr1 will discard all reads with chr1 as tag. You can specify multiple tags to discard using the following notation --discard chr1 chr2 tagN')
@@ -293,7 +297,7 @@ class PicosParser:
                             split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, postscript = POSTSCRIPT,
                             remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS,
                             proximity=PROXIMITY, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
-                            label2=LABEL2, numbins=NUMBINS, zscore=ZSCORE, blacklist=BLACKLIST)
+                            label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE)
 
         args = parser.parse_args()
 
@@ -343,7 +347,7 @@ class PicosParser:
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
                             args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, 
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.no_pseudocount, args.simple_counts, args.label1, 
-                            args.label2, args.numbins, args.zscore, args.blacklist)
+                            args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')

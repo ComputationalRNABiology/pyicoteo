@@ -1457,8 +1457,10 @@ class Region(AbstractCore):
     def p0(self, l, N):
         return (N-l)/N
 
+
     def p1(self, l, N):
         return l/N
+
     
     def join(self, other):
         """Joins two regions. Works with a cluster object too (if flushed properly). If the regions dont overlap, the space in between will be included too."""
@@ -1497,7 +1499,6 @@ class Region(AbstractCore):
                 prob = self._get_probability(nis, h)
                 Pr_of_h[h] += prob
                 random_variances[h].append(prob)
-
 
         #Get the mean and the variance for the random iterations and calculate the FDR
         found = False
