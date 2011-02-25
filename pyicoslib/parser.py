@@ -76,8 +76,8 @@ class PicosParser:
         replica_a = self.new_subparser()
         replica_a.add_argument('--replica-a', help='Experiment A replica file')
         
-        replica_b = self.new_subparser()
-        replica_b.add_argument('--replica-b', help='Experiment B replica file')
+        #replica_b = self.new_subparser()
+        #replica_b.add_argument('--replica-b', help='Experiment B replica file')
 
         control = self.new_subparser()
         control.add_argument('control', help='The control file or directory')
@@ -275,7 +275,8 @@ class PicosParser:
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
         #enrichment operation
-        subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, replica_b, optional_region, region_format, output, enrichment_flags, zscore])
+        subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, optional_region, region_format, output, enrichment_flags, zscore])
+        #replica_b,
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
 
@@ -401,10 +402,10 @@ class PicosParser:
             turbomix.operations = [REMOVE_REGION]      
 
         elif sys.argv[1] == 'modfdr':
-            turbomix.operations = [ModFDR]
+            turbomix.operations = [MODFDR]
 
         elif sys.argv[1] == 'callpeaks':
-            turbomix.operations = [SPLIT, EXTEND, POISSON, FILTER, REMOVE_DUPLICATES] 
+            turbomix.operations = [SPLIT, EXTEND, POISSON, FILTER, REMOVE_DUPLICATES, STRAND_CORRELATION] 
             if args.duplicates > 1: #If there is only 1 duplicate, there is no need to discard artifacts
                 turbomix.operations.append(DISCARD_ARTIFACTS)
             if args.blacklist:
@@ -423,7 +424,7 @@ class PicosParser:
             if args.subtract: turbomix.operations.append(SUBTRACT)
             if args.filter: turbomix.operations.append(FILTER)
             if args.poisson: turbomix.operations.append(POISSON)
-            if args.modfdr: turbomix.operations.append(ModFDR)
+            if args.modfdr: turbomix.operations.append(MODFDR)
             if args.remduplicates: turbomix.operations.append(REMOVE_DUPLICATES)
             if args.split: turbomix.operations.append(SPLIT)
             if args.trim: turbomix.operations.append(TRIM)

@@ -93,7 +93,7 @@ NOWRITE = 'nowrite'
 DISCARD_ARTIFACTS = 'discard'
 REMOVE_REGION = 'remove'
 REMOVE_DUPLICATES = 'remove_duplicates'
-ModFDR = 'modfdr'
+MODFDR = 'modfdr'
 STRAND_CORRELATION = 'strand_correlation'
 ENRICHMENT = 'enrichment'
 

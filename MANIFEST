@@ -12,12 +12,9 @@ pyicoslib/defaults.py
 pyicoslib/parser.py
 pyicoslib/turbomix.py
 pyicoslib/utils.py
-pyicoslib/lib/RBTree.py
 pyicoslib/lib/__init__.py
 pyicoslib/lib/argparse.py
-pyicoslib/lib/lorg_lru.py
 pyicoslib/lib/sorted_madness.py
-pyicoslib/lib/sorteddict.py
 test/testCore.py
 test/testOperation.py
 test/testParser.py
