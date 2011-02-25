@@ -72,6 +72,7 @@ class Turbomix:
                  label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE):
 
         self.__dict__.update(locals())
+        self.normalize_factor = 1
         self.set_logger(verbose, debug)
         self.is_sorted = False
         self.temp_experiment = False #Indicates if temp files where created for the experiment
@@ -140,7 +141,7 @@ class Turbomix:
             print CLUSTER_FORMATS
             sys.exit(0)
         
-        elif ENRICHMENT in self.operations and POISSON in self.operations:
+        elif ENRICHMENT in self.operations and MODFDR in self.operations:
             print
             self.logger.error("Enrichment and ModFDR operations are not compatible")
             sys.exit(0)
@@ -318,8 +319,6 @@ class Turbomix:
         if self.control_path:
             self.logger.info('Calculating normalization factor...')
             self.normalize_factor = self.get_normalize_factor(self.current_experiment_path, self.current_control_path)
-            self.cluster.normalize_factor = self.normalize_factor
-            self.cluster_aux.normalize_factor = self.normalize_factor
 
 
     def _manage_temp_file(self, path):
@@ -341,17 +340,18 @@ class Turbomix:
 
         cluster_same = Cluster(read=file_format, write=file_format, rounding=self.rounding, read_half_open = file_open, write_half_open = file_open, tag_length=self.tag_length, span = self.span, logger=self.logger, cached=self.cached)
 
-        for line in file(file_path):
+        for line in open(file_path):
+            #print line
             self.cluster.clear()
             self.cluster.read_line(line)
-
             if self.cluster.start == cluster_same.start and self.cluster.end == cluster_same.end and self.cluster.chromosome == cluster_same.chromosome and self.cluster.strand == cluster_same.strand:
                 equal_lines+=1
             else:
                 equal_lines=0
 
             cluster_same.clear()
-            cluster_same.read_line(line)        
+            cluster_same.read_line(line)   
+     
             if self.do_heuremove:
                 cluster_same = self.remove_regions(cluster_same)
 
@@ -362,6 +362,9 @@ class Turbomix:
                 new_file.write(cluster_same.write_line())
             else:
                 self.duplicates_found += 1
+
+            cluster_same.clear() #Need to re-read to allow combination of extend and remove duplicates
+            cluster_same.read_line(line) 
 
         new_file.flush()
         new_file.close()
@@ -410,7 +413,7 @@ class Turbomix:
     def decide_sort(self, experiment_path, control_path=None):
         """Decide if the files need to be sorted or not."""
         #TODO refractor this, copy pasted code (not as easy as it seems)
-        if self.tag_to_cluster or self.do_subtract or self.do_heuremove or self.do_dupremove or ModFDR in self.operations or ENRICHMENT in self.operations or REMOVE_REGION in self.operations or STRAND_CORRELATION in self.operations or self.frag_size:
+        if self.tag_to_cluster or self.do_subtract or self.do_heuremove or self.do_dupremove or MODFDR in self.operations or ENRICHMENT in self.operations or REMOVE_REGION in self.operations or STRAND_CORRELATION in self.operations or self.frag_size:
             self.experiment_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment', logger=self.logger)
             self.experiment_b_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment_b', logger=self.logger)
             self.replica_a_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'replica_a', logger=self.logger)
@@ -524,6 +527,7 @@ class Turbomix:
             if NORMALIZE in self.operations:
                 self.normalize()
 
+
             if self.do_cut: #if we cut, we will round later
                 self.cluster.rounding = False
                 self.cluster_aux.rounding = False
@@ -546,7 +550,7 @@ class Turbomix:
             elif self.do_cut: 
                 self.cut()
 
-            elif ModFDR in self.operations:
+            elif MODFDR in self.operations:
                 self.modfdr()
 
             #Plot and summary operations
@@ -593,6 +597,7 @@ class Turbomix:
     def _to_cluster_conversion(self, experiment, output):
         #load the first read
         self.logger.debug("_to_cluster_conversion: running clustering...")
+
         while self.cluster.is_empty():
             self.cluster_aux2.clear()
             self.safe_read_line(self.cluster_aux2, experiment.next())
@@ -636,7 +641,7 @@ class Turbomix:
         if self.output_format == WIG or self.output_format == VARIABLE_WIG:
             output.write('track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.label)
 
-        if self.output_format in CLUSTER_FORMATS and not ModFDR in self.operations and not ENRICHMENT in self.operations:
+        if self.output_format in CLUSTER_FORMATS and not MODFDR in self.operations and not ENRICHMENT in self.operations:
             if not self.experiment_format in CLUSTER_FORMATS:
                 self.logger.info('Clustering reads...')
             self._to_cluster_conversion(experiment, output)
@@ -680,21 +685,6 @@ class Turbomix:
         region = Region(cluster.start, cluster.end, cluster.chromosome)
         if self.blacklist_reader.get_overlaping_clusters(region, overlap=EPSILON):
             cluster.clear() 
-        return cluster
-
-    def remove_duplicates(self, cluster):
-        """Removes the duplicates found in the experiment file"""
-        if cluster.start == self.previous_start and self.previous_end == cluster.end and self.previous_chr == cluster.chromosome and not cluster.is_empty():
-            self.identical_reads+=1
-            if self.identical_reads > self.duplicates:
-                self.duplicates_found += 1
-                cluster.clear()
-        else:
-            self.previous_start = cluster.start
-            self.previous_end = cluster.end
-            self.previous_chr = cluster.chromosome
-            self.identical_reads = 0
-
         return cluster
 
     def _correct_bias(self, p_value):
@@ -862,6 +852,7 @@ class Turbomix:
     def extract_and_write(self, cluster, output):
         """The line will be written to the file if the last conditions are met"""
         if not cluster.is_empty() and cluster.start > -1:
+            cluster.normalize_factor = self.normalize_factor
             output.write(cluster.write_line())
 
     def _current_directory(self):
@@ -905,12 +896,14 @@ class Turbomix:
                     thres = self.poisson_results[self.poisson_test][cut_cluster.chromosome]
                     
                 if cut_cluster.is_significant(thres, self.poisson_test):
+                    cut_cluster.normalize_factor = self.normalize_factor
                     filtered_output.write(cut_cluster.write_line())
                     
             except KeyError:
                 pass
 
             if not cut_cluster.is_empty():
+                cut_cluster.normalize_factor = self.normalize_factor
                 unfiltered_output.write(cut_cluster.write_line()) 
 
         self._manage_temp_file(old_output)
@@ -928,6 +921,12 @@ class Turbomix:
         else:
             return Region(int(sline[1]), int(sline[2]), chromosome=sline[0]) 
      
+
+    def __calc_reg_write(self, region_file, count, calculated_region):
+        flag_minreads = 6
+        if count > flag_minreads:
+            region_file.write(calculated_region.write())   
+
 
     def calculate_region(self):
         """
@@ -949,8 +948,8 @@ class Turbomix:
 
     def calculate_region_notstranded(self, dual_reader, region_file):
         calculated_region = Region()        
-        flag_minreads = 4
-        readcount = 0
+
+        readcount = 1
         for line in dual_reader:
             if not calculated_region: #first region only
                 calculated_region = self._region_from_sline(line.split())
@@ -963,14 +962,13 @@ class Turbomix:
                     readcount += 1
                 else:
                     calculated_region.end -= self.proximity
-                    if readcount > flag_minreads:
-                        region_file.write(calculated_region.write())                         
+                    self.__calc_reg_write(region_file, readcount, calculated_region)                 
                     calculated_region = new_region.copy()
-                    readcount = 0
+                    readcount = 1
 
         if calculated_region:
             calculated_region.end -= self.proximity
-            region_file.write(calculated_region.write())                         
+            self.__calc_reg_write(region_file, readcount, calculated_region)                         
 
 
     def calculate_region_stranded(self, dual_reader, region_file):
@@ -979,17 +977,18 @@ class Turbomix:
         region_minus = Region()
         regions = []
         flag_minreads = 4
-        numreads_plus = 0
-        numreads_minus = 0
+        numreads_plus = 1
+        numreads_minus = 1
         dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.logger)
         for line in dual_reader:
             new_region = self._region_from_sline(line.split())
             new_region.end += self.proximity
-            if not (region_plus and region_minus): #first region only
-                if new_region.strand == PLUS_STRAND:
-                    region_plus = self._region_from_sline(line.split())
-                else:
-                    region_minus = self._region_from_sline(line.split())
+            if not (region_plus and new_region.strand == PLUS_STRAND):
+                region_plus = self._region_from_sline(line.split())
+               
+            elif not (region_plus and new_region.strand == PLUS_STRAND):
+                region_minus = self._region_from_sline(line.split())
+
             else:
                 if region_plus.overlap(new_region) and region_plus.strand == new_region.strand:
                     region_plus.join(new_region)
@@ -1003,13 +1002,13 @@ class Turbomix:
                         if numreads_plus < flag_minreads: 
                             regions.append(region_plus)                         
                         region_plus = new_region.copy()  
-                        numreads_plus = 0    
+                        numreads_plus = 1    
                     else:
                         region_minus.end -= self.proximity
                         if numreads_minus < flag_minreads:
                             regions.append(region_minus)                       
                         region_minus = new_region.copy()  
-                        numreads_minus = 0    
+                        numreads_minus = 1    
 
         if region_plus:
             region_plus.end -= self.proximity
@@ -1068,7 +1067,7 @@ class Turbomix:
             fold_flag = 4      
             self.logger.info("Loading table...")
             for line in open(file_path):
-                print line
+                #print line
                 sline = line.split()
                 ratio = float(sline[5])
                 average = float(sline[4])
@@ -1088,7 +1087,7 @@ class Turbomix:
             self.logger.info("Plotting points...")
             plot(A, M, 'y.', label=label_main)
             plot(A_significant, M_significant, 'r.', label="%s (significant)"%label_main)
-            plot(A_prime, M_prime, 'bo', label=label_control)
+            #plot(A_prime, M_prime, 'bo', label=label_control)
             xlabel('A')
             ylabel('M')
             legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
@@ -1210,10 +1209,7 @@ class Turbomix:
         return out_file.name
 
 
-
-
     def calculate_zscore(self, enrichment_result):
-        
         print len(enrichment_result)
         bin_size = int(self.binsize*len(enrichment_result))
         flag_step = int(bin_size/4)

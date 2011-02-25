@@ -135,8 +135,8 @@ class BigSort:
         self.logger = logger
         self.file_format = file_format
         self.frag_size = frag_size
-        self.buffer_size = 32000
-        self.temp_file_size = 800000
+        self.buffer_size = 320000
+        self.temp_file_size = 8000000
 
         try:
             if self.file_format:
