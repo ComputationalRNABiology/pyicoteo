@@ -61,7 +61,7 @@ class Turbomix:
 
 
     def __init__(self, experiment_path, output_path, experiment_format=BED, output_format=PK, label=LABEL, 
-                 open_experiment=OPEN_EXPERIMENT, open_output=OPEN_OUTPUT, debug = DEBUG, rounding=ROUNDING, tag_length = TAG_LENGTH, discarded_chromosomes = REMLABELS,
+                 open_experiment=OPEN_EXPERIMENT, open_output=OPEN_OUTPUT, debug = DEBUG, rounding=ROUNDING, tag_length = TAG_LENGTH, discarded_names = REMLABELS,
                  control_path = CONTROL, control_format = PK, open_control = OPEN_CONTROL, region_path = REGION, region_format = PK, 
                  open_region=OPEN_REGION, span = SPAN, frag_size = FRAG_SIZE, p_value = P_VALUE, height_limit = HEIGHT_LIMIT, correction_factor = CORRECTION,
                  trim_percentage=TRIM_PROPORTION, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, 
@@ -83,9 +83,9 @@ class Turbomix:
         self.previous_chr = None
         self.open_region = False
         self.safe_reader = utils.SafeReader(self.logger)        
-
-        if not self.discarded_chromosomes:
-            self.discarded_chromosomes = []
+        self.enrichment_header = "name\tstart\tend\tname2\tscore\tstrand\trpkm_a\trpkm_b\trpkm_prime_a\trpkm_prime_b\tA\tM\ttotal_reads_a\ttotal_reads_b\tnum_tags_a\tnum_tags_b\tA_prime\tM_prime\ttotal_1\ttotal_2\tcount_1\tcount_2\n"
+        if not self.discarded_names:
+            self.discarded_names = []
         self.region_cluster = Cluster(read=region_format, read_half_open = open_region, logger=self.logger)
         #Reusable cluster objects 
         try:
@@ -177,9 +177,9 @@ class Turbomix:
             self.result_log.write('Subtract\n')
             self.logger.info('Subtract')
 
-        if self.discarded_chromosomes:
-            self.result_log.write('Discard tags: %s\n'%self.discarded_chromosomes)
-            self.logger.info('Discard tags: %s'%self.discarded_chromosomes)
+        if self.discarded_names:
+            self.result_log.write('Discard tags: %s\n'%self.discarded_names)
+            self.logger.info('Discard tags: %s'%self.discarded_names)
 
         if self.do_heuremove:
             self.result_log.write('Heuristic Remove from %s\n'%self.region_path)
@@ -344,7 +344,7 @@ class Turbomix:
             #print line
             self.cluster.clear()
             self.cluster.read_line(line)
-            if self.cluster.start == cluster_same.start and self.cluster.end == cluster_same.end and self.cluster.chromosome == cluster_same.chromosome and self.cluster.strand == cluster_same.strand:
+            if self.cluster.start == cluster_same.start and self.cluster.end == cluster_same.end and self.cluster.name == cluster_same.name and self.cluster.strand == cluster_same.strand:
                 equal_lines+=1
             else:
                 equal_lines=0
@@ -481,6 +481,7 @@ class Turbomix:
 
     def operate(self, experiment_path, control_path=None, output_path=None):
         """Operate expects single paths, not directories. Its called from run() several times if the experiment for picos is a directory"""
+        #TODO This is where the combination of operations should be done. Operations should be executed in order of inclusion to the list while taking into consideration dependencies and co-runs
         try:
             self.i_cant_do()
             #per operation variables
@@ -535,17 +536,20 @@ class Turbomix:
             if ((not NOWRITE in self.operations) or (NOWRITE in self.operations and POISSON in self.operations)) and not ENRICHMENT in self.operations: 
                 self.process_file()
             
-            if self.do_poisson: #extract info from the last chromosome and print the thresholds
+            if self.do_poisson: #extract info from the last name and print the thresholds
                 self.poisson_analysis(self.previous_chr)
                 self.logger.info('\nCluster threadsholds for p-value %s:'%self.p_value)
                 self.result_log.write('\nCluster threadsholds for p-value %s:\n'%self.p_value)
-                for chromosome, k in self.poisson_results[self.poisson_test].items():
-                    self.logger.info('%s: %s'%(chromosome, k))
-                    self.result_log.write('%s: %s\n'%(chromosome, k))
+                for name, k in self.poisson_results[self.poisson_test].items():
+                    self.logger.info('%s: %s'%(name, k))
+                    self.result_log.write('%s: %s\n'%(name, k))
 
             #Mutually exclusive final operations
             if ENRICHMENT in self.operations:
                 self.plot_path = self.enrichment()
+                if ZSCORE in self.operations:
+                    print "ZSCORE"
+                    self.plot_path = self.calculate_zscore(self.plot_path)
 
             elif self.do_cut: 
                 self.cut()
@@ -653,7 +657,7 @@ class Turbomix:
             output.close()
 
     def subtract(self, cluster):
-        region = Region(cluster.start, cluster.end, cluster.chromosome, logger=self.logger)
+        region = Region(cluster.name, cluster.start, cluster.end, logger=self.logger)
         self.logger.debug("Getting overlapping clusters...")
         self.cluster_aux.clear()
         for c in self.control_reader_simple.overlapping_clusters(region, overlap=EPSILON):
@@ -682,7 +686,7 @@ class Turbomix:
         return cluster
 
     def remove_regions(self, cluster):
-        region = Region(cluster.start, cluster.end, cluster.chromosome)
+        region = Region(cluster.name, cluster.start, cluster.end)
         if self.blacklist_reader.get_overlaping_clusters(region, overlap=EPSILON):
             cluster.clear() 
         return cluster
@@ -702,9 +706,9 @@ class Turbomix:
         self.absolute_max_numtags = 0
         self.chr_length = 0
 
-    def poisson_analysis(self, chromosome=''):
+    def poisson_analysis(self, name=''):
         """
-        We do 3 different poisson statistical tests per chromosome for each experiment file:
+        We do 3 different poisson statistical tests per name for each experiment file:
         
         Nucleotide analysis:
         This analysis takes the nucleotide as the unit to analize. We give a p-value for each "height"
@@ -728,22 +732,22 @@ class Turbomix:
         else:
            out = os.path.dirname(os.path.abspath(self.output_path))
 
-        #search for the chromosome length in the chr len files
+        #search for the name length in the chr len files
         found = False
         try:
             #print '%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)
             for line in file('%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)):
                 
                 chrom, length = line.split()
-                if chrom == chromosome:
+                if chrom == name:
                     found = True
                     self.chr_length = int(length)
         except IOError:
             pass #file not found, the warning will be printed
         
-        if not found: self.logger.warning("The file containing %s length for assembly %s could not be found, an aproximation will be used"%(chromosome, self.species))
+        if not found: self.logger.warning("The file containing %s length for assembly %s could not be found, an aproximation will be used"%(name, self.species))
         self.result_log.write('---------------\n')
-        self.result_log.write('%s\n'%(chromosome))
+        self.result_log.write('%s\n'%(name))
         self.result_log.write('---------------\n\n')
         self.result_log.write('Correction factor: %s\n\n'%(self.correction_factor))
         self.reads_per_bp =  self.total_bp_with_reads / self.chr_length*self.correction_factor
@@ -764,22 +768,22 @@ class Turbomix:
 
             self.result_log.write('%s\t%.8f\t%.8f\t%.8f\n'%(k, p_nucleotide, p_cluster, p_numtags))
             
-            if chromosome not in self.poisson_results['length'].keys() and p_nucleotide < self.p_value: #if we don't have a height k that is over the p_value yet, write it.
-                self.poisson_results["length"][chromosome] = k
+            if name not in self.poisson_results['length'].keys() and p_nucleotide < self.p_value: #if we don't have a height k that is over the p_value yet, write it.
+                self.poisson_results["length"][name] = k
 
-            if chromosome not in self.poisson_results['height'].keys() and p_cluster < self.p_value:
-                self.poisson_results["height"][chromosome] = k
+            if name not in self.poisson_results['height'].keys() and p_cluster < self.p_value:
+                self.poisson_results["height"][name] = k
             
-            if chromosome not in self.poisson_results['numtags'].keys() and p_numtags < self.p_value:
-                self.poisson_results["numtags"][chromosome] = k
+            if name not in self.poisson_results['numtags'].keys() and p_numtags < self.p_value:
+                self.poisson_results["numtags"][name] = k
 
             if k not in self.maxheight_to_pvalue:
                 self.maxheight_to_pvalue[k] = {}
-            self.maxheight_to_pvalue[k][chromosome] = p_cluster
+            self.maxheight_to_pvalue[k][name] = p_cluster
 
             if k not in self.numtags_to_pvalue:
                 self.numtags_to_pvalue[k] = {}
-            self.numtags_to_pvalue[k][chromosome] = p_numtags
+            self.numtags_to_pvalue[k][name] = p_numtags
 
 
             k+=1
@@ -811,15 +815,15 @@ class Turbomix:
         if self.cluster._tag_cache:
             self.cluster._flush_tag_cache()
 
-        if cluster.chromosome not in self.discarded_chromosomes and not cluster.is_empty():
-            if self.previous_chr != cluster.chromosome: #A new chromosome has been detected
+        if cluster.name not in self.discarded_names and not cluster.is_empty():
+            if self.previous_chr != cluster.name: #A new name has been detected
                 if self.is_sorted:
-                    self.logger.info('Processing %s...'%cluster.chromosome)
+                    self.logger.info('Processing %s...'%cluster.name)
                     sys.stdout.flush()
                 if self.do_poisson and not self.first_chr:
                     self.poisson_analysis(self.previous_chr)
                     self._init_poisson()
-                self.previous_chr = cluster.chromosome
+                self.previous_chr = cluster.name
                 if self.output_format == VARIABLE_WIG:
                     output.write('variableStep\tchrom=%s\tspan=%s\n'%(self.previous_chr, self.span))
                 self.first_chr = False
@@ -883,9 +887,9 @@ class Turbomix:
             self.safe_read_line(cut_cluster, line)
             try:
                 if self.poisson_test == 'height':
-                    cut_cluster.p_value = self.maxheight_to_pvalue[int(round(cut_cluster.max_height()))][cut_cluster.chromosome]
+                    cut_cluster.p_value = self.maxheight_to_pvalue[int(round(cut_cluster.max_height()))][cut_cluster.name]
                 else:
-                    cut_cluster.p_value = self.numtags_to_pvalue[int(round(cut_cluster.area()/self.frag_size))][cut_cluster.chromosome]
+                    cut_cluster.p_value = self.numtags_to_pvalue[int(round(cut_cluster.area()/self.frag_size))][cut_cluster.name]
             except KeyError:
                 cut_cluster.p_value = 0 #If the cluster is not in the dictionary, it means its too big, so the p_value will be 0
 
@@ -893,7 +897,7 @@ class Turbomix:
                 if self.threshold:
                     thres = self.threshold
                 else:
-                    thres = self.poisson_results[self.poisson_test][cut_cluster.chromosome]
+                    thres = self.poisson_results[self.poisson_test][cut_cluster.name]
                     
                 if cut_cluster.is_significant(thres, self.poisson_test):
                     cut_cluster.normalize_factor = self.normalize_factor
@@ -917,9 +921,9 @@ class Turbomix:
 
     def _region_from_sline(self, sline):
         if self.stranded_analysis:
-            return Region(int(sline[1]), int(sline[2]), chromosome=sline[0], strand=sline[5])
+            return Region(sline[0], int(sline[1]), int(sline[2]), strand=sline[5])
         else:
-            return Region(int(sline[1]), int(sline[2]), chromosome=sline[0]) 
+            return Region(sline[0], int(sline[1]), int(sline[2])) 
      
 
     def __calc_reg_write(self, region_file, count, calculated_region):
@@ -933,7 +937,7 @@ class Turbomix:
         Calculate a region file using the reads present in the both main files to analyze. 
         """
 
-        self.logger.info('Generating region file...')
+        self.logger.info('Generating regions...')
         self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))
         region_file = open(self.sorted_region_path, 'wb')
         dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.logger) 
@@ -1018,7 +1022,7 @@ class Turbomix:
             region_minus.end -= self.proximity
             regions.append(region_minus)
 
-        regions.sort(key=lambda x:(x.chromosome, x.start, x.end, x.strand))
+        regions.sort(key=lambda x:(x.name, x.start, x.end, x.strand))
         for region in regions:
             region_file.write(region.write())  
        
@@ -1118,6 +1122,7 @@ class Turbomix:
         file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
         file_b_reader = utils.SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
         out_file = open(self.current_output_path, 'wb')
+        out_file.write(self.enrichment_header)
         if use_replica:
             replica_a_reader = utils.SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)
             msg = "%s using replicas..."%msg
@@ -1137,9 +1142,10 @@ class Turbomix:
             self.total_reads_replica_a = sum(1 for line in open(self.replica_a_path))
         self.total_regions = sum(1 for line in open(self.sorted_region_path))
         self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2
-        enrichment_result = [] #This will hold the chromosome, start and end of the region, plus the A, M, 'M and 'A
+        enrichment_result = [] #This will hold the name, start and end of the region, plus the A, M, 'M and 'A
         regions_analyzed_count = 0
         self.logger.info("... analyzing regions...")
+
         for region_line in file(self.sorted_region_path):
             region_of_interest = self._region_from_sline(region_line.split())
             tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=over)
@@ -1193,77 +1199,97 @@ class Turbomix:
                 #if there is no data in the replica or in the swap and we are not using pseudocounts, dont write the data 
                 if use_pseudocount or (use_replica and replica_tags) or (not use_replica and swap1.tags and swap2.tags):
                     M_prime = self.__enrichment_M(region_rpkm, replica_rpkm)
-                    A_prime = self.__enrichment_A(region_rpkm, replica_rpkm)             
-                    enrichment_result.append({'chr':region_of_interest.chromosome, 'start':region_of_interest.start, 'end':region_of_interest.end, 'strand': region_of_interest.strand,
-                                              'A':A, 'M':M, 'total_A': self.total_reads_a, 'total_b':self.total_reads_b, 'num_tags_a':len(tags_a), 
-                                              'num_tags_b':len(tags_b), 'A_prime':A_prime, 'M_prime':M_prime, 'total_1':total_1, 'total_2':total_2, 
-                                              'count_1':count_1, 'count_2':count_2, 'z_score': 0, 'mean': 0, 'sd': 0})
+                    A_prime = self.__enrichment_A(region_rpkm, replica_rpkm)   
+                    out_file.write("%s\n"%("\t".join([region_of_interest.write().rstrip("\n"), str(rpkm_a), str(rpkm_b), str(region_rpkm), str(replica_rpkm), str(A), str(M), str(self.total_reads_a), str(self.total_reads_b), str(len(tags_a)), str(len(tags_b)),  str(A_prime), str(M_prime), str(total_1), str(total_2), str(count_1), str(count_2)])))
+
                     regions_analyzed_count += 1
 
-        points = self.calculate_zscore(enrichment_result)
-        self.__sub_enrich_write(enrichment_result, out_file)
         out_file.flush()
         out_file.close()
         self.logger.info("%s regions analyzed."%regions_analyzed_count)
         self.logger.info("Enrichment result saved to %s"%self.current_output_path)
         return out_file.name
 
+    #def get_chunk(self, my_file, a, b):
+    #    chunk = []
+    #    chunk.append()
+        #iterate through the file and get the chunk from a to b
 
-    def calculate_zscore(self, enrichment_result):
-        print len(enrichment_result)
-        bin_size = int(self.binsize*len(enrichment_result))
+    def __load_enrichment_result(self, values_path):
+        ret = []
+        keys = (self.enrichment_header.rstrip("\n")).split()
+        for line in open(values_path):
+            sline = line.split()
+            try:
+                float(sline[1])
+                ret.append(dict(zip(keys, line.split())))
+            except ValueError:
+                pass
+
+        return ret        
+    
+    def calculate_zscore(self, values_path):
+        
+        num_regions = sum(1 for line in open(values_path))
+        bin_size = int(self.binsize*num_regions)
         flag_step = int(bin_size/4)
         
         print "BIN:", bin_size, "STEP:", flag_step
-        self.logger.info("... calculating zscore...")
-        enrichment_result.sort(key=lambda x:(x["A_prime"]))
-        points = []
-        #get the standard deviations
-        for i in range(0, len(enrichment_result)-bin_size+flag_step, flag_step):
-            #get the slice
 
-            if i+bin_size < len(enrichment_result):
-                result_chunk = enrichment_result[i:i+bin_size]  
+        self.logger.info("... calculating zscore...")
+
+        enrichment_result = self.__load_enrichment_result(values_path)
+        #sorter = utils.BigSort('bed', False, 0, 'zscore_a_sort%s'%temp_name, logger=self.logger)
+        #aprime_sorted = sorter.sort(values_path, None, lambda x:(x.split()[16])) #sort by A prime
+
+        self.points = []
+        #get the standard deviations
+        for i in range(0, num_regions-bin_size+flag_step, flag_step):
+            #get the slice
+            if i+bin_size < num_regions:
+                result_chunk = enrichment_result[i:i+bin_size] 
             else:
-                result_chunk = enrichment_result[i:] #last chunk
+                result_chunk = enrichment_result[i:]  #last chunk
+
             print "CHUNK:", len(result_chunk), 
             #retrieve the values
             mean_acum = 0
             Ms_replica = []
             for entry in result_chunk:
-                mean_acum += entry["M_prime"]
-                Ms_replica.append(entry["M_prime"])
+                mean_acum += float(entry["M_prime"])
+                Ms_replica.append(float(entry["M_prime"]))
 
             #add them to the points of mean and sd
             mean = mean_acum/len(result_chunk)
             sd = (sum((x - mean)**2 for x in Ms_replica))/len(Ms_replica) 
-            points.append([result_chunk[-1]["A_prime"], mean, sd]) #The maximum A of the chunk, the mean and the standard deviation     
-            print points[-1]
+            self.points.append([float(result_chunk[-1]["A_prime"]), mean, sd]) #The maximum A of the chunk, the mean and the standard deviation     
+            print self.points[-1]
 
         #update z scores
         for entry in enrichment_result:
-            for i in range(0, len(points)):
-                if entry["A"] < points[i][0]:
-                    self.__sub_zscore(entry, points[i]) # take into consideration binsize
+            for i in range(0, len(self.points)):
+                if entry["A"] < self.points[i][0]:
+                    self.__sub_zscore(entry, self.points[i]) #TODO take into consideration binsize
                     break #found it, leave go to the next
                
-                self.__sub_zscore(entry, points[-1]) #the value is the biggest, use the last break
+                self.__sub_zscore(entry, self.points[-1]) #the value is the biggest, use the last break
 
-        enrichment_result.sort(key=lambda x:(x["chr"], x["start"], x["end"]))
-        return points
+        #self._manage_temp_file(aprime_sorted)
+
+        enrichment_result.sort(key=lambda x:(x["name"], x["start"], x["end"]))
         
+        ret_file = open("otramas_queputoinfierno.bed", "wb")
+        for entry in enrichment_result:
+            ret_file.write("\t".join(entry.values())+"\n")
+        return ret_file.name
+
+
     def __sub_zscore(self, entry, point):
-        entry["mean"] = point[1]
-        entry["sd"] = point[2]
-        entry["z_score"] = self.get_zscore(entry["M"], self.sdfold*entry["mean"], entry["sd"])
+        entry["mean"] = str(point[1])
+        entry["sd"] = str(point[2])
+        entry["z_score"] = str(self.get_zscore(float(entry["M"]), self.sdfold*float(entry["mean"]), float(entry["sd"])))
 
 
-
-    def __sub_enrich_write(self, er, out_file):
-        for d in er:
-            out_file.write("%s\n"%"\t".join([d['chr'], str(d['start']), str(d['end']), str(d['strand']), str(d['A']), str(d['M']), str(d['total_A']), str(d['total_b']), str(d['num_tags_a']), 
-                                            str(d['num_tags_b']), str(d['A_prime']), str(d['M_prime']), str(d['total_1']), str(d['total_2']), str(d['count_1']), 
-                                            str(d['count_2']), str(d['mean']), str(d['sd']), str(d['z_score'])]))
 
     def _save_figure(self, figure_name):
         if self.postscript:
@@ -1292,7 +1318,7 @@ class Turbomix:
         unfiltered_output = file('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
         for region_line in file(self.sorted_region_path):
             split_region_line = region_line.split()
-            region = Region(split_region_line[1], split_region_line[2], chromosome=split_region_line[0], logger=self.logger, cached=self.cached)
+            region = Region(split_region_line[0], split_region_line[1], split_region_line[2], logger=self.logger, cached=self.cached)
             region.add_tags(cluster_reader.get_overlaping_clusters(region, overlap=EPSILON), True)
             classified_clusters = region.get_FDR_clusters(self.repeats)
             for cluster in classified_clusters:
@@ -1342,7 +1368,7 @@ class Turbomix:
                     num_analyzed += 1
                 #advance in the positive cluster cache if its too far behind
                 distance = negative_cluster.start-positive_cluster.start
-                while distance > self.max_delta or positive_cluster.chromosome < negative_cluster.chromosome: # if the negative clusters are too far behind, empty the positive cluster
+                while distance > self.max_delta or positive_cluster.name < negative_cluster.name: # if the negative clusters are too far behind, empty the positive cluster
                     positive_cluster.clear()
                     if positive_cluster_cache:
                         positive_cluster = positive_cluster_cache.pop() 
@@ -1393,7 +1419,7 @@ class Turbomix:
 
     def _correlate_clusters(self, positive_cluster, negative_cluster):
         distance = negative_cluster.end-positive_cluster.start
-        if (distance < self.max_delta and distance > self.min_delta) and (positive_cluster.chromosome == negative_cluster.chromosome):
+        if (distance < self.max_delta and distance > self.min_delta) and (positive_cluster.name == negative_cluster.name):
             self.analyzed_pairs+=1
             for delta in range(self.min_delta, self.max_delta+1, self.delta_step):
                 r_squared = self._analize_paired_clusters(positive_cluster, negative_cluster, delta)**2

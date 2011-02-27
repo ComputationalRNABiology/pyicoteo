@@ -274,8 +274,12 @@ class PicosParser:
         #strcorr operation
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
+
+        #rpkm operation
+        subparsers.add_parser('enrichcount', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using rpkm count files', parents=[region, basic_parser, output_flags, replica_a, region_format, output, enrichment_flags])
+
         #enrichment operation
-        subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, optional_region, region_format, output, enrichment_flags, zscore])
+        subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using mapped reads files', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, optional_region, region_format, output, enrichment_flags, zscore])
         #replica_b,
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
@@ -383,8 +387,11 @@ class PicosParser:
         elif sys.argv[1] == 'remove':
             turbomix.operations = [REMOVE_REGION]
 
+        elif sys.argv[1] == 'enrichcount':
+            turbomix.operations = [ENRICHMENT, ZSCORE, PLOT]
+
         elif sys.argv[1] == 'enrichment':
-            turbomix.operations = [ENRICHMENT, PLOT]
+            turbomix.operations = [ENRICHMENT, ZSCORE, PLOT]
 
         elif sys.argv[1] == 'split':
             turbomix.operations = [SPLIT]

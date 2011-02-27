@@ -350,15 +350,15 @@ class SortedFileReader:
         self.rewind()
         if self._read_line(): return
         cached_cluster = self._get_cluster()
-        while (cached_cluster.chromosome < region.chromosome) or (cached_cluster.chromosome == region.chromosome and region.start > cached_cluster.end) or cached_cluster.is_empty():
-            #print "old:",cached_cluster.chromosome, cached_cluster.start, cached_cluster.end
+        while (cached_cluster.name < region.name) or (cached_cluster.name == region.name and region.start > cached_cluster.end) or cached_cluster.is_empty():
+            #print "old:",cached_cluster.name, cached_cluster.start, cached_cluster.end
             self._advance()
             if self._read_line(): return
             cached_cluster = self._get_cluster()
-            #print "NEW:", cached_cluster.chromosome, cached_cluster.start, cached_cluster.end
+            #print "NEW:", cached_cluster.name, cached_cluster.start, cached_cluster.end
  
         #get intersections
-        while cached_cluster.start <= region.end and cached_cluster.chromosome == region.chromosome:
+        while cached_cluster.start <= region.end and cached_cluster.name == region.name:
             if cached_cluster.overlap(region) >= overlap:
                 if not region.strand or region.strand == cached_cluster.strand: #dont include the clusters with different strand from the region  
                     yield cached_cluster
@@ -413,14 +413,14 @@ class SortedFileClusterReader:
         if self._read_line_load_cache(self.slow_cursor):
             return clusters
         #advance slow cursor and delete the clusters that are already passed by
-        while (self.cluster_cache[self.slow_cursor].chromosome < region.chromosome) or (self.cluster_cache[self.slow_cursor].chromosome == region.chromosome and region.start > self.cluster_cache[self.slow_cursor].end):
+        while (self.cluster_cache[self.slow_cursor].name < region.name) or (self.cluster_cache[self.slow_cursor].name == region.name and region.start > self.cluster_cache[self.slow_cursor].end):
             del self.cluster_cache[self.slow_cursor]
             self.slow_cursor+=1
             if self._read_line_load_cache(self.slow_cursor):
                 return clusters
         #get intersections
         fast_cursor = self.slow_cursor
-        while self.cluster_cache[fast_cursor].start <= region.end and self.cluster_cache[fast_cursor].chromosome == region.chromosome:
+        while self.cluster_cache[fast_cursor].start <= region.end and self.cluster_cache[fast_cursor].name == region.name:
             if self.cluster_cache[fast_cursor].overlap(region) >= overlap:
                 if not region.strand or region.strand == self.cluster_cache[fast_cursor].strand:
                     clusters.append(self.cluster_cache[fast_cursor].copy_cluster())
