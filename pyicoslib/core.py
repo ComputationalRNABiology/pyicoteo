@@ -56,13 +56,13 @@ class AbstractCore:
         """Returns true if a Cluster/Region intersects with another Cluster/Region"""
         return ((other.start >= self.start and other.start <= self.end)
                  or (other.end >= self.start and other.end < self.end)
-                 or (other.start <= self.start and other.end >= self.end)) and (self.chromosome == other.chromosome)
+                 or (other.start <= self.start and other.end >= self.end)) and (self.name == other.name)
 
         
     def __cmp__(self, other):
-        if self.chromosome < other.chromosome:
+        if self.name < other.name:
             return -1
-        elif self.chromosome > other.chromosome:
+        elif self.name > other.name:
             return 1
         elif self.start < other.start:
             return -1
@@ -77,7 +77,7 @@ class AbstractCore:
 
     def overlap(self, other):
         """Returns the percentage of overlap of the self cluster with another cluster, from 0 to 1"""
-        if self.chromosome != other.chromosome or not self.intersects(other): #different chromosome or no intersection, no overlap
+        if self.name != other.name or not self.intersects(other): #different name or no intersection, no overlap
             return 0
         if other.start > self.start and other.end >= self.end:
             #|--------------------| self
@@ -109,7 +109,7 @@ class AbstractCore:
 
     def is_contiguous(self, other):
         """Returns true if a Cluster read is contiguous to another one. """
-        return (other.start == self.end+1 or other.end+1 == self.start) and self.chromosome == other.chromosome
+        return (other.start == self.end+1 or other.end+1 == self.start) and self.name == other.name
 
     
 
@@ -169,9 +169,9 @@ class BedReader(Reader):
 
     def _add_name(self, cluster, line):
         if len(line) > 3:
-            cluster.name = line[3]
+            cluster.name2 = line[3]
         else:
-            cluster.name = 'pyicos'
+            cluster.name2 = 'pyicos'
 
     def _add_score(self, cluster, line):
         if len(line) > 4:
@@ -191,7 +191,7 @@ class BedReader(Reader):
             if self.cached:
                 line = line.split()
                 new_start = int(line[1])+self.correction
-                cluster.chromosome = line[0]
+                cluster.name = line[0]
                 if cluster.is_empty():
                     cluster.add_tag_cached(new_start, line[2])
                     cluster.start = new_start
@@ -216,7 +216,7 @@ class BedReader(Reader):
                     self._add_line_to_cluster(line, cluster)
                 else:
                     line = line.split()
-                    cluster.chromosome = line[0]
+                    cluster.name = line[0]
                     cluster.start = int(line[1])+self.correction
                     cluster.end = int(line[2])
                     self._add_name(cluster, line)
@@ -243,13 +243,13 @@ class SamReader(Reader):
             if (not (self.sam_flag & 0x0004)):
                 new_start = int(line[3])+self.correction
                 new_end = new_start+len(line[9])-1
-                cluster.chromosome = line[2]
+                cluster.name = line[2]
                 new_strand = self._get_strand()
                 if cluster.is_empty():
                     cluster.add_tag_cached(new_start, new_end)
                     cluster.start = new_start
                     cluster.end = new_end
-                    cluster.name = line[0]
+                    cluster.name2 = line[0]
                     cluster.sequence = line[9]
                     cluster.strand = new_strand
                     cluster.tag_length = len(cluster)
@@ -259,7 +259,7 @@ class SamReader(Reader):
                     cluster.start = min(cluster.start, new_start)
                     cluster.end = max(cluster.end, new_end)
                     cluster.sequence = ''
-                    cluster.name = ''
+                    cluster.name2 = ''
                     if cluster.strand != new_strand:
                         cluster.strand == NOSTRAND
 
@@ -282,7 +282,7 @@ class WigReader(Reader):
         try:
             line = line.split()
             if cluster.is_empty():
-                cluster.chromosome = line[0]
+                cluster.name = line[0]
                 cluster.start = int(line[1])+self.correction
 
             cluster.append_level(int(line[2])-int(line[1])-self.correction+1, float(line[3])*cluster.normalize_factor)
@@ -300,10 +300,10 @@ class ElandReader(Reader):
                 cluster.read_count += 1
                 if cluster.is_empty():
                     line = line.split()
-                    cluster.name = line[0]
+                    cluster.name2 = line[0]
                     length = len(line[1])
                     cluster.sequence = line[1]
-                    cluster.chromosome = line[6].rstrip('.fa')
+                    cluster.name = line[6].rstrip('.fa')
                     cluster.start = int(line[7])+self.correction
                     cluster.end = length+cluster.start-1
                     cluster.append_level(length+self.correction, cluster.normalize_factor)
@@ -332,7 +332,7 @@ class PkReader(Reader):
                     line = line.split()
                     if line[0] == 'track':
                         raise InvalidLine
-                    cluster.chromosome = line[0]
+                    cluster.name = line[0]
                     cluster.start = int(line[1])+self.correction
                     for item in line[3].split('|'):
                         temp = item.split(':')
@@ -399,7 +399,7 @@ class ElandWriter(Writer):
                 seq = 'A'*(cluster.end-cluster.start+1+self.correction)
             else:
                 seq = cluster.sequence
-            return '%s\t%s\tU0\t1\t0\t0\t%s.fa\t%s\t%s\t..\t26A\n'%(cluster.name, seq, cluster.chromosome, cluster.start+self.correction, cluster.strand)
+            return '%s\t%s\tU0\t1\t0\t0\t%s.fa\t%s\t%s\t..\t26A\n'%(cluster.name2, seq, cluster.name, cluster.start+self.correction, cluster.strand)
 
 class BedWriter(Writer):
     def write_line(self, cluster):
@@ -413,10 +413,10 @@ class BedWriter(Writer):
                 for tag in split_tags:
                     tags = cluster.decompose()
                     for tag in tags:
-                        lines = '%s%s'%(lines, bed_blueprint%(tag.chromosome, tag.start+self.correction, tag.end, tag.name, tag.score, tag.strand))
+                        lines = '%s%s'%(lines, bed_blueprint%(tag.name, tag.start+self.correction, tag.end, tag.name2, tag.score, tag.strand))
                 return lines
             else:
-                return bed_blueprint%(cluster.chromosome, cluster.start+self.correction, cluster.end, cluster.name, cluster.score,  cluster.strand)
+                return bed_blueprint%(cluster.name, cluster.start+self.correction, cluster.end, cluster.name2, cluster.score,  cluster.strand)
 
 class SamWriter(Writer):
     def write_line(self, cluster):
@@ -436,10 +436,10 @@ class SamWriter(Writer):
                 for tag in split_tags:
                     tags = cluster.decompose()
                     for tag in tags:
-                        lines = '%s%s'%(lines, sam_blueprint%(tag.name, samflag, tag.chromosome, tag.start+self.correction, len(tag), tag.sequence, (len(tag)+self.correction)*'?'))
+                        lines = '%s%s'%(lines, sam_blueprint%(tag.name2, samflag, tag.name, tag.start+self.correction, len(tag), tag.sequence, (len(tag)+self.correction)*'?'))
                 return lines
             else:
-                return sam_blueprint%(cluster.name, samflag, cluster.chromosome, cluster.start+self.correction, len(cluster), cluster.sequence, (len(cluster)+self.correction)*'?')
+                return sam_blueprint%(cluster.name2, samflag, cluster.name, cluster.start+self.correction, len(cluster), cluster.sequence, (len(cluster)+self.correction)*'?')
 
 
 class WigWriter(Writer):
@@ -453,9 +453,9 @@ class WigWriter(Writer):
 
             if height > 0:
                 if cluster.rounding:
-                    lines = '%s%s\t%s\t%s\t%.0f\n'%(lines,cluster.chromosome,start+self.correction, end, height)
+                    lines = '%s%s\t%s\t%s\t%.0f\n'%(lines,cluster.name,start+self.correction, end, height)
                 else:
-                    lines = '%s%s\t%s\t%s\t%.2f\n'%(lines,cluster.chromosome,start+self.correction, end, height)
+                    lines = '%s%s\t%s\t%s\t%.2f\n'%(lines,cluster.name,start+self.correction, end, height)
             start = end+1
         return lines
 
@@ -492,7 +492,7 @@ class VariableWigWriter(Writer):
 
 class PkWriter(Writer):
     def _format_line(self, cluster, start, acum_length, profile, max_height, max_height_pos, area):
-        format_str = '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'%(cluster.chromosome, start+self.correction, start+acum_length-1, profile, max_height, cluster.strand, max_height_pos, area)
+        format_str = '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s'%(cluster.name, start+self.correction, start+acum_length-1, profile, max_height, cluster.strand, max_height_pos, area)
         if cluster.p_value != None: #it can be 0 and we want to print this, so DONT change this to "if cluster.p_value":
             format_str = '%s\t%s\n'%(format_str, cluster.p_value)
         else:
@@ -562,15 +562,15 @@ class Cluster(AbstractCore):
     Represents one cluster of overlaping tags or a single Tag. This object can read and write in every format provided.
     It can be added, compared, subtracted to other cluster objects.
     """
-    def __init__(self, chromosome='', start=0, end=-1, strand='.', name='noname', score=0, rounding = False,
+    def __init__(self, name='', start=0, end=-1, strand='.', name2='noname', score=0, rounding = False,
                  read=PK, write=PK, read_half_open=False, write_half_open=False, normalize_factor=1., tag_length=0, sequence=None, span=20, cached=False, logger=None):
         """If you want the object to operate with integers instead
         of floats, set the rounding flag to True."""
         self.logger = logger
-        self.chromosome = chromosome
+        self.name = name
         self.start = int(start)
         self.end = int(end)
-        self.name = name
+        self.name2 = name2
         self.restart_levels()
         length = self.end-self.start+1
         if length > 0:
@@ -617,10 +617,10 @@ class Cluster(AbstractCore):
 
     def clear(self):
         """Empties the cluster"""
-        self.chromosome = ''
+        self.name = ''
         self.start = 0
         self.end = -1
-        self.name = 'noname'
+        self.name2 = 'noname'
         del self._levels
         self.restart_levels()
         del self._tag_cache
@@ -675,7 +675,7 @@ class Cluster(AbstractCore):
 
     def __eq__(self, other):
         #for cluster_a == cluster_b
-        if  (self.chromosome != other.chromosome) or (self.start != other.start) or (self.strand != other.strand) or (self.end != other.end) or (self.name !=other.name) or (self.num_levels() != other.num_levels()):
+        if  (self.name != other.name) or (self.start != other.start) or (self.strand != other.strand) or (self.end != other.end) or (self.name2 !=other.name2) or (self.num_levels() != other.num_levels()):
             return False
         for i in xrange (0, self.num_levels()):
                 if self.get_level_length(i) != other.get_level_length(i) or self.get_level_height(i) != other.get_level_height(i):
@@ -697,9 +697,9 @@ class Cluster(AbstractCore):
                     other.append_level(length, height)
 
             other.cached = self.cached
-            other.chromosome = self.chromosome 
+            other.name = self.name 
             other.score = self.score
-            other.name = self.name
+            other.name2 = self.name2
             other.strand = self.strand
             other.rounding = self.rounding
             other.normalize_factor = self.normalize_factor
@@ -728,13 +728,12 @@ class Cluster(AbstractCore):
                     ret_cluster.append_level(length, height)
 
             ret_cluster.cached = self.cached
-            ret_cluster.chromosome = self.chromosome
-           
+            ret_cluster.name = self.name
             ret_cluster.read_as(self.reader.format, self.reader.half_open, self.cached)
             ret_cluster.write_as(self.writer.format, self.writer.half_open, self.writer.span)
 
             ret_cluster.score = self.score
-            ret_cluster.name = self.name
+            ret_cluster.name2 = self.name2
             ret_cluster.strand = self.strand
             ret_cluster.rounding = self.rounding
             ret_cluster.normalize_factor = self.normalize_factor
@@ -761,7 +760,7 @@ class Cluster(AbstractCore):
                     self.set_level_length(0, self.get_level_length(0) + (previous_start - self.start))
 
                     if self.start < 1:
-                        if self.logger: self.logger.debug('Extending the line invalidates the read. Discarding %s %s %s'%(self.chromosome, self.start, self.end))
+                        if self.logger: self.logger.debug('Extending the line invalidates the read. Discarding %s %s %s'%(self.name, self.start, self.end))
                         self.clear()
         
                 else:
@@ -809,7 +808,7 @@ class Cluster(AbstractCore):
         new_cluster = self.copy_cluster()
         new_cluster.clear()
         new_cluster.start = self.start
-        new_cluster.chromosome = self.chromosome
+        new_cluster.name = self.name
         clusters = []
         split_points = []
         going_up = True
@@ -878,7 +877,7 @@ class Cluster(AbstractCore):
 
     def __subsplit(self, new_cluster, clusters, nucleotides, length):
         """sub method of split"""
-        new_cluster.chromosome=self.chromosome
+        new_cluster.name=self.name
         new_cluster._recalculate_end()
         clusters.append(new_cluster.copy_cluster())
         new_cluster.clear()
@@ -978,7 +977,7 @@ class Cluster(AbstractCore):
         if self.logger: self.logger.debug("SUBTRACT: Copying...")
         result = self.copy_cluster()
         if self.logger: self.logger.debug("SUBTRACT: Subtracting... len1:%s len2:%s"%(len(self._levels), len(other._levels)))
-        if result.chromosome == other.chromosome and self.num_levels() > 0:
+        if result.name == other.name and self.num_levels() > 0:
             break_up = False
             other_acum_levels = 0
             other_count = 0
@@ -1348,17 +1347,18 @@ class Cluster(AbstractCore):
             return False
 
     def __str__(self):
-        return "<Cluster object> chr: %s start: %s end: %s name: %s "%(self.chromosome, self.start, self.end, self.name)
+        return "<Cluster object> chr: %s start: %s end: %s name: %s "%(self.name, self.start, self.end, self.name2)
 
 
 #######################
 #   REGION  OBJECT    #
 #######################
 class Region(AbstractCore):
-    def __init__(self, start=0, end=0, chromosome=None, strand=None, logger=None, cached=True):
+    def __init__(self, name='undefined', start=0, end=0, name2='noname', strand=None, logger=None, cached=True):
         self.start = int(start)
         self.end = int(end)
-        self.chromosome = chromosome
+        self.name = name
+        self.name2 = name2
         self.strand = strand
         self.tags = []
         self.clusters = []
@@ -1366,7 +1366,7 @@ class Region(AbstractCore):
         self.cached = cached
 
     def __nonzero__(self):
-        return (self.start is not 0 and self.end is not 0 and self.chromosome is not None)
+        return (self.start is not 0 and self.end is not 0 and self.name is not None)
 
     def rpkm(self, total_reads, total_regions_analyzed=0, pseudocount=False):
         """Original definition: Reads per kilobase of exon model per million mapped reads. We generalize to: Reads per kilobase of region per million mapped reads. Added 1 pseudocount per region to avoid 0s"""
@@ -1395,14 +1395,14 @@ class Region(AbstractCore):
 
     def swap(self, region_b):
         "Given 2 regions, return 2 new regions with the reads of both regions mixed aleatoriely"
-        swap1 = Region(self.start, self.end, self.chromosome)
-        swap2 = Region(self.start, self.end, self.chromosome)
+        swap1 = Region(self.name, self.start, self.end)
+        swap2 = Region(self.name, self.start, self.end)
         self.__sub_swap(self, swap1, swap2)
         self.__sub_swap(region_b, swap1, swap2)
         return (swap1, swap2)        
 
     def __str__(self):
-        return "chr: %s start: %s end: %s number_of_tags: %s"%(self.chromosome, self.start, self.end, len(self.tags))
+        return "chr: %s start: %s end: %s number_of_tags: %s"%(self.name, self.start, self.end, len(self.tags))
 
     def _numpos_higher_than(self, h, nis):
         ret = 0
@@ -1423,7 +1423,8 @@ class Region(AbstractCore):
         new_region.__class__ = self.__class__
         new_region.start = self.start
         new_region.end = self.end
-        new_region.chromosome = self.chromosome
+        new_region.name = self.name
+        new_region.name2 = self.name2
         new_region.logger = self.logger
         new_region.tags = []
         new_region.clusters = []
@@ -1478,14 +1479,14 @@ class Region(AbstractCore):
         #we do the same calculation but shuffling the tags randomly. We do it as many times as the variable repeats asks for
         Pr_of_h = defaultdict(int)
         random_variances = defaultdict(int)
-        random_region = Region(self.start, self.end, logger=self.logger, cached=self.cached)
+        random_region = Region(None, self.start, self.end, logger=self.logger, cached=self.cached)
         if self.logger: self.logger.debug("get_FDR_clusters: Adding tags to random...")
         random_region.add_tags(self.tags)
         if self.logger: self.logger.debug("get_FDR_clusters: Done adding")
         #Get the repeat regions that overlap with the region
         """
         masker_tags = repeat_reader.get_overlaping_clusters(region, overlap=0.000001) #get all overlaping masker tags
-        masker_region = Region(region.start, region.end, region.chromosome)
+        masker_region = Region(None, region.start, region.end, region.name)
         masker_region.add_tags(masker_tags)
         """
         if self.logger: self.logger.debug("Calculating modfdr for %s tags in %s region"%(len(self.tags), self.end-self.start+1))
@@ -1694,6 +1695,7 @@ class Region(AbstractCore):
         strand = self.strand
         if not strand:
             strand = '.'
-        return "%s\t%s\t%s\t0\tpyicos_region\t%s\n"%(self.chromosome, self.start, self.end, strand)
+        
+        return "%s\t%s\t%s\t%s\t0\t%s\n"%(self.name, self.start, self.end, self.name2, strand)
 
 

@@ -23,7 +23,7 @@ class TestCoreObjects(unittest.TestCase):
 
     #####################   REGION TESTS           ############################
     def test_FDR(self):
-        r = Region(1, 1999)
+        r = Region('', 1, 1999)
         tags = []
         for i in range(0, 50):
             c = Cluster()
@@ -38,7 +38,7 @@ class TestCoreObjects(unittest.TestCase):
 
 
     def test_get_profile(self):
-        r = Region(1, 1999)
+        r = Region(start=1, end=1999)
         c = Cluster(read=BED)
         c.read_line('chr4 1 40')
         r.add_tags(c, True)
@@ -53,7 +53,7 @@ class TestCoreObjects(unittest.TestCase):
     def test_region_swap_rpkm(self):
         total_reads = 400000000
         total_reads_b = 500000000
-        r = Region(1, 1000, "bla", "chr1")
+        r = Region("chr1", 1, 1000, name2="bla")
         c = Cluster(read=BED)
         c.read_line('chr1 1 40')
         r.add_tags(c)
@@ -63,7 +63,7 @@ class TestCoreObjects(unittest.TestCase):
         c = Cluster(read=BED)
         c.read_line('chr1 3 40')
         r.add_tags(c)
-        r2 = Region(1, 1000, "bla", "chr1")
+        r2 = Region("chr1", 1, 1000, name2="bla")
         c = Cluster(read=BED)
         c.read_line('chr1 100 140')
         r2.add_tags(c)
@@ -265,7 +265,7 @@ class TestCoreObjects(unittest.TestCase):
     def test_bed_reader(self):
         self.assertEqual(self.bed_tag.start, 1)
         self.assertEqual(self.bed_tag.end, 100)
-        self.assertEqual(self.bed_tag.name, 'hola')
+        self.assertEqual(self.bed_tag.name2, 'hola')
         self.assertEqual(self.bed_tag.strand, '+')
 
     def test_bed_writer(self):
@@ -581,7 +581,7 @@ class TestCoreObjects(unittest.TestCase):
         exp_cached.read_line("chr17	146970	147296	88:1.00|13:2.00|61:1.00|27:2.00|37:1.00|37:2.00|64:1.00	2.0	.	147139	404.0")
         #print exp_cached.write_line()
         #control.bed
-        r = Region(1, 2000, chromosome="chr17")
+        r = Region("chr17", 1, 2000)
         control0.read_line("chr17 146904 147004")
         control1.read_line("chr17 147036 147136")
         control2.read_line("chr17 147261 147361")
@@ -650,7 +650,7 @@ class TestCoreObjects(unittest.TestCase):
         self.assertFalse(not tag)
 
     def test_comparison(self):
-        cluster = Region(1, 100, "chr1")
+        cluster = Region("chr1", 1, 100)
         clusterdup = Cluster(read=BED)
         clusterdup.read_line("chr1 1 100")
         cluster2 = Cluster(read=BED)
@@ -740,7 +740,7 @@ class TestCoreObjects(unittest.TestCase):
         self.bed_tag.write_line()
 
     def test_write_pk(self):
-        cluster = Cluster(write=PK, chromosome='chr5', start=1, rounding=True, write_half_open=True)
+        cluster = Cluster(write=PK, name='chr5', start=1, rounding=True, write_half_open=True)
         cluster.append_level(100, 1)
         cluster.append_level(50, 2)
         cluster.append_level(50, 3)
@@ -754,9 +754,9 @@ class TestCoreObjects(unittest.TestCase):
         self.assertEqual(cluster.write_line(),'chr5\t1\t300\t100:1|50:2|50:3|100:1\t3.0\t.\t175\t450.0\nchr5\t501\t501\t1:3\t3.0\t.\t501\t3.0\nchr5\t512\t611\t100:1\t1.0\t.\t561\t100.0\n') #Closed
 
     def test_read_wig(self):
-        cluster1 = Cluster(read=WIG, chromosome='chr5', start=1, rounding=True, read_half_open=True)
+        cluster1 = Cluster(read=WIG, name='chr5', start=1, rounding=True, read_half_open=True)
         cluster1.read_line('chr6 0 100 1')
-        cluster2 = Cluster(read=WIG, chromosome='chr5', start=1, rounding=True, read_half_open=False)
+        cluster2 = Cluster(read=WIG, name='chr5', start=1, rounding=True, read_half_open=False)
         cluster2.read_line('chr6 1 100 1')
         self.assertEqual(cluster1, cluster2)
 
