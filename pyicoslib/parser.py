@@ -19,7 +19,7 @@ from lib import argparse
 import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.9.8'
+__version__ = '0.9.9'
 from defaults import *
 
 class PicosParser:
@@ -132,9 +132,12 @@ class PicosParser:
         enrichment_flags.add_argument('--proximity', default=PROXIMITY, type=int, help="Determines if two regions calculated automatically are close enough to be clustered. Default %(default)s nt")
         enrichment_flags.add_argument('--no-pseudocount', action='store_true', default=NOPSEUDOCOUNT, help="The usage of pseudocounts in the enrichment calculation allows the inclusion of regions that have n reads in one dataset and 0 reads in the other.  [Default %(default)s]")
         enrichment_flags.add_argument('--simple-counts', action='store_true', default=SIMPLECOUNTS, help="To calculate densities, RPKM values are used by default. This flag changes the calculation to simple read counts. [Default %(default)s]")
-        enrichment_flags.add_argument('--binsize', type=float, default=BINSIZE, help="The size of the bins to calculate the local sd and mean for the background model. [Default %(default)s]")        
+        enrichment_flags.add_argument('--binsize', type=float, default=BINSIZE, help="The size of the bins to calculate the local sd and mean for the background model, as a ratio of total number or regions. [Default %(default)s]")        
         enrichment_flags.add_argument('--sdfold', type=float, default=SDFOLD, help="The standard deviation fold used to generate the background model. [Default %(default)s]")  
-        enrichment_flags.add_argument('--recalculate', type=bool, default=RECALCULATE, help="Recalculate the z-score when plotting. Useful for doing different plots with 'pyicos plot' [Default %(default)s]")         
+        enrichment_flags.add_argument('--recalculate', type=bool, default=RECALCULATE, help="Recalculate the z-score when plotting. Useful for doing different plots with 'pyicos plot' [Default %(default)s]")    
+        enrichment_flags.add_argument('--mintags', type=float, default=REGION_MINTAGS, help="Number of tags (of the union of the experiment and experiment_b datasets) for a region to qualify to be analyzed. [Default %(default)s]") 
+        enrichment_flags.add_argument('--binstep', type=float, default=WINDOW_STEP, help="Step of the sliding window for the calculation of the z-score, as a ratio of total number or regions. [Default %(default)s]")  
+        
         
         zscore = self.new_subparser()  
         zscore.add_argument('--zscore', type=float, default=ZSCORE, help="Significant Z-score value. [Default %(default)s]")        
@@ -237,6 +240,9 @@ class PicosParser:
         correlation_flags.add_argument('--max-correlations',type=int, default=MAX_CORRELATIONS, help='The maximum of clusters that will be enough to calculate the strand correlation shift. Lower this parameter to increase time performance [Default %(default)s]')    
 
 
+        counts_file = self.new_subparser()
+        counts_file.add_argument('counts_file', help='The counts file. The format required is a bed file with fields "name", "start", "end", "name2", "score(ignored)", "strand", "count file a", "count file b", "count file a", "count replica a" where the counts can be RPKMs or simple counts')
+
         protocol_name = self.new_subparser()
         protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
         #callpeaks operation
@@ -276,7 +282,7 @@ class PicosParser:
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
 
         #rpkm operation
-        subparsers.add_parser('enrichcount', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using rpkm count files', parents=[region, basic_parser, output_flags, replica_a, region_format, output, enrichment_flags])
+        subparsers.add_parser('enrichcount', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using rpkm count files', parents=[counts_file, basic_parser, output_flags, replica_a, region_format, output, enrichment_flags, zscore])
 
         #enrichment operation
         subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using mapped reads files', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, optional_region, region_format, output, enrichment_flags, zscore])
@@ -284,7 +290,7 @@ class PicosParser:
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
 
-        subparsers.add_parser('plot', help="(UNDER DEVELOPMENT) Plot a file with pyicos plotting utilities. Requires matplotlib installed.", parents=[basic_parser, plot_path, output, zscore])
+        subparsers.add_parser('plot', help="(UNDER DEVELOPMENT) Plot a file with pyicos plotting utilities. Requires matplotlib 0.9.7 installed.", parents=[basic_parser, plot_path, output])
 
         #whole exposure
         subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
@@ -302,7 +308,8 @@ class PicosParser:
                             split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, postscript = POSTSCRIPT,
                             remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS,
                             proximity=PROXIMITY, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
-                            label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE)
+                            label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, 
+                            counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP)
 
         args = parser.parse_args()
 
@@ -352,7 +359,7 @@ class PicosParser:
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
                             args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, 
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.no_pseudocount, args.simple_counts, args.label1, 
-                            args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate)
+                            args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
@@ -388,10 +395,10 @@ class PicosParser:
             turbomix.operations = [REMOVE_REGION]
 
         elif sys.argv[1] == 'enrichcount':
-            turbomix.operations = [ENRICHMENT, ZSCORE, PLOT]
+            turbomix.operations = [ENRICHMENT, CALCZSCORE, PLOT]
 
         elif sys.argv[1] == 'enrichment':
-            turbomix.operations = [ENRICHMENT, ZSCORE, PLOT]
+            turbomix.operations = [ENRICHMENT, CALCZSCORE, PLOT]
 
         elif sys.argv[1] == 'split':
             turbomix.operations = [SPLIT]
