@@ -1427,17 +1427,15 @@ class Region(AbstractCore):
         new_region.name2 = self.name2
         new_region.logger = self.logger
         new_region.tags = []
+        new_region.tags.append(tag for tag in self.tags)
         new_region.clusters = []
-        new_region.add_tags(self.tags)
+        new_region.clusters.append(cluster for cluster in self.clusters)
         new_region.strand = self.strand
 
         for cluster in self.clusters:
             new_region.clusters.append(cluster)
 
         return new_region
-
-    def num_tags(self):
-        return len(self.tags)
 
     def max_height(self):
         max_height = 0
