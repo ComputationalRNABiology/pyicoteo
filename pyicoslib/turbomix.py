@@ -982,7 +982,6 @@ class Turbomix:
         region_plus = Region()
         region_minus = Region()
         regions = []
-        flag_minreads = 4
         numreads_plus = 1
         numreads_minus = 1
         dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.logger)
@@ -1005,14 +1004,12 @@ class Turbomix:
                 else:
                     if new_region.strand == region_plus.strand:
                         region_plus.end -= self.proximity
-                        if numreads_plus < flag_minreads: 
-                            regions.append(region_plus)                         
+                        self.__calc_reg_write(region_file, numreads_plus, region_plus)                      
                         region_plus = new_region.copy()  
                         numreads_plus = 1    
                     else:
                         region_minus.end -= self.proximity
-                        if numreads_minus < flag_minreads:
-                            regions.append(region_minus)                       
+                        self.__calc_reg_write(region_file, numreads_minus, region_minus)         
                         region_minus = new_region.copy()  
                         numreads_minus = 1    
 

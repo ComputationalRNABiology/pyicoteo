@@ -633,7 +633,7 @@ class Cluster(AbstractCore):
         self._levels = []
 
     def __len__(self):
-        return self.end-self.start+1    
+        return max(0, self.end-self.start+1)    
     
     def num_levels(self):
         return len(self._levels)
@@ -1354,7 +1354,7 @@ class Cluster(AbstractCore):
 #   REGION  OBJECT    #
 #######################
 class Region(AbstractCore):
-    def __init__(self, name='undefined', start=0, end=0, name2='noname', strand=None, logger=None, cached=True):
+    def __init__(self, name='undefined', start=0, end=-1, name2='noname', strand=None, logger=None, cached=True):
         self.start = int(start)
         self.end = int(end)
         self.name = name
@@ -1415,7 +1415,7 @@ class Region(AbstractCore):
         return self._numpos_higher_than(h, nis)/self._numpos_higher_than(1, nis)
 
     def __len__(self):
-        return self.end-self.start+1
+        return max(0, self.end-self.start+1)
 
     def copy(self):
         """Copies a Region object into another"""
