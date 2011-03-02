@@ -1138,6 +1138,14 @@ class Turbomix:
     def __enrichment_A(self, rpkm_a, rpkm_b):
         return (math.log(float(rpkm_a), 2)+math.log(float(rpkm_b), 2))/2
 
+
+    def rpkm_or_counts(self, region, use_pseudocount, total_regions, total_reads):
+        if self.simple_counts:
+            rpkm_a = region.numtags(use_pseudocount)
+        else:
+            return region.rpkm(self.total_reads, self.total_regions, use_pseudocount)    
+       
+
     def enrichment(self):
         self.total_reads_a = 0
         self.total_reads_b = 0
@@ -1192,6 +1200,10 @@ class Turbomix:
             region_a = None
             replica_a = None
             replica_tags = None
+            rpkm_a = -1
+            rpkm_b = -1
+            region_rpkm = -1
+            replica_rpkm = -1
             swap1 = Region()
             swap2 = Region()
             if self.counts_file:
@@ -1219,32 +1231,33 @@ class Turbomix:
                         rpkm_b = region_b.rpkm(self.total_reads_b, self.total_regions, use_pseudocount)    
 
             if not self.counts_file:
-                if use_replica:
-                    replica_a = region_of_interest.copy()
-                    replica_a.add_tags(replica_tags)
-                    count_1 = len(tags_a)
-                    count_2 = len(replica_tags)
-                    total_1 = self.total_reads_a
-                    total_2 = self.total_reads_replica_a
-                    region_rpkm = rpkm_a
-                    if self.simple_counts:
-                        replica_rpkm = replica_a.numtags(use_pseudocount)
-                    else:
-                        replica_rpkm = replica_a.rpkm(self.total_reads_replica_a, self.total_regions, use_pseudocount)
-                elif region_a:
-                    swap1, swap2 = region_a.swap(region_b)
-                    count_1 = len(swap1.tags)
-                    count_2 = len(swap2.tags)
-                    total_1 = total_2 = self.average_total_reads
-                    if self.simple_counts: 
-                        region_rpkm = swap1.numtags(use_pseudocount)
-                        replica_rpkm = swap2.numtags(use_pseudocount)                    
-                    else:                  
-                        region_rpkm = swap1.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
-                        replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
+                if (use_pseudocount and (tags_a or tags_b)) or (not use_pseudocount and tags_a and tags_b): 
+                    if use_replica:
+                        replica_a = region_of_interest.copy()
+                        replica_a.add_tags(replica_tags)
+                        count_1 = len(tags_a)
+                        count_2 = len(replica_tags)
+                        total_1 = self.total_reads_a
+                        total_2 = self.total_reads_replica_a
+                        region_rpkm = rpkm_a
+                        if self.simple_counts:
+                            replica_rpkm = replica_a.numtags(use_pseudocount)
+                        else:
+                            replica_rpkm = replica_a.rpkm(self.total_reads_replica_a, self.total_regions, use_pseudocount)
+                    elif region_a:
+                        swap1, swap2 = region_a.swap(region_b)
+                        count_1 = len(swap1.tags)
+                        count_2 = len(swap2.tags)
+                        total_1 = total_2 = self.average_total_reads
+                        if self.simple_counts: 
+                            region_rpkm = swap1.numtags(use_pseudocount)
+                            replica_rpkm = swap2.numtags(use_pseudocount)                    
+                        else:                  
+                            region_rpkm = swap1.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
+                            replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
 
             #if there is no data in the replica or in the swap and we are not using pseudocounts, dont write the data 
-            if use_pseudocount or (use_replica and replica_tags) or (not use_replica and swap1.tags and swap2.tags) or self.counts_file:
+            if rpkm_a != -1 and rpkm_b != -1 and region_rpkm != -1 and replica_rpkm != -1:
                 A = self.__enrichment_A(rpkm_a, rpkm_b)
                 M = self.__enrichment_M(rpkm_a, rpkm_b) 
                 M_prime = self.__enrichment_M(region_rpkm, replica_rpkm)
@@ -1316,7 +1329,12 @@ class Turbomix:
             print self.points[-1]
 
         #update z scores
+
         for entry in enrichment_result:
+            entry["A_limit"] = 0
+            entry["mean"] = 0
+            entry["sd"] = 0
+            entry["zscore"] = 0
             for i in range(0, len(self.points)):
                 entry["A_limit"] = self.points[i][0]
                 if float(entry["A"]) < self.points[i][0]:
