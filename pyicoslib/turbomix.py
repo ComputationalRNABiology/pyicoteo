@@ -1068,19 +1068,22 @@ class Turbomix:
             M_significant = []
             A_significant = []
             M_prime = []
-            figure(figsize=(8,6))
-            fold_flag = 4      
+            A_limits = []      
             points = []
+            minus_points = []
+            all_points = []
+            figure(figsize=(8,6))
+            fold_flag = 4
+            
             self.logger.info("Loading table...")
             for line in open(file_path):
                 sline = line.split()
                 enrich = dict(zip(self.enrichment_keys, sline))             
-                
-                if (enrich["A_limit"], enrich["mean"], enrich["sd"]) not in points:
-                    points.append((enrich["A_limit"], enrich["mean"], enrich["sd"]))
-                #if abs(self.get_zscore(enrich["M"], enrich["sd"]*self.sdfold, enrich["mean"])) < self.zscore:
-                #print enrich
-                #print abs(float(enrich["zscore"])) < self.zscore, abs(float(enrich["zscore"])), self.zscore
+                positive_point = self.zscore*abs(float(enrich["sd"]))
+                A_limit = float(enrich["A_limit"])
+                if (A_limit, positive_point) not in all_points:
+                    all_points.append((A_limit, positive_point))
+
                 if abs(float(enrich["zscore"])) < self.zscore:
                     M.append(float(enrich["M"]))
                     A.append(float(enrich["A"]))
@@ -1091,19 +1094,28 @@ class Turbomix:
                 M_prime.append(float(enrich["M_prime"]))    
                 A_prime.append(float(enrich["A_prime"]))
             
+            all_points.sort(key= lambda x:x[0])
+            
+            for t in all_points:
+                (A_limits.append(t[0]), points.append(t[1]), minus_points.append(-t[1])) 
+                    
 
-            points.sort(key=lambda x:float(x[0]))
-            for point in points: print point
             self.logger.info("Plotting points...")
             subplot(211)
             xlabel('A')
             ylabel('M')
             axhline(0, linestyle='--', color="grey", alpha=0.75)
-            plot(A_prime, M_prime, 'bo', label=label_control)
+ 
+            plot(A_limits, points, 'r--', label="")            
+            plot(A_limits, minus_points,  'r--', label=label_control)
+           
+            plot(A_prime, M_prime, 'bo', label=label_control)            
 
             legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
             subplot(212)
             axhline(0, linestyle='--', color="grey", alpha=0.75)
+            plot(A_limits, points, 'r--', label=label_control)            
+            plot(A_limits, minus_points, 'r--', label=label_control)
             plot(A, M, 'y.', label=label_main)
             plot(A_significant, M_significant, 'r.', label="%s (significant)"%label_main)
             xlabel('A')
@@ -1138,6 +1150,7 @@ class Turbomix:
         tags_b = []
         count_1 = 0
         count_2 = 0
+
         use_pseudocount = not self.no_pseudocount
         use_replica = bool(self.replica_a_path)
         over = 1./sys.maxint #minimum overlap
@@ -1179,6 +1192,11 @@ class Turbomix:
         for region_line in open(self.sorted_region_path):
             sline = region_line.split()
             region_of_interest = self._region_from_sline(sline)
+            region_a = None
+            replica_a = None
+            replica_tags = None
+            swap1 = Region()
+            swap2 = Region()
             if self.counts_file:
                 rpkm_a = float(sline[6])
                 rpkm_b = float(sline[7])
@@ -1187,10 +1205,6 @@ class Turbomix:
             else:
                 tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=over)
                 tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=over)
-                replica_a = None
-                replica_tags = None
-                swap1 = None
-                swap2 = None
                 if use_replica:            
                     replica_tags = replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=over)
 
@@ -1207,8 +1221,6 @@ class Turbomix:
                         rpkm_a = region_a.rpkm(self.total_reads_a, self.total_regions, use_pseudocount)
                         rpkm_b = region_b.rpkm(self.total_reads_b, self.total_regions, use_pseudocount)    
 
-            A = self.__enrichment_A(rpkm_a, rpkm_b)
-            M = self.__enrichment_M(rpkm_a, rpkm_b)  
             if not self.counts_file:
                 if use_replica:
                     replica_a = region_of_interest.copy()
@@ -1219,10 +1231,10 @@ class Turbomix:
                     total_2 = self.total_reads_replica_a
                     region_rpkm = rpkm_a
                     if self.simple_counts:
-                        replica_a.numtags(use_pseudocount)
+                        replica_rpkm = replica_a.numtags(use_pseudocount)
                     else:
                         replica_rpkm = replica_a.rpkm(self.total_reads_replica_a, self.total_regions, use_pseudocount)
-                else:
+                elif region_a:
                     swap1, swap2 = region_a.swap(region_b)
                     count_1 = len(swap1.tags)
                     count_2 = len(swap2.tags)
@@ -1235,7 +1247,9 @@ class Turbomix:
                         replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
 
             #if there is no data in the replica or in the swap and we are not using pseudocounts, dont write the data 
-            if use_pseudocount or (use_replica and replica_tags) or (not use_replica and swap1.tags and swap2.tags):
+            if use_pseudocount or (use_replica and replica_tags) or (not use_replica and swap1.tags and swap2.tags) or self.counts_file:
+                A = self.__enrichment_A(rpkm_a, rpkm_b)
+                M = self.__enrichment_M(rpkm_a, rpkm_b) 
                 M_prime = self.__enrichment_M(region_rpkm, replica_rpkm)
                 A_prime = self.__enrichment_A(region_rpkm, replica_rpkm)   
                 out_file.write("%s\n"%("\t".join([region_of_interest.write().rstrip("\n"), str(rpkm_a), str(rpkm_b), str(region_rpkm), str(replica_rpkm), str(A), str(M), str(self.total_reads_a), str(self.total_reads_b), str(len(tags_a)), str(len(tags_b)),  str(A_prime), str(M_prime), str(total_1), str(total_2), str(count_1), str(count_2)])))
@@ -1323,7 +1337,8 @@ class Turbomix:
         shutil.move(os.path.abspath(values_path), old_file_path) #move the file
 
         new_file = file(values_path, 'w') #open a new file in the now empty file space
-        for entry in enrichment_result:      
+        
+        for entry in enrichment_result:    
             new_file.write("\t".join(str(entry[key]) for key in self.enrichment_keys)+"\n")
 
         self._manage_temp_file(old_file_path)

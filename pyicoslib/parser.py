@@ -290,7 +290,7 @@ class PicosParser:
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
 
-        subparsers.add_parser('plot', help="(UNDER DEVELOPMENT) Plot a file with pyicos plotting utilities. Requires matplotlib 0.9.7 installed.", parents=[basic_parser, plot_path, output])
+        subparsers.add_parser('plot', help="(UNDER DEVELOPMENT) Plot a file with pyicos plotting utilities. Requires matplotlib 0.9.7 installed.", parents=[basic_parser, plot_path, output, zscore])
 
         #whole exposure
         subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
