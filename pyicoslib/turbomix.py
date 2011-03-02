@@ -924,9 +924,9 @@ class Turbomix:
 
     def _region_from_sline(self, sline):
         if self.stranded_analysis:
-            return Region(sline[0], int(sline[1]), int(sline[2]), strand=sline[5])
+            return Region(sline[0], int(sline[1]), int(sline[2]), name2=sline[3], strand=sline[5])
         else:
-            return Region(sline[0], int(sline[1]), int(sline[2])) 
+            return Region(sline[0], int(sline[1]), int(sline[2]), name2=sline[3]) 
      
 
     def __calc_reg_write(self, region_file, count, calculated_region):
