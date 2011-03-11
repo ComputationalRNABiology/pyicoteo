@@ -287,6 +287,7 @@ class WigReader(Reader):
 
             cluster.append_level(int(line[2])-int(line[1])-self.correction+1, float(line[3])*cluster.normalize_factor)
             cluster._recalculate_end()
+            #print "Buenas", cluster.name, cluster.start, cluster._levels
         except (ValueError, IndexError):
             raise InvalidLine
 
@@ -1132,10 +1133,10 @@ class Cluster(AbstractCore):
         """
         Adds the levels of 2 selfs, activating the + operator for this type of object results = self + self2
         """
-        #if self._levels: 
-        #    print "Adding with LEVELS"
-        #if self._tag_cache: 
-        #    print "Adding with CACHE"
+        """if self._levels: 
+            print "Adding with LEVELS"
+        if self._tag_cache: 
+            print 'Adding with CACHE'"""
         if other._tag_cache:
             #for start, end, dup in other._tag_cache: 
             self.add_tag_cached(other._tag_cache[0][0], other._tag_cache[0][1]) #TODO only works when other._tag_cache = 1. For performance. Change if needed.
