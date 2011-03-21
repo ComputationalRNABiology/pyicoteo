@@ -85,7 +85,7 @@ class Turbomix:
         self.safe_reader = utils.SafeReader(self.logger)        
         self.enrichment_keys  = ['name', 'start', 'end', 'name2', 'score', 'strand', 'rpkm_a', 'rpkm_b', 'rpkm_prime_a', 'rpkm_prime_b',
                                  'A','M','total_reads_a','total_reads_b','num_tags_a','num_tags_b','A_prime','M_prime',
-                                 'total_1','total_2','count_1','count_2', 'A_limit', 'mean', 'sd', 'zscore']
+                                 'total_1','total_2','count_1','count_2', 'A_median', 'mean', 'sd', 'zscore']
         if not self.discarded_names:
             self.discarded_names = []
         self.region_cluster = Cluster(read=region_format, read_half_open = open_region, logger=self.logger)
@@ -1057,7 +1057,7 @@ class Turbomix:
                 if self.replica_a_path:
                     label_control = '%s(A) VS %s(A)'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
                 else:
-                    label_control = 'Swap1 VS Swap2'
+                    label_control = 'Background distribution'
 
             A = []
             A_prime = []
@@ -1065,21 +1065,27 @@ class Turbomix:
             M_significant = []
             A_significant = []
             M_prime = []
-            A_limits = []      
+            A_medians = []      
             points = []
             minus_points = []
             all_points = []
             figure(figsize=(8,6))
             fold_flag = 4
-            
+            biggest_A = -sys.maxint
+            smallest_A = sys.maxint
             self.logger.info("Loading table...")
             for line in open(file_path):
                 sline = line.split()
-                enrich = dict(zip(self.enrichment_keys, sline))             
-                positive_point = self.zscore*abs(float(enrich["sd"]))
-                A_limit = float(enrich["A_limit"])
-                if (A_limit, positive_point) not in all_points:
-                    all_points.append((A_limit, positive_point))
+                enrich = dict(zip(self.enrichment_keys, sline)) 
+                biggest_A = max(biggest_A, float(enrich["A"]))         
+                smallest_A = min(smallest_A, float(enrich["A"]))       
+                biggest_A = max(biggest_A, float(enrich["A_prime"]))         
+                smallest_A = min(smallest_A, float(enrich["A_prime"]))   
+                positive_point = self.zscore*float(enrich["sd"])+float(enrich["mean"])
+                negative_point = -self.zscore*float(enrich["sd"])+float(enrich["mean"])
+                A_median = float(enrich["A_median"])
+                if (A_median, positive_point) not in all_points:
+                    all_points.append((A_median, positive_point, negative_point))
 
                 if abs(float(enrich["zscore"])) < self.zscore:
                     M.append(float(enrich["M"]))
@@ -1094,40 +1100,46 @@ class Turbomix:
             all_points.sort(key= lambda x:x[0])
             
             for t in all_points:
-                (A_limits.append(t[0]), points.append(t[1]), minus_points.append(-t[1])) 
+                (A_medians.append(t[0]), points.append(t[1]), minus_points.append(t[2])) 
                     
 
+
+            A_medians.append(biggest_A)
+            points.append(points[-1])
+            minus_points.append(minus_points[-1])
+
+            A_medians.insert(0, smallest_A)
+            points.insert(0, points[0])
+            minus_points.insert(0, minus_points[0])
             self.logger.info("Plotting points...")
             subplot(211)
             xlabel('A')
             ylabel('M')
-            axhline(0, linestyle='--', color="grey", alpha=0.75)
- 
-            plot(A_limits, points, 'r--', label="")            
-            plot(A_limits, minus_points,  'r--', label=label_control)
-           
-            plot(A_prime, M_prime, 'bo', label=label_control)            
-
+            plot(A_prime, M_prime, '.', label=label_control, color = '#666666')
+            plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
+            plot(A_medians, minus_points,  'r--')            
+            axhline(0, linestyle='--', color="grey", alpha=0.75)  
             legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
+
             subplot(212)
-            axhline(0, linestyle='--', color="grey", alpha=0.75)
-            plot(A_limits, points, 'r--', label=label_control)            
-            plot(A_limits, minus_points, 'r--', label=label_control)
-            plot(A, M, 'y.', label=label_main)
+            plot(A, M, 'k.', label=label_main)
             plot(A_significant, M_significant, 'r.', label="%s (significant)"%label_main)
+            plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
+            plot(A_medians, minus_points, 'r--')
+            axhline(0, linestyle='--', color="grey", alpha=0.75)
             xlabel('A')
             ylabel('M')
 
             legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
             self._save_figure("enrichment_MA")
 
-            M.extend(M_significant)
-            hist(M, 100, color="r", histtype="step", label=label_main)
-            hist(M_prime, 100, color="b", histtype="step", label=label_control)
-            xlabel('M')
-            ylabel('')
-            legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=1, mode="expand", borderaxespad=0.)
-            self._save_figure("hist_A")
+            #M.extend(M_significant)
+            #hist(M, 100, color="r", histtype="step", label=label_main)
+            #hist(M_prime, 100, color="b", histtype="step", label=label_control)
+            #xlabel('M')
+            #ylabel('')
+            #legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3, ncol=1, mode="expand", borderaxespad=0.)
+            #self._save_figure("hist_A")
 
         except ImportError:
             self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')
@@ -1192,7 +1204,7 @@ class Turbomix:
             self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2
         enrichment_result = [] #This will hold the name, start and end of the region, plus the A, M, 'M and 'A
         regions_analyzed_count = 0
-        self.logger.info("... analyzing regions...")
+        self.logger.info("... analyzing regions, calculating counts/rpkms, A / M and or swap...")
  
         for region_line in open(self.sorted_region_path):
             sline = region_line.split()
@@ -1257,7 +1269,7 @@ class Turbomix:
                             replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
 
             #if there is no data in the replica or in the swap and we are not using pseudocounts, dont write the data 
-            if rpkm_a != -1 and rpkm_b != -1 and region_rpkm != -1 and replica_rpkm != -1:
+            if rpkm_a > 0 and rpkm_b > 0 and region_rpkm > 0 and replica_rpkm > 0:
                 A = self.__enrichment_A(rpkm_a, rpkm_b)
                 M = self.__enrichment_M(rpkm_a, rpkm_b) 
                 M_prime = self.__enrichment_M(region_rpkm, replica_rpkm)
@@ -1313,35 +1325,46 @@ class Turbomix:
             else:
                 result_chunk = enrichment_result[i:]  #last chunk
 
-            print "CHUNK:", len(result_chunk), 
+            
             #retrieve the values
             mean_acum = 0
+            a_acum = 0
             Ms_replica = []
             for entry in result_chunk:
                 mean_acum += float(entry["M_prime"])
+                a_acum += float(entry["A_prime"])
                 Ms_replica.append(float(entry["M_prime"]))
 
             #add them to the points of mean and sd
             mean = mean_acum/len(result_chunk)
             sd = (sum((x - mean)**2 for x in Ms_replica))/len(Ms_replica) 
-            A_limit = float(result_chunk[-1]["A_prime"])
-            self.points.append([float(result_chunk[-1]["A_prime"]), mean, sd]) #The maximum A of the chunk, the mean and the standard deviation     
-            print self.points[-1]
+
+            A_median = a_acum / len(result_chunk)
+            self.points.append([A_median, mean, sd]) #The A asigned to the window, the mean and the standard deviation  
+            self.logger.debug("Window of %s length, with A median: %s mean: %s sd: %s", (len(result_chunk), self.points[-1][0], self.points[-1][1], self.points[-1][2]))    
 
         #update z scores
 
         for entry in enrichment_result:
-            entry["A_limit"] = 0
+            entry["A_median"] = 0
             entry["mean"] = 0
             entry["sd"] = 0
             entry["zscore"] = 0
+
+            closest_A = sys.maxint
+            sd_position = 0
+            found = False
             for i in range(0, len(self.points)):
-                entry["A_limit"] = self.points[i][0]
-                if float(entry["A"]) < self.points[i][0]:
-                    self.__sub_zscore(entry, self.points[i]) #TODO take into consideration binsize
-                    break #found it, leave go to the next
-                entry["A_limit"] = self.points[i][-1]               
-                self.__sub_zscore(entry, self.points[-1]) #the value is the biggest, use the last break
+                if abs(closest_A - float(entry["A"])) > abs(self.points[i][0] - float(entry["A"])):
+                    closest_A = self.points[i][0]
+                    sd_position = i
+                    found = True
+                else:
+                    if found: #its not going to get closer from now on, since its sorted
+                        break
+                        
+            entry["A_median"] = closest_A
+            self.__sub_zscore(entry, self.points[sd_position]) #the value is the biggest, use the last break
 
         #self._manage_temp_file(aprime_sorted)
 
