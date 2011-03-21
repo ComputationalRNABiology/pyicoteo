@@ -293,34 +293,35 @@ class WigReader(Reader):
 
 class ElandReader(Reader):
     """Convertor for the eland export format"""
-    eland_filter = re.compile(r'\w+.fa')
+    #eland_filter = re.compile(r'\w+.fsa')
 
-    def read_line(self, cluster, line):
-        if line is not None and line != '\n' and self.quality_filter(line):
-            try:
-                cluster.read_count += 1
-                if cluster.is_empty():
-                    line = line.split()
-                    cluster.name2 = line[0]
-                    length = len(line[1])
-                    cluster.sequence = line[1]
-                    cluster.name = line[6].rstrip('.fa')
-                    cluster.start = int(line[7])+self.correction
-                    cluster.end = length+cluster.start-1
-                    cluster.append_level(length+self.correction, cluster.normalize_factor)
-                    cluster.tag_length = len(cluster)
-                    if line[8] is 'F':
-                        cluster.strand = '+'
+    def read_line(self, cluster, line):     
+        if line is not None and line != '\n':
+            line = line.split()
+            if len(line) >= 7: #TODO check quality
+                try:
+                    if cluster.is_empty():
+                        cluster.name2 = line[0]
+                        length = len(line[1])
+                        cluster.sequence = line[1]
+                        cluster.name = line[6].split('.')[0]
+                        cluster.start = int(line[7])+self.correction
+                        cluster.end = length+cluster.start-1
+                        cluster.append_level(length+self.correction, cluster.normalize_factor)
+                        cluster.tag_length = len(cluster)
+                        if line[8] is 'F':
+                            cluster.strand = '+'
+                        else:
+                            cluster.strand = '-'
                     else:
-                        cluster.strand = '-'
-                else:
-                    self._add_line_to_cluster(line, cluster)
+                        self._add_line_to_cluster(line, cluster)
 
-            except (ValueError, IndexError):
-                raise InvalidLine
+                    cluster.read_count += 1
+                except (ValueError, IndexError):
+                    raise InvalidLine
 
-    def quality_filter(self, line):
-        return self.eland_filter.search(line)
+    #def quality_filter(self, line):
+    #    return self.eland_filter.search(line)
 
 class PkReader(Reader):
     def read_line(self, cluster, line):
