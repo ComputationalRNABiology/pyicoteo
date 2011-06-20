@@ -75,6 +75,14 @@ class AbstractCore:
         else:
             return 0     
 
+    def extend5prime(self, extra_bases):
+        "Add extra basepairs on the 5 prime region to the genomic interval, taking into consideration the strand"
+        if self.strand == MINUS_STRAND:
+             c.end = c.end + 3000
+        else:
+            c.start = c.start - 3000        
+       
+
     def overlap(self, other):
         """Returns the percentage of overlap of the self cluster with another cluster, from 0 to 1"""
         if self.name != other.name or not self.intersects(other): #different name or no intersection, no overlap
@@ -297,19 +305,19 @@ class ElandReader(Reader):
 
     def read_line(self, cluster, line):     
         if line is not None and line != '\n':
-            line = line.split()
+            sline = line.split()
             if len(line) >= 7: #TODO check quality
                 try:
                     if cluster.is_empty():
-                        cluster.name2 = line[0]
-                        length = len(line[1])
-                        cluster.sequence = line[1]
-                        cluster.name = line[6].split('.')[0]
-                        cluster.start = int(line[7])+self.correction
+                        cluster.name2 = sline[0]
+                        length = len(sline[1])
+                        cluster.sequence = sline[1]
+                        cluster.name = sline[6].split('.')[0]
+                        cluster.start = int(sline[7])+self.correction
                         cluster.end = length+cluster.start-1
                         cluster.append_level(length+self.correction, cluster.normalize_factor)
                         cluster.tag_length = len(cluster)
-                        if line[8] is 'F':
+                        if sline[8] is 'F':
                             cluster.strand = '+'
                         else:
                             cluster.strand = '-'
@@ -969,7 +977,6 @@ class Cluster(AbstractCore):
 
 
     def __sub__(self, other):
-        debug = True
         if self.logger: self.logger.debug("SUBTRACT: Flushing experiment...")
         if self._tag_cache:
             self._flush_tag_cache()
@@ -986,21 +993,14 @@ class Cluster(AbstractCore):
             self_slow_count = 0
             slow_start = result.start
             slow_end = result.start + result.get_level_length(0)
-            while (other.num_levels() > other_count):
-                #if debug: print "other_count:", other_count, other.num_levels()
+            other_numlevels = other.num_levels() #for speed
+            while (other_numlevels > other_count):
                 other_level_start = other.start + other_acum_levels
                 other_acum_levels += other.get_level_length(other_count) #for speed
                 other_level_end = other.start + other_acum_levels
                 other_height = other.get_level_height(other_count) #for speed
                 other_length = other.get_level_length(other_count) #for speed
-
-                #print "--------ANTES--------"
-                #print "self:", slow_start, slow_end, result._levels
-                #print "other:", other_level_start, other_level_end, other_height, other._levels
-
-
                 while other_level_start > slow_end:
-                    #print "advance slow count"
                     slow_start += result.get_level_length(self_slow_count)
                     self_slow_count += 1
                     try:
@@ -1008,10 +1008,6 @@ class Cluster(AbstractCore):
                     except IndexError: #this means we got to the end of the level list and that there is not more subtracting to do
                         break_up = True
                         break
-
-                    #print "self:", slow_start, slow_end, result._levels
-
-
                
                 if break_up:
                     break
@@ -1019,64 +1015,43 @@ class Cluster(AbstractCore):
                 self_count = self_slow_count
                 level_start = slow_start
                 level_end = slow_start
-                while (result.num_levels() > self_count): 
-                    #print result.num_levels(), self_count, other.num_levels(), other_count
+                while result.num_levels() > self_count and other_level_end >= level_start: 
                     level_end += result.get_level_length(self_count)
                     height = result.get_level_height(self_count)
                     if other_level_start <= level_start and other_level_end >= level_end:
-                        #print " Operation 1"
                         #       |------------| self
                         #   |--------------------| other
                         result.set_level_height(self_count, result.get_level_height(self_count)-other_height)
-                        #print "self:", result._levels
 
                     elif other_level_start <= level_start and other_level_end < level_end and other_level_end > level_start:
-                        #print " Operation 2"
                         #     |---------------------| self
                         #  |--------------------| other
                         result.set_level_length(self_count, other_level_end - level_start)
                         result.set_level_height(self_count, result.get_level_height(self_count)-other_height)
                         result.add_level(self_count+1, level_end - other_level_end, height)
                         level_end = other_level_end
-                        #print "self:", result._levels
-
 
                     elif other_level_start > level_start and other_level_start < level_end and other_level_end >= level_end:
-                        #print " Operation 3"
                         # |-------------------| self
                         #         |-------------------| other
                         result.set_level_length(self_count, result.get_level_length(self_count)-(level_end-other_level_start))
                         result.add_level(self_count+1, level_end-other_level_start,result.get_level_height(self_count)-other_height)
                         self_count+=1
-                        #print "self:", result._levels
-
 
                     elif other_level_start > level_start and other_level_end < level_end:
-                        #print " Operation 4"
+
                         # |-------------------| self
                         #         |-----| other
                         result.set_level_length(self_count, other_length)
                         result.set_level_height(self_count, result.get_level_height(self_count)-other_height)
                         result.add_level(self_count+1, level_end - other_level_end, height)
                         result.add_level(self_count, other_level_start - level_start, height)
-                        #slow_end = min(slow_end, (level_start - other_level_start))
-                        #print level_end
-                        #print "self:", result._levels
-
-                
-                    elif other_level_end < level_start:
-                        #                         |--------------------| self
-                        # |--------------| other
-                        break
                 
                     level_start = level_end
                     self_count+=1
 
                 other_count+=1
-                #print
-                #print "self", slow_start, slow_end, result._levels
-                #print "other", other_level_start, other_level_end, other_height
-                #print "--------DESPUES--------"
+
             if self.logger: self.logger.debug("SUBTRACT: Done Subtracting. Cleaning...")
             result._clean_levels()
         return result
@@ -1388,20 +1363,21 @@ class Region(AbstractCore):
             return len(self.tags)
 
 
-    def __sub_swap(self, region, swap1, swap2):
+    def __sub_swap(self, region, swap1, swap2, ratio): #ratio of reads in file A per read in file B
         for tag in region.tags:
-            if random.randint(0,1):
+            if random.uniform(0,2)*ratio > 1:
                 swap1.add_tags(tag)
             else:
                 swap2.add_tags(tag)
 
-    def swap(self, region_b):
+    def swap(self, region_b, ratio=1):
         "Given 2 regions, return 2 new regions with the reads of both regions mixed aleatoriely"
+        #ratio=50.
         swap1 = Region(self.name, self.start, self.end)
         swap2 = Region(self.name, self.start, self.end)
-        self.__sub_swap(self, swap1, swap2)
-        self.__sub_swap(region_b, swap1, swap2)
-        return (swap1, swap2)        
+        self.__sub_swap(self, swap1, swap2, ratio)
+        self.__sub_swap(region_b, swap1, swap2, ratio)
+        return (swap1, swap2)
 
     def __str__(self):
         return "chr: %s start: %s end: %s number_of_tags: %s"%(self.name, self.start, self.end, len(self.tags))
