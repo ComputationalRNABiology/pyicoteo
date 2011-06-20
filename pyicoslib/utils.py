@@ -131,13 +131,13 @@ class BigSort:
     NOTE: This class is becoming a preprocessing module. This is a good thing, I think! But its not
     only a sorting class then. We have to think about renaming it, or extracting functionality from it...
     """
-    def __init__(self, file_format=None, read_half_open=False, frag_size=0, id=0, logger=True):
+    def __init__(self, file_format=None, read_half_open=False, frag_size=0, id=0, logger=True, filter_chunks=True):
         self.logger = logger
         self.file_format = file_format
         self.frag_size = frag_size
         self.buffer_size = 320000
         self.temp_file_size = 8000000
-
+        self.filter_chunks = filter_chunks
         try:
             if self.file_format:
                 self.cluster = Cluster(read=self.file_format, write=self.file_format, read_half_open=read_half_open, write_half_open=read_half_open, logger=self.logger)
@@ -192,18 +192,19 @@ class BigSort:
 
         if not tempdirs:
             tempdirs.append(gettempdir())
-        input_file = file(input,'rb',self.temp_file_size)
+        input_file = open(input,'rb',self.temp_file_size)
         self.skipHeaderLines(key, input_file)
         try:
             input_iterator = iter(input_file)
             chunks = []
             for tempdir in cycle(tempdirs):
                 current_chunk = list(islice(input_iterator, self.buffer_size))
-                current_chunk = self.filter_chunk(current_chunk) #Now we always filter the chunks, so no empty and invalid lines appear. This used to be optional
+                if self.filter_chunks:
+                    current_chunk = self.filter_chunk(current_chunk) 
                 if current_chunk:
                     if self.logger: self.logger.debug("Chunk: len current_chunk: %s chunks: %s temp_file_size %s buffer_size %s"%(len(current_chunk), len(chunks), self.temp_file_size, self.buffer_size))
                     current_chunk.sort(key=key)
-                    output_chunk = file(os.path.join(tempdir,'%06i_%s_%s'%(len(chunks), os.getpid(), self.id)),'w+b',self.temp_file_size)
+                    output_chunk = open(os.path.join(tempdir,'%06i_%s_%s'%(len(chunks), os.getpid(), self.id)),'w+b',self.temp_file_size)
                     output_chunk.writelines(current_chunk)
                     output_chunk.flush()
                     output_chunk.seek(0)
@@ -222,7 +223,7 @@ class BigSort:
         if output is None:
             output = "%s/tempsort%s_%s"%(gettempdir(), os.getpid(), self.id)
         
-        output_file = file(output,'wb',self.temp_file_size)
+        output_file = open(output,'wb',self.temp_file_size)
         
         try:
             output_file.writelines(self.merge(chunks,key))
@@ -230,7 +231,7 @@ class BigSort:
             self.remove_chunks(chunks)
 
         output_file.close()
-        return file(output)
+        return open(output)
 
     def merge(self, chunks, key=None):
         if self.logger: self.logger.info("... Merging chunks...")
@@ -309,7 +310,7 @@ class SortedFileReader:
     """
     def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, logger=None):
         self.__dict__.update(locals())
-        self.file_iterator = file(file_path, 'rb')
+        self.file_iterator = open(file_path, 'rb')
         self.safe_reader = SafeReader()
         self.cursor = self.file_iterator.tell()
         self.initial_tell =  self.file_iterator.tell() 
@@ -370,7 +371,6 @@ class SortedFileReader:
         self.safe_reader.safe_read_line(cluster, line)
 
 
-
 class SortedFileClusterReader:
     """
     Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
@@ -378,7 +378,7 @@ class SortedFileClusterReader:
     """
     def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
         self.__dict__.update(locals())
-        self.file_iterator = file(file_path)
+        self.file_iterator = open(file_path)
         self.__initvalues()
         self.safe_reader = SafeReader()
     

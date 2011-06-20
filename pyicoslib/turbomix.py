@@ -69,7 +69,8 @@ class Turbomix:
                  split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, experiment_b_path=EXPERIMENT,
                  replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, stranded_analysis=STRANDED_ANALYSIS, proximity=PROXIMITY, 
                  postscript=POSTSCRIPT, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
-                 label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, counts_file=COUNTS_FILE, region_mintags=REGION_MINTAGS, bin_step=WINDOW_STEP):
+                 label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, counts_file=COUNTS_FILE, 
+                 region_mintags=REGION_MINTAGS, bin_step=WINDOW_STEP, weight_correction=WEIGHT_CORRECTION):
 
         self.__dict__.update(locals())
         self.normalize_factor = 1
@@ -234,7 +235,7 @@ class Turbomix:
         """Returns the total number of cells in a file"""
         num = 0.
         cluster = Cluster(read=file_format, logger=self.logger)
-        for line in file(file_path, 'rb'):
+        for line in open(file_path, 'rb'):
             self.safe_read_line(cluster, line)
             for level in cluster: 
                 num += level[0]*level[1]
@@ -336,7 +337,7 @@ class Turbomix:
     def _filter_file(self, file_path, temp_name, remove_temp, file_format, file_open):
         """Assumes sorted file. Extend and removal of duplicates go here"""
         new_file_path = "%s/tempfilter%s_%s"%(gettempdir(), os.getpid(), temp_name)
-        new_file = file(new_file_path, 'w')
+        new_file = open(new_file_path, 'w')
         self.logger.info("Filtering %s file..."%temp_name)
         previous_line = ''
         equal_lines = 0
@@ -497,7 +498,7 @@ class Turbomix:
             self.current_output_path = output_path
             self.cluster.clear()
             self.cluster_aux.clear()
-            self.result_log = file('%s/pyicos_report_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path)), 'wb')
+            self.result_log = open('%s/pyicos_report_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path)), 'wb')
             self.result_log.write('Pyicos analysis report\n')
             self.result_log.write('----------------------\n\n')
             self.result_log.write('Date run: %s\n'%datetime.now())
@@ -642,7 +643,7 @@ class Turbomix:
         if NOWRITE in self.operations:
             output = None
         else:
-            output = file(self.current_output_path, 'wb')
+            output = open(self.current_output_path, 'wb')
         experiment = file(self.current_experiment_path, 'rb')
 
         if self.output_format == WIG or self.output_format == VARIABLE_WIG:
@@ -677,7 +678,7 @@ class Turbomix:
 
         if self.cluster_aux: #last one
             region.clusters.append(self.cluster_aux.copy_cluster())
-            self.logger.debug("region clusters length: %s Last cluster cache: %s"%(len(region.clusters), region.clusters[-1]._tag_cache))
+            self.logger.debug("Region clusters length: %s Last cluster cache: %s"%(len(region.clusters), region.clusters[-1]._tag_cache))
             self.cluster_aux.clear()
 
         self.logger.debug("Done adding tags!")
@@ -739,7 +740,7 @@ class Turbomix:
         found = False
         try:
             #print '%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)
-            for line in file('%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)):
+            for line in open('%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)):
                 
                 chrom, length = line.split()
                 if chrom == name:
@@ -870,7 +871,7 @@ class Turbomix:
         current_directory = self._current_directory()
         old_output = '%s/before_cut_%s'%(current_directory, os.path.basename(self.current_output_path))
         shutil.move(os.path.abspath(self.current_output_path), old_output)
-        filtered_output = file(self.current_output_path, 'w+')
+        filtered_output = open(self.current_output_path, 'w+')
 
         if self.poisson_test == 'height':
             msg = "Filtering using cluster height..."
@@ -878,14 +879,14 @@ class Turbomix:
             msg = "number of reads per cluster..."
 
         self.logger.info(msg)
-        unfiltered_output = file('%s/unfiltered_%s'%(current_directory, os.path.basename(self.current_output_path)), 'w+')
+        unfiltered_output = open('%s/unfiltered_%s'%(current_directory, os.path.basename(self.current_output_path)), 'w+')
         if self.output_format == WIG or self.output_format == VARIABLE_WIG:
             wig_header = 'track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.label
             filtered_output.write(wig_header)
             unfiltered_output.write(wig_header)
         cut_cluster = Cluster(read=self.output_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_output, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, logger=self.logger)
         self.logger.info('Writing filtered and unfiltered file...')
-        for line in file(old_output):
+        for line in open(old_output):
             cut_cluster.clear()
             self.safe_read_line(cut_cluster, line)
             try:
@@ -1039,7 +1040,7 @@ class Turbomix:
                 import matplotlib
                 matplotlib.use("PS")
 
-            from matplotlib.pyplot import plot, hist, show, legend, figure, xlabel, ylabel, subplot, axhline
+            from matplotlib.pyplot import plot, hist, show, legend, figure, xlabel, ylabel, subplot, axhline, axis
             from matplotlib import rcParams
             rcParams['legend.fontsize'] = 8
             #decide labels
@@ -1071,16 +1072,22 @@ class Turbomix:
             all_points = []
             figure(figsize=(8,6))
             fold_flag = 4
-            biggest_A = -sys.maxint
-            smallest_A = sys.maxint
+            biggest_A  = -sys.maxint #for drawing
+            smallest_A = sys.maxint #for drawing
+            biggest_M = 0 #for drawing
+
             self.logger.info("Loading table...")
             for line in open(file_path):
                 sline = line.split()
                 enrich = dict(zip(self.enrichment_keys, sline)) 
                 biggest_A = max(biggest_A, float(enrich["A"]))         
-                smallest_A = min(smallest_A, float(enrich["A"]))       
+                smallest_A = min(smallest_A, float(enrich["A"]))   
+                biggest_M = max(biggest_M, abs(float(enrich["M"])))          
+    
                 biggest_A = max(biggest_A, float(enrich["A_prime"]))         
-                smallest_A = min(smallest_A, float(enrich["A_prime"]))   
+                smallest_A = min(smallest_A, float(enrich["A_prime"]))
+                biggest_M = max(biggest_M, abs(float(enrich["M_prime"])))
+           
                 positive_point = self.zscore*float(enrich["sd"])+float(enrich["mean"])
                 negative_point = -self.zscore*float(enrich["sd"])+float(enrich["mean"])
                 A_median = float(enrich["A_median"])
@@ -1103,11 +1110,10 @@ class Turbomix:
                 (A_medians.append(t[0]), points.append(t[1]), minus_points.append(t[2])) 
                     
 
-
-            A_medians.append(biggest_A)
+            margin = 1.1
+            A_medians.append(biggest_A*margin)
             points.append(points[-1])
             minus_points.append(minus_points[-1])
-
             A_medians.insert(0, smallest_A)
             points.insert(0, points[0])
             minus_points.insert(0, minus_points[0])
@@ -1115,6 +1121,8 @@ class Turbomix:
             subplot(211)
             xlabel('A')
             ylabel('M')
+
+            axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
             plot(A_prime, M_prime, '.', label=label_control, color = '#666666')
             plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
             plot(A_medians, minus_points,  'r--')            
@@ -1122,6 +1130,7 @@ class Turbomix:
             legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
 
             subplot(212)
+            axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
             plot(A, M, 'k.', label=label_main)
             plot(A_significant, M_significant, 'r.', label="%s (significant)"%label_main)
             plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
@@ -1142,6 +1151,8 @@ class Turbomix:
             #self._save_figure("hist_A")
 
         except ImportError:
+            if self.debug:
+                raise
             self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')
 
     def __enrichment_M(self, rpkm_a, rpkm_b):
@@ -1167,6 +1178,7 @@ class Turbomix:
         tags_b = []
         count_1 = 0
         count_2 = 0
+        factor = 1
 
         use_pseudocount = not self.no_pseudocount
         use_replica = bool(self.replica_a_path)
@@ -1180,14 +1192,17 @@ class Turbomix:
         #out_file.write('\t'.join(self.enrichment_keys))
         #out_file.write('\n') #TODO Write the header... Do we really want this? 
         if self.counts_file: #TODO ultimate hack, refractor
-            self.sorted_region_path = self.counts_file 
+            self.sorted_region_path = self.counts_file
         else:
             if use_replica:
                 replica_a_reader = utils.SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)
                 msg = "%s using replicas..."%msg
             else:
                 msg += "%s using swap..."%msg
-            
+                if self.weight_correction:
+                    factor = self.get_normalize_factor(self.current_control_path, self.current_experiment_path)
+                    msg +=  "... with a factor of %s"%factor
+
             self.logger.info(msg)
             if self.sorted_region_path:
                 self.logger.info('Using region file %s'%self.region_path)
@@ -1205,7 +1220,7 @@ class Turbomix:
         enrichment_result = [] #This will hold the name, start and end of the region, plus the A, M, 'M and 'A
         regions_analyzed_count = 0
         self.logger.info("... analyzing regions, calculating counts/rpkms, A / M and or swap...")
- 
+        self.use_MA = USE_MA in self.operations
         for region_line in open(self.sorted_region_path):
             sline = region_line.split()
             region_of_interest = self._region_from_sline(sline)
@@ -1257,7 +1272,7 @@ class Turbomix:
                         else:
                             replica_rpkm = replica_a.rpkm(self.total_reads_replica_a, self.total_regions, use_pseudocount)
                     elif region_a:
-                        swap1, swap2 = region_a.swap(region_b)
+                        swap1, swap2 = region_a.swap(region_b, factor)
                         count_1 = len(swap1.tags)
                         count_2 = len(swap2.tags)
                         total_1 = total_2 = self.average_total_reads
@@ -1269,29 +1284,30 @@ class Turbomix:
                             replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
 
             #if there is no data in the replica or in the swap and we are not using pseudocounts, dont write the data 
-            if rpkm_a > 0 and rpkm_b > 0 and region_rpkm > 0 and replica_rpkm > 0:
-                A = self.__enrichment_A(rpkm_a, rpkm_b)
-                M = self.__enrichment_M(rpkm_a, rpkm_b) 
-                M_prime = self.__enrichment_M(region_rpkm, replica_rpkm)
-                A_prime = self.__enrichment_A(region_rpkm, replica_rpkm)   
+            if rpkm_a > 0 and rpkm_b > 0 and region_rpkm > 0 and replica_rpkm > 0 or self.use_MA:
+                if self.use_MA:
+                    A = float(sline[10])
+                    M = float(sline[11])
+                    A_prime = float(sline[16])
+                    M_prime = float(sline[17])
+                else:
+                    A = self.__enrichment_A(rpkm_a, rpkm_b)
+                    M = self.__enrichment_M(rpkm_a, rpkm_b)
+                    M_prime = self.__enrichment_M(region_rpkm, replica_rpkm)
+                    A_prime = self.__enrichment_A(region_rpkm, replica_rpkm)
                 out_file.write("%s\n"%("\t".join([region_of_interest.write().rstrip("\n"), str(rpkm_a), str(rpkm_b), str(region_rpkm), str(replica_rpkm), str(A), str(M), str(self.total_reads_a), str(self.total_reads_b), str(len(tags_a)), str(len(tags_b)),  str(A_prime), str(M_prime), str(total_1), str(total_2), str(count_1), str(count_2)])))
-
                 regions_analyzed_count += 1
 
         out_file.flush()
         out_file.close()
         self.logger.info("%s regions analyzed."%regions_analyzed_count)
         self.logger.info("Enrichment result saved to %s"%self.current_output_path)
-        return out_file.name
+        return out_file.name 
+    
 
-    #def get_chunk(self, my_file, a, b):
-    #    chunk = []
-    #    chunk.append()
-        #iterate through the file and get the chunk from a to b
-
-    def __load_enrichment_result(self, values_path):
+    def __load_enrichment_result(self, lines):
         ret = []
-        for line in open(values_path):
+        for line in lines:
             sline = line.split()
             try:
                 float(sline[1])
@@ -1299,10 +1315,9 @@ class Turbomix:
             except ValueError:
                 pass
 
-        return ret        
-    
+        return ret  
+
     def calculate_zscore(self, values_path):
-        
         num_regions = sum(1 for line in open(values_path))
         bin_size = int(self.binsize*num_regions)
         if bin_size < 50:
@@ -1312,76 +1327,74 @@ class Turbomix:
         bin_step = max(1, int(self.bin_step*num_regions))
         self.logger.info("Enrichment window calculation using a sliding window size of %s, sliding with a step of %s"%(bin_size, bin_step))
         self.logger.info("... calculating zscore...")
-        enrichment_result = self.__load_enrichment_result(values_path)
-        #sorter = utils.BigSort('bed', False, 0, 'zscore_a_sort%s'%temp_name, logger=self.logger)
-        #aprime_sorted = sorter.sort(values_path, None, lambda x:(x.split()[16])) #sort by A prime
-        enrichment_result.sort(key= lambda x:(float(x["A_prime"])))
-        self.points = []
-        #get the standard deviations
-        for i in range(0, num_regions-bin_size+bin_step, bin_step):
-            #get the slice
-            if i+bin_size < num_regions:
-                result_chunk = enrichment_result[i:i+bin_size] 
-            else:
-                result_chunk = enrichment_result[i:]  #last chunk
 
-            
-            #retrieve the values
-            mean_acum = 0
-            a_acum = 0
-            Ms_replica = []
-            for entry in result_chunk:
-                mean_acum += float(entry["M_prime"])
-                a_acum += float(entry["A_prime"])
-                Ms_replica.append(float(entry["M_prime"]))
+        sorter = utils.BigSort('bed', False, 0, 'zscore_sorter%s'%os.getpid(), logger=self.logger, filter_chunks=False)
 
-            #add them to the points of mean and sd
-            mean = mean_acum/len(result_chunk)
-            sd = (sum((x - mean)**2 for x in Ms_replica))/len(Ms_replica) 
-
-            A_median = a_acum / len(result_chunk)
-            self.points.append([A_median, mean, sd]) #The A asigned to the window, the mean and the standard deviation  
-            self.logger.debug("Window of %s length, with A median: %s mean: %s sd: %s", (len(result_chunk), self.points[-1][0], self.points[-1][1], self.points[-1][2]))    
-
-        #update z scores
-
-        for entry in enrichment_result:
-            entry["A_median"] = 0
-            entry["mean"] = 0
-            entry["sd"] = 0
-            entry["zscore"] = 0
-
-            closest_A = sys.maxint
-            sd_position = 0
-            found = False
-            for i in range(0, len(self.points)):
-                if abs(closest_A - float(entry["A"])) > abs(self.points[i][0] - float(entry["A"])):
-                    closest_A = self.points[i][0]
-                    sd_position = i
-                    found = True
-                else:
-                    if found: #its not going to get closer from now on, since its sorted
-                        break
-                        
-            entry["A_median"] = closest_A
-            self.__sub_zscore(entry, self.points[sd_position]) #the value is the biggest, use the last break
-
-        #self._manage_temp_file(aprime_sorted)
-
-        enrichment_result.sort(key=lambda x:(x["name"], int(x["start"]), int(x["end"])))
-        
+        aprime_sorted = sorter.sort(values_path, None, lambda line:(float(line.split()[16]))) #sort by A prime
 
         old_file_path = '%s/before_zscore_%s'%(self._current_directory(), os.path.basename(values_path)) #create path for the outdated file
         shutil.move(os.path.abspath(values_path), old_file_path) #move the file
+        new_file = open(values_path, 'w') #open a new file in the now empty file space
 
-        new_file = file(values_path, 'w') #open a new file in the now empty file space
-        
-        for entry in enrichment_result:    
+        result_chunk = []
+        self.points = []
+        #get the standard deviations range(0, num_regions-bin_size+bin_step, bin_step)
+        for line in aprime_sorted:
+            #print line.split()[16]
+            result_chunk.append(dict(zip(self.enrichment_keys, line.split()))) #add the line to the result_chunk
+            if len(result_chunk) > bin_size: # if the result chunk is smaller than the bin_size, remove oldest item
+                entry = result_chunk.pop(0)
+                new_file.write("\t".join(str(entry[key]) for key in self.enrichment_keys)+"\n")
+
+            if len(result_chunk) == bin_size: #we have the size of the bin: operate
+                #retrieve the values
+                mean_acum = 0
+                a_acum = 0
+                Ms_replica = []
+                for entry in result_chunk:
+                    mean_acum += float(entry["M_prime"])
+                    a_acum += float(entry["A_prime"])
+                    Ms_replica.append(float(entry["M_prime"]))
+
+                #add them to the points of mean and sd
+                mean = mean_acum/len(result_chunk)
+                sd = (sum((x - mean)**2 for x in Ms_replica))/len(Ms_replica) 
+
+                A_median = a_acum / len(result_chunk)
+                self.points.append([A_median, mean, sd]) #The A asigned to the window, the mean and the standard deviation  
+
+                self.logger.debug("Window of %s length, with A median: %s mean: %s sd: %s"%(len(result_chunk), self.points[-1][0], self.points[-1][1], self.points[-1][2])) 
+
+                #update z scores
+                for entry in result_chunk:
+                    entry["A_median"] = 0
+                    entry["mean"] = 0
+                    entry["sd"] = 0
+                    entry["zscore"] = 0
+                    closest_A = sys.maxint
+                    sd_position = 0
+                    for i in range(0, len(self.points)):
+                        new_A = self.points[i][0]
+                        if new_A != closest_A: #skip repeated points
+                            if abs(closest_A - float(entry["A"])) >= abs(new_A - float(entry["A"])):
+                                closest_A = new_A
+                                sd_position = i
+                            else:
+                                break #already found, no need to go further since the points are ordered
+                                
+                    entry["A_median"] = closest_A
+                    self.__sub_zscore(entry, self.points[sd_position]) #the value is the biggest, use the last break
+
+        #'10.0236456021'
+        for entry in result_chunk: # the last entries
+            #print entry
             new_file.write("\t".join(str(entry[key]) for key in self.enrichment_keys)+"\n")
-
+        new_file.flush()
+        self._manage_temp_file(aprime_sorted.name)
         self._manage_temp_file(old_file_path)
-        
-        return values_path
+        result_file = sorter.sort(new_file.name, None, lambda x:(x.split()[0], int(x.split()[1]), int(x.split()[2]))) #sort by chr, start, end
+
+        return result_file.name
 
 
     def __sub_zscore(self, entry, point):
@@ -1414,9 +1427,9 @@ class Turbomix:
         cluster_reader = utils.SortedFileClusterReader(old_output, self.output_format, cached=self.cached)
         if self.masker_file:
             masker_reader = utils.SortedFileClusterReader(self.masker_file, BED, cached=self.cached)
-        filtered_output = file(self.current_output_path, 'w+')
-        unfiltered_output = file('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
-        for region_line in file(self.sorted_region_path):
+        filtered_output = open(self.current_output_path, 'w+')
+        unfiltered_output = open('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
+        for region_line in open(self.sorted_region_path):
             split_region_line = region_line.split()
             region = Region(split_region_line[0], split_region_line[1], split_region_line[2], logger=self.logger, cached=self.cached)
             region.add_tags(cluster_reader.get_overlaping_clusters(region, overlap=EPSILON), True)
@@ -1438,7 +1451,7 @@ class Turbomix:
         self.analyzed_pairs = 0.
         acum_length = 0.
         num_analyzed = 0
-        for line in file(self.current_experiment_path):
+        for line in open(self.current_experiment_path):
             line_read = Cluster(read=self.experiment_format)
             line_read.read_line(line)
             if line_read.strand == PLUS_STRAND:
@@ -1514,6 +1527,8 @@ class Turbomix:
                 self._save_figure("correlation")
 
             except ImportError:
+                if self.debug:
+                    raise
                 self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library (version >1.0.1).')
 
 

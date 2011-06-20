@@ -18,9 +18,9 @@ import sys
 from lib import argparse
 import ConfigParser
 from turbomix import Turbomix, OperationFailed
-from core import (BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, CLUSTER_FORMATS, READ_FORMATS, WRITE_FORMATS)
-__version__ = '0.9.9'
 from defaults import *
+
+__version__ = '0.9.9.2'
 
 class PicosParser:
     def config_section_map(self, section, config_file):
@@ -87,7 +87,7 @@ class PicosParser:
         optional_control = self.new_subparser()
         optional_control.add_argument('--control', help='The control file or directory')
         open_control = self.new_subparser()
-        open_control.add_argument('--open-control', action='store_true', default=OPEN_CONTROL, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
+        open_control.add_argument('--open-control', action='store_true', default=OPEN_CONTROL, help='Define if the region file is half-open or closed notation. [Default closed]')
 
 
         basic_parser = self.new_subparser()
@@ -106,7 +106,7 @@ class PicosParser:
         output.add_argument('output', help='The output file or directory')
 
         output_flags = self.new_subparser()
-        output_flags.add_argument('-O','--open-output', action='store_true', default=OPEN_OUTPUT, help='Define if the output is half-open or closed notation. [Default %(default)s]')
+        output_flags.add_argument('-O','--open-output', action='store_true', default=OPEN_OUTPUT, help='Define if the output is half-open or closed notation. [Default closed]')
         output_flags.add_argument('-F','--output-format',default=OUTPUT_FORMAT, help='Format desired for the output. You can choose between %s. WARNING, for some operations, some outputs are not valid. See operation help for more info. [default pk]'%write_formats)
 
 
@@ -125,7 +125,7 @@ class PicosParser:
         optional_region.add_argument('--region', help='The region file or directory. In the enrichment analysis, if its not specified it will be calculated automatically from the tags in both files and the distance of clustering specified in the --proximity flag')
         region_format = self.new_subparser()
         region_format.add_argument('--region-format',default=REGION_FORMAT, help='The format the region file is written as. [default %(default)s]')
-        region_format.add_argument('--open-region', action='store_true', default=OPEN_REGION, help='Define if the region file is half-open or closed notation. [Default %(default)s]')
+        region_format.add_argument('--open-region', action='store_true', default=OPEN_REGION, help='Define if the region file is half-open or closed notation. [Default closed]')
 
         enrichment_flags = self.new_subparser()
         enrichment_flags.add_argument('--stranded', action='store_true', default=STRANDED_ANALYSIS, help="Decide if the strand is taken into consideration for the analysis. This requires a region file in bed format with the strand information in its 6th column.")
@@ -134,9 +134,12 @@ class PicosParser:
         enrichment_flags.add_argument('--simple-counts', action='store_true', default=SIMPLECOUNTS, help="To calculate densities, RPKM values are used by default. This flag changes the calculation to simple read counts. [Default %(default)s]")
         enrichment_flags.add_argument('--binsize', type=float, default=BINSIZE, help="The size of the bins to calculate the local sd and mean for the background model, as a ratio of total number or regions. [Default %(default)s]")        
         enrichment_flags.add_argument('--sdfold', type=float, default=SDFOLD, help="The standard deviation fold used to generate the background model. [Default %(default)s]")  
-        enrichment_flags.add_argument('--recalculate', type=bool, default=RECALCULATE, help="Recalculate the z-score when plotting. Useful for doing different plots with 'pyicos plot' [Default %(default)s]")    
+        enrichment_flags.add_argument('--recalculate', action='store_true', default=RECALCULATE, help="Recalculate the z-score when plotting. Useful for doing different plots with 'pyicos plot' [Default %(default)s]")    
         enrichment_flags.add_argument('--mintags', type=float, default=REGION_MINTAGS, help="Number of tags (of the union of the experiment and experiment_b datasets) for a region to qualify to be analyzed. [Default %(default)s]") 
         enrichment_flags.add_argument('--binstep', type=float, default=WINDOW_STEP, help="Step of the sliding window for the calculation of the z-score, as a ratio of total number or regions. [Default %(default)s]")  
+
+        enrichment_flags.add_argument('--weight-correction', action='store_true', default=WEIGHT_CORRECTION, help="Correct the background distribution taking into consideration the difference on number of reads between samples. [Default %(default)s]")
+
         
         
         zscore = self.new_subparser()  
@@ -233,11 +236,11 @@ class PicosParser:
         plot_path.add_argument('plot_path', default=PLOT_PATH, help='The path of the file to plot.')
 
         correlation_flags = self.new_subparser()
-        correlation_flags.add_argument('--max-delta',type=int, default=MAX_DELTA, help='Maximum delta [Default %(default)s]')
-        correlation_flags.add_argument('--min-delta',type=int, default=MIN_DELTA, help='Minimum delta [Default %(default)s]')
-        correlation_flags.add_argument('--height-filter',type=int, default=HEIGHT_FILTER, help='Height to filter the peaks [Default %(default)s]')
+        correlation_flags.add_argument('--max-delta',type=int, default=MAX_DELTA, help='Maximum distance to consider when correlating the positive and the negative groups of reads [Default %(default)s]')
+        correlation_flags.add_argument('--min-delta',type=int, default=MIN_DELTA, help='Minimum distance to consider when correlating the positive and the negative groups of reads  [Default %(default)s]')
+        correlation_flags.add_argument('--height-filter',type=int, default=HEIGHT_FILTER, help='The minimum number of overlapping reads in a cluster to include it in the test [Default %(default)s]')
         correlation_flags.add_argument('--delta-step',type=int, default=DELTA_STEP, help='The step of the delta values to test [Default %(default)s]')
-        correlation_flags.add_argument('--max-correlations',type=int, default=MAX_CORRELATIONS, help='The maximum of clusters that will be enough to calculate the strand correlation shift. Lower this parameter to increase time performance [Default %(default)s]')    
+        correlation_flags.add_argument('--max-correlations',type=int, default=MAX_CORRELATIONS, help='The maximum pairs of clusters to analyze before considering the test complete. Lower this parameter to increase time performance [Default %(default)s]')    
 
 
         counts_file = self.new_subparser()
@@ -282,6 +285,9 @@ class PicosParser:
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
 
         #rpkm operation
+        subparsers.add_parser('enrichma', help='An enrichment test based on the MA plots using rpkm count files with the MA information', parents=[counts_file, basic_parser, output_flags, replica_a, region_format, output, enrichment_flags, zscore])
+
+        #rpkm operation
         subparsers.add_parser('enrichcount', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using rpkm count files', parents=[counts_file, basic_parser, output_flags, replica_a, region_format, output, enrichment_flags, zscore])
 
         #enrichment operation
@@ -309,7 +315,7 @@ class PicosParser:
                             remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS,
                             proximity=PROXIMITY, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
                             label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, 
-                            counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP)
+                            counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, weight_correction=WEIGHT_CORRECTION)
 
         args = parser.parse_args()
 
@@ -359,7 +365,7 @@ class PicosParser:
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
                             args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, 
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.no_pseudocount, args.simple_counts, args.label1, 
-                            args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep)
+                            args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, args.weight_correction)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
@@ -396,6 +402,9 @@ class PicosParser:
 
         elif sys.argv[1] == 'enrichcount':
             turbomix.operations = [ENRICHMENT, CALCZSCORE, PLOT]
+
+        elif sys.argv[1] == 'enrichma':
+            turbomix.operations = [USE_MA, ENRICHMENT, CALCZSCORE, PLOT]
 
         elif sys.argv[1] == 'enrichment':
             turbomix.operations = [ENRICHMENT, CALCZSCORE, PLOT]

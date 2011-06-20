@@ -72,7 +72,7 @@ RECALCULATE=False
 REGION_MINTAGS = 6
 WINDOW_STEP = 0.01
 POISSON_OPTIONS=("height", "numtags", "length")
-
+WEIGHT_CORRECTION=False
 
 #CONSTANTS
 PLUS_STRAND = "+"
@@ -93,6 +93,8 @@ REMOVE_REGION = 'remove'
 REMOVE_DUPLICATES = 'remove_duplicates'
 MODFDR = 'modfdr'
 STRAND_CORRELATION = 'strand_correlation'
+
+USE_MA = 'use_ma'
 ENRICHMENT = 'enrichment'
 CALCZSCORE = 'zscore'
 PLOT='plot'
