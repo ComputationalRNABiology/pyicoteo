@@ -1,18 +1,20 @@
 import math
 import os
+import sys
 from tempfile import gettempdir
 from heapq import heappop, heappush
 from itertools import islice, cycle, chain
 
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 from defaults import *
-import sys
+
 
 def add_slash_to_path(path):
     if path[-1] != '/':
         path = '%s/'%path
     return path
     
+
 def poisson(actual, mean):
     '''From StackOverflow: This algorithm is iterative,
         to keep the components from getting too large or small'''
@@ -25,6 +27,9 @@ def poisson(actual, mean):
     
     except OverflowError:
         return 0
+
+
+
 
 def pearson(list_one, list_two):
     """

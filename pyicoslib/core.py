@@ -74,13 +74,13 @@ class AbstractCore:
             return 1
         else:
             return 0     
-
-    def extend5prime(self, extra_bases):
+    #TODO not used?
+    """def extend5prime(self, extra_bases):
         "Add extra basepairs on the 5 prime region to the genomic interval, taking into consideration the strand"
         if self.strand == MINUS_STRAND:
              c.end = c.end + 3000
         else:
-            c.start = c.start - 3000        
+            c.start = c.start - 3000        """
        
 
     def overlap(self, other):
@@ -803,7 +803,7 @@ class Cluster(AbstractCore):
         self._subtrim(threshold, 0, True) #trim the left side of the cluster
         self._subtrim(threshold, -1, False) #trim the right side of the cluster
 
-    def split(self, percentage=0.05, absolute=0):
+    def split(self, percentage=0.9, absolute=0):
         """
         Scans each cluster position from start to end and looks for local maxima x and local minima y.
         Given two consecutive local maxima x_{i} and x_{i+1} we define the smallest of them as x_{min}.

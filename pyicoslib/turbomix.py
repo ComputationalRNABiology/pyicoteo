@@ -84,9 +84,6 @@ class Turbomix:
         self.previous_chr = None
         self.open_region = False
         self.safe_reader = utils.SafeReader(self.logger)        
-        self.enrichment_keys  = ['name', 'start', 'end', 'name2', 'score', 'strand', 'rpkm_a', 'rpkm_b', 'rpkm_prime_a', 'rpkm_prime_b',
-                                 'A','M','total_reads_a','total_reads_b','num_tags_a','num_tags_b','A_prime','M_prime',
-                                 'total_1','total_2','count_1','count_2', 'A_median', 'mean', 'sd', 'zscore']
         if not self.discarded_names:
             self.discarded_names = []
         self.region_cluster = Cluster(read=region_format, read_half_open = open_region, logger=self.logger)
@@ -324,7 +321,9 @@ class Turbomix:
         if self.control_path:
             self.logger.info('Calculating normalization factor...')
             self.normalize_factor = self.get_normalize_factor(self.current_experiment_path, self.current_control_path)
-
+            self.cluster.normalize_factor = self.normalize_factor
+            self.cluster_aux.normalize_factor = self.normalize_factor
+            self.cluster_aux2.normalize_factor = self.normalize_factor
 
     def _manage_temp_file(self, path):
         """A temporary file that is no longer needed is given, and depending on the value of self.keep_temp its removed or kept"""
@@ -428,7 +427,7 @@ class Turbomix:
             if self.no_sort:
                 self.logger.warning('Input sort skipped. Results might be wrong.')
                 self.current_experiment_path = experiment_path
-            else:
+            elif not self.counts_file:
                 self.logger.info('Sorting experiment file...')
                 self.is_sorted = True
                 sorted_experiment_file = self.experiment_preprocessor.sort(experiment_path, None, self.get_lambda_func(self.experiment_format))
@@ -860,7 +859,6 @@ class Turbomix:
     def extract_and_write(self, cluster, output):
         """The line will be written to the file if the last conditions are met"""
         if not cluster.is_empty() and cluster.start > -1:
-            cluster.normalize_factor = self.normalize_factor
             output.write(cluster.write_line())
 
     def _current_directory(self):
@@ -884,7 +882,7 @@ class Turbomix:
             wig_header = 'track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.label
             filtered_output.write(wig_header)
             unfiltered_output.write(wig_header)
-        cut_cluster = Cluster(read=self.output_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_output, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, logger=self.logger)
+        cut_cluster = Cluster(read=self.output_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_output, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, logger=self.logger, normalize_factor = self.normalize_factor)
         self.logger.info('Writing filtered and unfiltered file...')
         for line in open(old_output):
             cut_cluster.clear()
@@ -904,14 +902,12 @@ class Turbomix:
                     thres = self.poisson_results[self.poisson_test][cut_cluster.name]
                     
                 if cut_cluster.is_significant(thres, self.poisson_test):
-                    cut_cluster.normalize_factor = self.normalize_factor
                     filtered_output.write(cut_cluster.write_line())
                     
             except KeyError:
                 pass
 
             if not cut_cluster.is_empty():
-                cut_cluster.normalize_factor = self.normalize_factor
                 unfiltered_output.write(cut_cluster.write_line()) 
 
         self._manage_temp_file(old_output)
@@ -1079,7 +1075,7 @@ class Turbomix:
             self.logger.info("Loading table...")
             for line in open(file_path):
                 sline = line.split()
-                enrich = dict(zip(self.enrichment_keys, sline)) 
+                enrich = dict(zip(enrichment_keys, sline)) 
                 biggest_A = max(biggest_A, float(enrich["A"]))         
                 smallest_A = min(smallest_A, float(enrich["A"]))   
                 biggest_M = max(biggest_M, abs(float(enrich["M"])))          
@@ -1155,42 +1151,154 @@ class Turbomix:
                 raise
             self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')
 
-    def __enrichment_M(self, rpkm_a, rpkm_b):
-        return math.log(rpkm_a/float(rpkm_b), 2)
+    def __enrichment_M(self, signal_a, signal_b, total_reads_a=1, total_reads_b=1):
+        return math.log((signal_a)/float(signal_b), 2)
 
-    def __enrichment_A(self, rpkm_a, rpkm_b):
-        return (math.log(float(rpkm_a), 2)+math.log(float(rpkm_b), 2))/2
+    def __enrichment_A(self, signal_a, signal_b, total_reads_a=1, total_reads_b=1):
+        return (math.log(float(signal_a), 2)+math.log(float(signal_b), 2))/2
 
 
     def rpkm_or_counts(self, region, use_pseudocount, total_regions, total_reads):
         if self.simple_counts:
-            rpkm_a = region.numtags(use_pseudocount)
+            signal_a = region.numtags(use_pseudocount)
         else:
             return region.rpkm(self.total_reads, self.total_regions, use_pseudocount)    
        
 
-    def enrichment(self):
-        self.total_reads_a = 0
-        self.total_reads_b = 0
-        total_1 = 0
-        total_2 = 0
+    def _calculate_MA(self, region_path, factor, read_counts, file_a_reader=None, file_b_reader=None, replica_a_reader=None):
+
+        write_header_flag = False
+
         tags_a = []
         tags_b = []
-        count_1 = 0
-        count_2 = 0
-        factor = 1
-
+        numreads_background_1 = 0
+        numreads_background_2 = 0
+        total_reads_background_1 = 0
+        total_reads_background_2 = 0
         use_pseudocount = not self.no_pseudocount
         use_replica = bool(self.replica_a_path)
+        self.use_MA = USE_MA in self.operations
+        self.regions_analyzed_count = 0
+        enrichment_result = [] #This will hold the name, start and end of the region, plus the A, M, 'M and 'A
         over = 1./sys.maxint #minimum overlap
+ 
+        out_file = open(self.current_output_path, 'wb')
+
+        if write_header_flag:
+            out_file.write('\t'.join(enrichment_keys))
+            out_file.write('\n') 
+
+        for region_line in open(region_path):
+            sline = region_line.split()
+            region_of_interest = self._region_from_sline(sline)
+            region_a = None
+            replica_a = None
+            replica_tags = None
+            signal_a = -1
+            signal_b = -1
+            signal_background_1 = -1
+            signal_background_2 = -1
+            swap1 = Region()
+            swap2 = Region()
+            if read_counts:
+                signal_a = float(sline[6])
+                signal_b = float(sline[7])*factor
+                signal_background_1 = float(sline[8])
+                signal_background_2 = float(sline[9])
+            else:
+                tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=over)
+                tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=over)
+                if use_replica:            
+                    replica_tags = replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=over)
+
+                #if we are using pseudocounts, use the union, use the intersection otherwise
+                if (use_pseudocount and (tags_a or tags_b)) or (not use_pseudocount and tags_a and tags_b): 
+                    region_a = region_of_interest.copy()
+                    region_b = region_of_interest.copy()
+                    region_a.add_tags(tags_a, clusterize=False)
+                    region_b.add_tags(tags_b, clusterize=False)
+                    if self.simple_counts:
+                        signal_a = region_a.numtags(use_pseudocount)
+                        signal_b = region_b.numtags(use_pseudocount)
+                    else:
+                        signal_a = region_a.rpkm(self.total_reads_a, self.total_regions, use_pseudocount)
+                        signal_b = region_b.rpkm(self.total_reads_b, self.total_regions, use_pseudocount)    
+
+            if not self.counts_file:
+                if (use_pseudocount and (tags_a or tags_b)) or (not use_pseudocount and tags_a and tags_b): 
+                    if use_replica:
+                        replica_a = region_of_interest.copy()
+                        replica_a.add_tags(replica_tags)
+                        numreads_background_1 = len(tags_a)
+                        numreads_background_2 = len(replica_tags)
+                        total_reads_background_1 = self.total_reads_a
+                        total_reads_background_2 = self.total_reads_replica_a
+                        signal_background_1 = signal_a
+                        if self.simple_counts:
+                            signal_background_2 = replica_a.numtags(use_pseudocount)
+                        else:
+                            signal_background_2 = replica_a.rpkm(self.total_reads_replica_a, self.total_regions, use_pseudocount)
+                    elif region_a:
+                        swap1, swap2 = region_a.swap(region_b, factor)
+                        numreads_background_1 = len(swap1.tags)
+                        numreads_background_2 = len(swap2.tags)
+                        total_reads_background_1 = total_reads_background_2 = self.average_total_reads
+                        if self.simple_counts: 
+                            signal_background_1 = swap1.numtags(use_pseudocount)
+                            signal_background_2 = swap2.numtags(use_pseudocount)                    
+                        else:                  
+                            signal_background_1 = swap1.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
+                            signal_background_2 = swap2.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
+
+            #if there is no data in the replica or in the swap and we are not using pseudocounts, dont write the data 
+            if signal_a > 0 and signal_b > 0 and signal_background_1 > 0 and signal_background_2 > 0 or self.use_MA:
+                if self.use_MA:
+                    A = float(sline[10])
+                    M = float(sline[11])
+                    A_prime = float(sline[16])
+                    M_prime = float(sline[17])
+                else:
+                    A = self.__enrichment_A(signal_a, signal_b, self.total_reads_a, self.total_reads_b)
+                    M = self.__enrichment_M(signal_a, signal_b, self.total_reads_a, self.total_reads_b)
+                    M_prime = self.__enrichment_M(signal_background_1, signal_background_2)
+                    A_prime = self.__enrichment_A(signal_background_1, signal_background_2)
+
+
+                out_file.write("%s\n"%("\t".join([region_of_interest.write().rstrip("\n"), str(signal_a), str(signal_b), str(signal_background_1), str(signal_background_2), str(A), str(M), str(self.total_reads_a), str(self.total_reads_b), str(len(tags_a)), str(len(tags_b)),  str(A_prime), str(M_prime), str(total_reads_background_1), str(total_reads_background_2), str(numreads_background_1), str(numreads_background_2)])))
+                self.regions_analyzed_count += 1
+
+
+        out_file.flush()
+        out_file.close()
+        return out_file.name
+
+    def enrichment(self):
+
+        calcular_tmm_flag = False  
+        file_a_reader = file_b_reader = replica_a_reader = None
+        total_reads_a_flag = 1691734
+        total_reads_b_flag = 1804977
+        total_reads_replica_flag = 10000000
+
+        self.total_reads_a = 1  #Neutral value for the division
+        self.total_reads_b = 1  #Neutral value for the division
+
+        #load reads from the flags
+        if total_reads_a_flag:
+            self.total_reads_a = total_reads_a_flag  
+    
+        if total_reads_b_flag:
+            self.total_reads_b = total_reads_b_flag 
+
+        if total_reads_replica_flag:
+            numreads_background_1 = total_reads_replica_flag
+
+
         msg = "Calculating enrichment in regions"
         file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
         if not self.counts_file: #TODO ultimate hack, refractor
             file_b_reader = utils.SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
-        out_file = open(self.current_output_path, 'wb')
 
-        #out_file.write('\t'.join(self.enrichment_keys))
-        #out_file.write('\n') #TODO Write the header... Do we really want this? 
         if self.counts_file: #TODO ultimate hack, refractor
             self.sorted_region_path = self.counts_file
         else:
@@ -1199,9 +1307,6 @@ class Turbomix:
                 msg = "%s using replicas..."%msg
             else:
                 msg += "%s using swap..."%msg
-                if self.weight_correction:
-                    factor = self.get_normalize_factor(self.current_control_path, self.current_experiment_path)
-                    msg +=  "... with a factor of %s"%factor
 
             self.logger.info(msg)
             if self.sorted_region_path:
@@ -1217,107 +1322,91 @@ class Turbomix:
                 self.total_reads_replica_a = sum(1 for line in open(self.replica_a_path))
             self.total_regions = sum(1 for line in open(self.sorted_region_path))
             self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2
-        enrichment_result = [] #This will hold the name, start and end of the region, plus the A, M, 'M and 'A
-        regions_analyzed_count = 0
+
+
         self.logger.info("... analyzing regions, calculating counts/rpkms, A / M and or swap...")
-        self.use_MA = USE_MA in self.operations
-        for region_line in open(self.sorted_region_path):
-            sline = region_line.split()
-            region_of_interest = self._region_from_sline(sline)
-            region_a = None
-            replica_a = None
-            replica_tags = None
-            rpkm_a = -1
-            rpkm_b = -1
-            region_rpkm = -1
-            replica_rpkm = -1
-            swap1 = Region()
-            swap2 = Region()
-            if self.counts_file:
-                rpkm_a = float(sline[6])
-                rpkm_b = float(sline[7])
-                region_rpkm = float(sline[8])
-                replica_rpkm = float(sline[9])
-            else:
-                tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=over)
-                tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=over)
-                if use_replica:            
-                    replica_tags = replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=over)
 
-                #if we are using pseudocounts, use the union, use the intersection otherwise
-                if (use_pseudocount and (tags_a or tags_b)) or (not use_pseudocount and tags_a and tags_b): 
-                    region_a = region_of_interest.copy()
-                    region_b = region_of_interest.copy()
-                    region_a.add_tags(tags_a, clusterize=False)
-                    region_b.add_tags(tags_b, clusterize=False)
-                    if self.simple_counts:
-                        rpkm_a = region_a.numtags(use_pseudocount)
-                        rpkm_b = region_b.numtags(use_pseudocount)
-                    else:
-                        rpkm_a = region_a.rpkm(self.total_reads_a, self.total_regions, use_pseudocount)
-                        rpkm_b = region_b.rpkm(self.total_reads_b, self.total_regions, use_pseudocount)    
+        out_path = self._calculate_MA(self.sorted_region_path, 1, self.counts_file, file_a_reader, file_b_reader, replica_a_reader)
+     
+        if calcular_tmm_flag:
+            tmm_factor = self.tmm_factor(out_path, self.regions_analyzed_count)
+            #move output file to old output
+            #use as input
+            old_output = '%s/notnormalized_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
+            shutil.move(os.path.abspath(self.current_output_path), old_output)
+            out_path = self._calculate_MA(old_output, tmm_factor, True) #recalculate with the new factor, using the counts again
 
-            if not self.counts_file:
-                if (use_pseudocount and (tags_a or tags_b)) or (not use_pseudocount and tags_a and tags_b): 
-                    if use_replica:
-                        replica_a = region_of_interest.copy()
-                        replica_a.add_tags(replica_tags)
-                        count_1 = len(tags_a)
-                        count_2 = len(replica_tags)
-                        total_1 = self.total_reads_a
-                        total_2 = self.total_reads_replica_a
-                        region_rpkm = rpkm_a
-                        if self.simple_counts:
-                            replica_rpkm = replica_a.numtags(use_pseudocount)
-                        else:
-                            replica_rpkm = replica_a.rpkm(self.total_reads_replica_a, self.total_regions, use_pseudocount)
-                    elif region_a:
-                        swap1, swap2 = region_a.swap(region_b, factor)
-                        count_1 = len(swap1.tags)
-                        count_2 = len(swap2.tags)
-                        total_1 = total_2 = self.average_total_reads
-                        if self.simple_counts: 
-                            region_rpkm = swap1.numtags(use_pseudocount)
-                            replica_rpkm = swap2.numtags(use_pseudocount)                    
-                        else:                  
-                            region_rpkm = swap1.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
-                            replica_rpkm = swap2.rpkm(self.average_total_reads, self.total_regions, use_pseudocount)
-
-            #if there is no data in the replica or in the swap and we are not using pseudocounts, dont write the data 
-            if rpkm_a > 0 and rpkm_b > 0 and region_rpkm > 0 and replica_rpkm > 0 or self.use_MA:
-                if self.use_MA:
-                    A = float(sline[10])
-                    M = float(sline[11])
-                    A_prime = float(sline[16])
-                    M_prime = float(sline[17])
-                else:
-                    A = self.__enrichment_A(rpkm_a, rpkm_b)
-                    M = self.__enrichment_M(rpkm_a, rpkm_b)
-                    M_prime = self.__enrichment_M(region_rpkm, replica_rpkm)
-                    A_prime = self.__enrichment_A(region_rpkm, replica_rpkm)
-                out_file.write("%s\n"%("\t".join([region_of_interest.write().rstrip("\n"), str(rpkm_a), str(rpkm_b), str(region_rpkm), str(replica_rpkm), str(A), str(M), str(self.total_reads_a), str(self.total_reads_b), str(len(tags_a)), str(len(tags_b)),  str(A_prime), str(M_prime), str(total_1), str(total_2), str(count_1), str(count_2)])))
-                regions_analyzed_count += 1
-
-        out_file.flush()
-        out_file.close()
-        self.logger.info("%s regions analyzed."%regions_analyzed_count)
+        self.logger.info("%s regions analyzed."%self.regions_analyzed_count)
         self.logger.info("Enrichment result saved to %s"%self.current_output_path)
-        return out_file.name 
+        return out_path
+
+
+    def _sub_tmm(self, counts_a, counts_b, total_a, total_b):
+        return (counts_a-total_a)/(counts_a*total_a) + (counts_b-total_b)/(counts_b*total_b)
     
 
-    def __load_enrichment_result(self, lines):
+    def tmm_factor(self, file_counts, total_regions):
+
+        a_trim_flag = 0.05
+        m_trim_flag = 0.224
+        values_list = []
+        #read the file inside the values_list
+        for line in open(file_counts):
+            sline = line.split()
+            values_list.append(dict(zip(enrichment_keys, sline)))
+
+        a_trim_number = int(round(total_regions*a_trim_flag))
+        #discard the bad A
+        self.logger.debug("Removing the worst A (%s regions, %s percent)"%(a_trim_number, a_trim_flag*100))
+
+        values_list.sort(key=lambda x:x["A"]) #sort by A
+        for i in range (0, a_trim_number):
+            values_list.pop(0)
+
+        values_list.sort(key=lambda x:abs(float((x["M"])))) #sort by M
+        m_trim_number = int(round(total_regions*(m_trim_flag))) #this number is half the value of the flag, because we will trim half below, and half over 
+        self.logger.debug("Removing the worst M on the left(%s regions, %s percent)"%(m_trim_number, (m_trim_flag)*100))
+
+        for i in range(0, m_trim_number):
+            values_list.pop(-1)
+
+        #now calculate the normalization factor
+        arriba = 0
+        abajo = 0
+        
+        if not self.total_reads_a or not self.total_reads_b:
+            total_a = 1
+            total_b = 1
+        else:
+            total_a = self.total_reads_a
+            total_b = self.total_reads_b
+
+
+        print total_a, total_b
+        for value in values_list:
+            w = self._sub_tmm(float(value["signal_a"]), float(value["signal_b"]), total_a, total_b)
+            arriba += w*float(value["M"])
+            abajo += w
+
+ 
+        factor = 2**(arriba/abajo)
+        self.logger.info("TMM Normalization Factor: %s"%factor)
+        return factor
+
+    def __load_enrichment_result(self, values_path):
         ret = []
-        for line in lines:
+        for line in open(values_path):
             sline = line.split()
             try:
                 float(sline[1])
-                ret.append(dict(zip(self.enrichment_keys, sline)))
+                ret.append(dict(zip(enrichment_keys, sline)))
             except ValueError:
                 pass
 
-        return ret  
+        return ret        
+    
 
-    def calculate_zscore(self, values_path):
+    def calculate_zscore(self, values_path): 
         num_regions = sum(1 for line in open(values_path))
         bin_size = int(self.binsize*num_regions)
         if bin_size < 50:
@@ -1327,81 +1416,74 @@ class Turbomix:
         bin_step = max(1, int(self.bin_step*num_regions))
         self.logger.info("Enrichment window calculation using a sliding window size of %s, sliding with a step of %s"%(bin_size, bin_step))
         self.logger.info("... calculating zscore...")
+        enrichment_result = self.__load_enrichment_result(values_path)
+        enrichment_result.sort(key= lambda x:(float(x["A_prime"])))
+        self.points = []
+        #get the standard deviations
+        for i in range(0, num_regions-bin_size+bin_step, bin_step):
+            #get the slice
+            if i+bin_size < num_regions:
+                result_chunk = enrichment_result[i:i+bin_size] 
+            else:
+                result_chunk = enrichment_result[i:]  #last chunk
 
-        sorter = utils.BigSort('bed', False, 0, 'zscore_sorter%s'%os.getpid(), logger=self.logger, filter_chunks=False)
+            #retrieve the values
+            mean_acum = 0
+            a_acum = 0
+            Ms_replica = []
+            for entry in result_chunk:
+                mean_acum += float(entry["M_prime"])
+                a_acum += float(entry["A_prime"])
+                Ms_replica.append(float(entry["M_prime"]))
 
-        aprime_sorted = sorter.sort(values_path, None, lambda line:(float(line.split()[16]))) #sort by A prime
+            #add them to the points of mean and sd
+            mean = mean_acum/len(result_chunk)
+            sd = (sum((x - mean)**2 for x in Ms_replica))/len(Ms_replica) 
 
+            A_median = a_acum / len(result_chunk)
+            self.points.append([A_median, mean, sd]) #The A asigned to the window, the mean and the standard deviation  
+            self.logger.debug("Window of %s length, with A median: %s mean: %s sd: %s"%(len(result_chunk), self.points[-1][0], self.points[-1][1], self.points[-1][2]))  
+
+        #update z scores
+        for entry in enrichment_result:
+            entry["A_median"] = 0
+            entry["mean"] = 0
+            entry["sd"] = 0
+            entry["zscore"] = 0
+            closest_A = sys.maxint
+            sd_position = 0
+            for i in range(0, len(self.points)):
+                new_A = self.points[i][0]
+                if new_A != closest_A: #skip repeated points
+                    if abs(closest_A - float(entry["A"])) >= abs(new_A - float(entry["A"])):
+                        closest_A = new_A
+                        sd_position = i
+                    else:
+                        break #already found, no need to go further since the points are ordered
+                        
+            entry["A_median"] = closest_A
+            if self.points: #only calculate if there where enough windows, otherwise give a warning
+                self.__sub_zscore(entry, self.points[sd_position]) #the value is the biggest, use the last break
+
+        
+        if not self.points: 
+            self.logger.warning("Insufficient number of regions analyzed (%s), z-score values could not be calculated"%num_regions)
+
+        enrichment_result.sort(key=lambda x:(x["name"], int(x["start"]), int(x["end"])))
         old_file_path = '%s/before_zscore_%s'%(self._current_directory(), os.path.basename(values_path)) #create path for the outdated file
         shutil.move(os.path.abspath(values_path), old_file_path) #move the file
-        new_file = open(values_path, 'w') #open a new file in the now empty file space
+        new_file = file(values_path, 'w') #open a new file in the now empty file space     
+        for entry in enrichment_result:    
+            new_file.write("\t".join(str(entry[key]) for key in enrichment_keys)+"\n")
 
-        result_chunk = []
-        self.points = []
-        #get the standard deviations range(0, num_regions-bin_size+bin_step, bin_step)
-        for line in aprime_sorted:
-            #print line.split()[16]
-            result_chunk.append(dict(zip(self.enrichment_keys, line.split()))) #add the line to the result_chunk
-            if len(result_chunk) > bin_size: # if the result chunk is smaller than the bin_size, remove oldest item
-                entry = result_chunk.pop(0)
-                new_file.write("\t".join(str(entry[key]) for key in self.enrichment_keys)+"\n")
-
-            if len(result_chunk) == bin_size: #we have the size of the bin: operate
-                #retrieve the values
-                mean_acum = 0
-                a_acum = 0
-                Ms_replica = []
-                for entry in result_chunk:
-                    mean_acum += float(entry["M_prime"])
-                    a_acum += float(entry["A_prime"])
-                    Ms_replica.append(float(entry["M_prime"]))
-
-                #add them to the points of mean and sd
-                mean = mean_acum/len(result_chunk)
-                sd = (sum((x - mean)**2 for x in Ms_replica))/len(Ms_replica) 
-
-                A_median = a_acum / len(result_chunk)
-                self.points.append([A_median, mean, sd]) #The A asigned to the window, the mean and the standard deviation  
-
-                self.logger.debug("Window of %s length, with A median: %s mean: %s sd: %s"%(len(result_chunk), self.points[-1][0], self.points[-1][1], self.points[-1][2])) 
-
-                #update z scores
-                for entry in result_chunk:
-                    entry["A_median"] = 0
-                    entry["mean"] = 0
-                    entry["sd"] = 0
-                    entry["zscore"] = 0
-                    closest_A = sys.maxint
-                    sd_position = 0
-                    for i in range(0, len(self.points)):
-                        new_A = self.points[i][0]
-                        if new_A != closest_A: #skip repeated points
-                            if abs(closest_A - float(entry["A"])) >= abs(new_A - float(entry["A"])):
-                                closest_A = new_A
-                                sd_position = i
-                            else:
-                                break #already found, no need to go further since the points are ordered
-                                
-                    entry["A_median"] = closest_A
-                    self.__sub_zscore(entry, self.points[sd_position]) #the value is the biggest, use the last break
-
-        #'10.0236456021'
-        for entry in result_chunk: # the last entries
-            #print entry
-            new_file.write("\t".join(str(entry[key]) for key in self.enrichment_keys)+"\n")
-        new_file.flush()
-        self._manage_temp_file(aprime_sorted.name)
         self._manage_temp_file(old_file_path)
-        result_file = sorter.sort(new_file.name, None, lambda x:(x.split()[0], int(x.split()[1]), int(x.split()[2]))) #sort by chr, start, end
-
-        return result_file.name
+        return values_path
 
 
     def __sub_zscore(self, entry, point):
         entry["mean"] = str(point[1])
         entry["sd"] = str(point[2])
         entry["zscore"] = str(self.get_zscore(float(entry["M"]), float(entry["mean"]), self.sdfold*float(entry["sd"])))
-
 
 
     def _save_figure(self, figure_name):

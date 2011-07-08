@@ -13,6 +13,11 @@ WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
 READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM) #formats that we actually can read as
 WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
 
+#Enrichment header
+enrichment_keys  = ['name', 'start', 'end', 'name2', 'score', 'strand', 'signal_a', 'signal_b', 'rpkm_prime_a', 'rpkm_prime_b',
+                    'A','M','total_reads_a','total_reads_b','num_tags_a','num_tags_b','A_prime','M_prime',
+                    'total_reads_a','total_reads_b','total_reads_background_1','total_reads_background_2', 'A_median', 'mean', 'sd', 'zscore']
+
 
 #Default values for parser
 EXPERIMENT = OUTPUT = CONTROL = COUNTS_FILE = REGION = MASKER_FILE = '' #files
@@ -35,12 +40,12 @@ HEIGHT_LIMIT=400
 CORRECTION=1.
 NO_SUBTRACT = False
 DO_NORMALIZE = False
-SPLIT_PROPORTION=0.9
+SPLIT_PROPORTION=0.1
 SPLIT_ABSOLUTE=0
 TRIM_PROPORTION=0.3
 OPEN_CONTROL=False
 NO_SORT=False
-DUPLICATES=3
+DUPLICATES=0
 THRESHOLD=0
 TRIM_ABSOLUTE=0
 MAX_DELTA=500
@@ -89,7 +94,7 @@ FILTER = 'filter'
 POISSON = 'poisson'
 NOWRITE = 'nowrite'
 DISCARD_ARTIFACTS = 'discard'
-REMOVE_REGION = 'remove'
+REMOVE_REGION = 'remove_regions'
 REMOVE_DUPLICATES = 'remove_duplicates'
 MODFDR = 'modfdr'
 STRAND_CORRELATION = 'strand_correlation'
