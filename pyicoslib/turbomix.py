@@ -1168,7 +1168,7 @@ class Turbomix:
     def _calculate_MA(self, region_path, factor, read_counts, file_a_reader=None, file_b_reader=None, replica_a_reader=None):
 
         write_header_flag = False
-
+        use_replica = bool(self.replica_a_path)
         tags_a = []
         tags_b = []
         numreads_background_1 = 0
@@ -1176,7 +1176,7 @@ class Turbomix:
         total_reads_background_1 = 0
         total_reads_background_2 = 0
         use_pseudocount = not self.no_pseudocount
-        use_replica = bool(self.replica_a_path)
+
         self.use_MA = USE_MA in self.operations
         self.regions_analyzed_count = 0
         enrichment_result = [] #This will hold the name, start and end of the region, plus the A, M, 'M and 'A
@@ -1279,7 +1279,7 @@ class Turbomix:
         total_reads_a_flag = 1691734
         total_reads_b_flag = 1804977
         total_reads_replica_flag = 10000000
-
+        use_replica = bool(self.replica_a_path)
         self.total_reads_a = 1  #Neutral value for the division
         self.total_reads_b = 1  #Neutral value for the division
 
