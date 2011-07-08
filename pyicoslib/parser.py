@@ -14,13 +14,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import sys
+import os
 
 from lib import argparse
 import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from defaults import *
 
-__version__ = '0.9.9.2'
+__version__ = '0.9.9.4'
 
 class PicosParser:
     def config_section_map(self, section, config_file):
@@ -36,6 +37,13 @@ class PicosParser:
                 dict1[option] = None
         return dict1
 
+    def _file_exists(self, path):
+        if path:
+            if not os.path.exists(path):
+                print
+                print "Pyicos couldn't find the following file or directory: %s"%path
+                print
+                sys.exit(1)       
 
     def validate(self, args):
         if args.binsize < 0 or args.binsize > 1:
@@ -45,6 +53,13 @@ class PicosParser:
         if args.poisson_test not in POISSON_OPTIONS:
             print "\n%s is not a valid pyicos poisson test. Please use one of the following: %s"%(args.poisson_test, POISSON_OPTIONS)
             sys.exit(1)
+
+        self._file_exists(args.experiment)
+        self._file_exists(args.experiment_b)
+        self._file_exists(args.region)
+        self._file_exists(args.control)
+        self._file_exists(args.replica_a)
+
 
     def new_subparser(self, *args):
         return argparse.ArgumentParser(add_help=False)
@@ -291,12 +306,12 @@ class PicosParser:
         subparsers.add_parser('enrichcount', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using rpkm count files', parents=[counts_file, basic_parser, output_flags, replica_a, region_format, output, enrichment_flags, zscore])
 
         #enrichment operation
-        subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using mapped reads files', parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, optional_region, region_format, output, enrichment_flags, zscore])
+        subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using mapped reads files. Pyicos output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, optional_region, region_format, output, enrichment_flags, zscore])
         #replica_b,
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
 
-        subparsers.add_parser('plot', help="(UNDER DEVELOPMENT) Plot a file with pyicos plotting utilities. Requires matplotlib 0.9.7 installed.", parents=[basic_parser, plot_path, output, zscore])
+        subparsers.add_parser('plot', help="(UNDER DEVELOPMENT) Plot a file with pyicos plotting utilities. Requires matplotlib >=0.9.7 installed.", parents=[basic_parser, plot_path, output, zscore])
 
         #whole exposure
         subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
