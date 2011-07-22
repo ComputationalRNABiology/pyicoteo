@@ -5,6 +5,8 @@ from pyicoslib.parser import PicosParser
 Sometimes it may be useful to have an ArgumentParser parse args other than those of sys.argv. 
 This can be accomplished by passing a list of strings to parse_args. This is useful for testing at the interactive prompt:
 
+
+
 >>> parser = argparse.ArgumentParser()
 >>> parser.add_argument(
 ...     'integers', metavar='int', type=int, choices=xrange(10),
@@ -12,6 +14,9 @@ This can be accomplished by passing a list of strings to parse_args. This is use
 >>> parser.add_argument(
 ...     '--sum', dest='accumulate', action='store_const', const=sum,
 ...   default=max, help='sum the integers (default: find the max)')
+
+
+
 >>> parser.parse_args(['1', '2', '3', '4'])
 Namespace(accumulate=<built-in function max>, integers=[1, 2, 3, 4])
 >>> parser.parse_args('1 2 3 4 --sum'.split())
@@ -37,6 +42,8 @@ class TestParser(unittest.TestCase):
             self.fail('unexpected exception: %s' % e)
         else:
             self.fail('SystemExit exception expected')
+
+        
 
 def suite():
     suite = unittest.TestSuite()
