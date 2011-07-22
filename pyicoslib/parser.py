@@ -21,9 +21,21 @@ import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from defaults import *
 
-__version__ = '0.9.9.4'
+__version__ = '1.0.1'
 
 class PicosParser:
+
+    def _big_warning(self, message):
+        print
+        print "**************************************WARNING*********************************WARNING**************************************************************"
+        print message
+        print "**************************************WARNING*********************************WARNING**************************************************************"
+        print        
+   
+    def _error_exit(self, message):
+        print ("\nERROR: %s")%message
+        sys.exit(1)     
+
     def config_section_map(self, section, config_file):
         dict1 = {}
         options = config_file.options(section)
@@ -45,21 +57,28 @@ class PicosParser:
                 print
                 sys.exit(1)       
 
+    def validate_operations(self, args, turbomix):
+        if MODFDR in turbomix.operations and args.output_format != SPK:
+            self._big_warning('You are using the ModFDR without a stranded format as output. This means that the strand information will be ignored. If you want to include the strand information, please consider using the --output-format bed_spk flag to get the output in bed spk stranded format')
+
     def validate(self, args):
         if args.binsize < 0 or args.binsize > 1:
-            print "\nBinsize is a ratio, it should be between 0 and 1"
-            sys.exit(1)
+            self._error_exit("Binsize is a ratio, it should be between 0 and 1")
 
         if args.poisson_test not in POISSON_OPTIONS:
-            print "\n%s is not a valid pyicos poisson test. Please use one of the following: %s"%(args.poisson_test, POISSON_OPTIONS)
-            sys.exit(1)
+            self._error_exit("%s is not a valid pyicos poisson test. Please use one of the following: %s"%(args.poisson_test, POISSON_OPTIONS))
+
+        if args.output_format == WIG and args.open_output == False:
+            self._big_warning('You chose as output format a WIG + closed file. This will not be visible in the UCSC genome browser. Please consider adding the --open-output flag if you are intending to use the UCSC browser with it.')
+
+        if args.N_norm == True and args.simple_counts == False:
+            self._error_exit("The normalization by number of reads --N-norm should only be used in combination of --simple-counts")
 
         self._file_exists(args.experiment)
         self._file_exists(args.experiment_b)
         self._file_exists(args.region)
         self._file_exists(args.control)
         self._file_exists(args.replica_a)
-
 
     def new_subparser(self, *args):
         return argparse.ArgumentParser(add_help=False)
@@ -97,7 +116,7 @@ class PicosParser:
         control = self.new_subparser()
         control.add_argument('control', help='The control file or directory')
         control_format = self.new_subparser()
-        control_format.add_argument('--control-format', default=CONTROL_FORMAT, help='The format the control file is written as. [default %(default)s]')
+        control_format.add_argument('--control-format', default=CONTROL_FORMAT, help='The format the control file is written as. [default: The same as experiment format]')
 
         optional_control = self.new_subparser()
         optional_control.add_argument('--control', help='The control file or directory')
@@ -152,11 +171,17 @@ class PicosParser:
         enrichment_flags.add_argument('--recalculate', action='store_true', default=RECALCULATE, help="Recalculate the z-score when plotting. Useful for doing different plots with 'pyicos plot' [Default %(default)s]")    
         enrichment_flags.add_argument('--mintags', type=float, default=REGION_MINTAGS, help="Number of tags (of the union of the experiment and experiment_b datasets) for a region to qualify to be analyzed. [Default %(default)s]") 
         enrichment_flags.add_argument('--binstep', type=float, default=WINDOW_STEP, help="Step of the sliding window for the calculation of the z-score, as a ratio of total number or regions. [Default %(default)s]")  
+        enrichment_flags.add_argument('--tmm-norm', action='store_true', default=TMM_NORM, help="Trimming the extreme A and M to correct the dataset for the differences in read density between samples. [Default %(default)s]")
+        enrichment_flags.add_argument('--N-norm', action='store_true', default=N_NORM, help="Divide the values of A and M by the total number of reads.")
+        enrichment_flags.add_argument('--skip-header', action='store_true', default=SKIP_HEADER, help="Skip the writing of the header for the output in the counts enrichment file. [Default %(default)s]")
 
-        enrichment_flags.add_argument('--weight-correction', action='store_true', default=WEIGHT_CORRECTION, help="Correct the background distribution taking into consideration the difference on number of reads between samples. [Default %(default)s]")
+        enrichment_flags.add_argument('--total-reads-a', type=int, default=0, help="To manually set how many reads the dataset in 'experiment' has. If not used, it will be counted from the read or counts file. Default (automatically calculated from reads or counts files)")
+        enrichment_flags.add_argument('--total-reads-b', type=int, default=0, help="To manually set how many reads the dataset in 'experiment_b' has. If not used, it will be counted from the read or counts file. Default (automatically calculated from reads or counts files)")
+        enrichment_flags.add_argument('--total-reads-replica', type=int, default=0, help="To manually set how many reads the dataset in 'experiment_replica_a' has. If not used, it will be calculated from the read or the counts file. Default %(default)s (not used)")
 
-        
-        
+        enrichment_flags.add_argument('--a-trim', type=float, default=A_TRIM, help="Proportion of A values to be discarded when doing the TMM normalization. Only applied when combined with --tmm-norm. [Default %(default)s]")
+        enrichment_flags.add_argument('--m-trim', type=float, default=M_TRIM, help="Proportion of M values to be discarded when doing the TMM normalization. Only applied when combined with --tmm-norm. [Default %(default)s]")
+
         zscore = self.new_subparser()  
         zscore.add_argument('--zscore', type=float, default=ZSCORE, help="Significant Z-score value. [Default %(default)s]")        
 
@@ -307,7 +332,9 @@ class PicosParser:
 
         #enrichment operation
         subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using mapped reads files. Pyicos output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, optional_region, region_format, output, enrichment_flags, zscore])
+
         #replica_b,
+
         #protocol reading
         subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
 
@@ -330,11 +357,10 @@ class PicosParser:
                             remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS,
                             proximity=PROXIMITY, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
                             label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, 
-                            counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, weight_correction=WEIGHT_CORRECTION)
+                            counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, tmm_norm=TMM_NORM, N_norm=N_NORM, skip_header=SKIP_HEADER,  
+                            total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM)
 
         args = parser.parse_args()
-
-        self.validate(args)
 
         #Add any parameters found in the config file. Override them with anything found in the args later
         if sys.argv[1] == 'protocol':
@@ -368,10 +394,12 @@ class PicosParser:
                         print 'ERROR: There is an error in your protocol file.  "%s" is not a Pyicos parameter'%key
                         sys.exit(0)
 
+        self.validate(args)
 
         if not args.control_format: #If not specified, the control format is equal to the experiment format
             args.control_format = args.experiment_format
             args.open_control = args.open_experiment
+
 
         turbomix = Turbomix(args.experiment, args.output, args.experiment_format, args.output_format, args.label, args.open_experiment, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.remlabels, args.control, args.control_format, args.open_control, args.region,
@@ -380,7 +408,8 @@ class PicosParser:
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
                             args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, 
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.no_pseudocount, args.simple_counts, args.label1, 
-                            args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, args.weight_correction)
+                            args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, 
+                            args.tmm_norm, args.N_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
@@ -448,10 +477,9 @@ class PicosParser:
                 turbomix.operations.append(DISCARD_ARTIFACTS)
             if args.blacklist:
                 turbomix.operations.append(REMOVE_REGION)
-            if args.control:
+            if args.control and not args.no_subtract:
                 turbomix.operations.append(NORMALIZE)
-                if not args.no_subtract:
-                    turbomix.operations.append(SUBTRACT)
+                turbomix.operations.append(SUBTRACT)
 
         elif sys.argv[1] == 'plot':
             turbomix.operations = [PLOT, NOWRITE]      
@@ -470,6 +498,7 @@ class PicosParser:
             if args.remregions: turbomix.operations.append(REMOVE_REGION)
             if args.remartifacts: turbomix.operations.append(DISCARD_ARTIFACTS)
 
+        self.validate_operations(args, turbomix)
         #parameters are set, now try running
         try:
             turbomix.run()
@@ -482,11 +511,7 @@ class PicosParser:
                raise
             else:
                 print 'Operation Failed.'
-        """except IOError as error:
-            if args.debug:
-                raise
-            else:            
-                print error""" #Not compatible with python 2.5
+
         
 
 

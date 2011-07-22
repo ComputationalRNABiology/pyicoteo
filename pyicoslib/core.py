@@ -1196,8 +1196,9 @@ class Cluster(AbstractCore):
 
     def _flush_tag_cache(self):
         """
-        Joins all reads in levels. Assumes that the tags were sorted (TODO: Is there a FAST way of detecting if they are sorted, so we could sort them if neccesary?)
+        Joins all reads in levels. Assumes that the tags were sorted 
         """
+        #TODO: Is there a FAST way of detecting if they are sorted, so we could sort them if neccesary?
         array_ends = []
         self._numends = 0 #The number of ends is not equivalent to len(array_ends) since its compressed
         previous_start = -1
