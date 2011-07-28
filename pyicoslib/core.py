@@ -136,6 +136,8 @@ class ReaderFactory:
             return ElandReader(format, half_open, cached)
         elif format == SAM:
             return SamReader(format, half_open, cached)
+        elif format == COUNTS:
+            return None
         else:
             raise ConversionNotSupported
 
@@ -380,6 +382,8 @@ class WriterFactory:
             return PkWriter(format, half_open, span)
         elif format == SAM:
             return SamWriter(format, half_open, span)
+        elif format == COUNTS:
+            None
         else:
             raise ConversionNotSupported
 
@@ -1355,6 +1359,21 @@ class Region(AbstractCore):
             pseudo = 1
         return (1e9*float(len(self.tags)+pseudo))/(len(self)*(total_regions_analyzed+total_reads))
 
+    def normalized_counts(self, region_norm=False, total_n_norm=False, regions_analyzed=0, pseudocount=False, tmm_factor = 1, total_reads = 1):
+        counts = float(len(self.tags))      
+        if pseudocount:
+            counts += 1    
+        else:
+            total_regions_analyzed = 0 #because we add 1 pseudocount per region, so we have to increase N by num-regions. If pseudocounts not are used, there is no need for this count
+        
+        if region_norm: #read per kilobase in region
+            counts = 1e3*(counts/len(self))
+
+        if total_n_norm: #per million reads in the sample
+            counts = 1e6*(counts/(regions_analyzed+total_reads))
+
+        return counts*tmm_factor
+
 
     def numtags(self, pseudocount=False):
         """Returns the number of reads in the region, gives the possibility of returning +1 reads if pseudocounts are being used"""
@@ -1370,6 +1389,7 @@ class Region(AbstractCore):
                 swap1.add_tags(tag)
             else:
                 swap2.add_tags(tag)
+
 
     def swap(self, region_b, ratio=1):
         "Given 2 regions, return 2 new regions with the reads of both regions mixed aleatoriely"
@@ -1406,7 +1426,9 @@ class Region(AbstractCore):
         new_region.name2 = self.name2
         new_region.logger = self.logger
         new_region.tags = []
-        new_region.tags.append(tag for tag in self.tags)
+        for tag in self.tags:   
+            new_region.tags.append(tag)
+
         new_region.clusters = []
         new_region.clusters.append(cluster for cluster in self.clusters)
         new_region.strand = self.strand
@@ -1555,7 +1577,6 @@ class Region(AbstractCore):
         self.clusterize()
 
     def _sub_add_tag(self, tag):
-
         if not self.strand or tag.strand == self.strand:
             self.tags.append(tag)
         
@@ -1577,6 +1598,9 @@ class Region(AbstractCore):
         if clusterize:
             self.clusterize()
         if self.logger: self.logger.debug("ADDING: Done Clustering")
+
+
+
 
     def clusterize(self):
         """Creates the Cluster objects of the tags in the Region object"""
@@ -1604,19 +1628,6 @@ class Region(AbstractCore):
                         if self.logger: self.logger.error("\t".join(["Error in clustering of Region Object:", self.tags[i].write_line(), self.tags[i].reader.format, self.tags[i].writer.format, self.clusters[-1].reader.format]))
                         raise
 
-            """
-            WHY U NO CLUSTERIZE WITH CACHE
-            for i in xrange(0, len(self.tags)):
-                if not self.tags[i].is_empty():
-                    if not self.clusters[-1].touches(self.tags[i]) > 0 and not self.clusters[-1].is_empty():
-                        self.clusters.append(Cluster(read=BED, cached=self.cached)) #create a new cluster object
-                    try:
-                        if self.clusters[-1].is_empty():
-                            self.clusters[-1] = self.tags[i].copy_cluster()
-                        else:
-                            self.clusters[-1] += self.tags[i]
-            """
-
 
     def percentage_covered(self):
         """Returns the percentage of the region covered by tags"""
@@ -1633,10 +1644,7 @@ class Region(AbstractCore):
 
     def get_metacluster(self):
         """Returns a cluster object that contains the levels of all previous clusters combined, with gaps (zeros) between them"""
-        #print "META", self.clusters
-
         if self.clusters:
-            #print "META", self.clusters[0]._tag_cache, self.clusters[0]._levels
             if self.logger: self.logger.debug("METACLUSTER: Get metacluster...")
             if self.clusters[0]._tag_cache:
                 self.clusters[0]._flush_tag_cache()

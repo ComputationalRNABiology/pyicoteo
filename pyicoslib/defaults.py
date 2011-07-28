@@ -8,13 +8,14 @@ FIXED_WIG = 'fixed_wig'
 PK = 'bed_pk'
 SPK = 'bed_spk'
 SAM = 'sam'
+COUNTS = 'counts'
 CLUSTER_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG, PK, SPK)
 WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
-READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM) #formats that we actually can read as
+READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM, COUNTS) #formats that we actually can read as
 WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
 
 #Enrichment header
-enrichment_keys  = ['name', 'start', 'end', 'name2', 'score', 'strand', 'signal_a', 'signal_b', 'rpkm_prime_a', 'rpkm_prime_b',
+enrichment_keys  = ['name', 'start', 'end', 'name2', 'score', 'strand', 'signal_a', 'signal_b', 'signal_prime_1', 'signal_prime_2',
                     'A','M','total_reads_a','total_reads_b','num_tags_a','num_tags_b','A_prime','M_prime',
                     'total_reads_a','total_reads_b','total_reads_background_1','total_reads_background_2', 'A_median', 'mean', 'sd', 'zscore']
 
@@ -65,8 +66,6 @@ PROXIMITY=50
 POSTSCRIPT=False
 SHOWPLOTS=False
 PLOT_PATH=None
-NOPSEUDOCOUNT=False
-SIMPLECOUNTS=False
 LABEL1=""
 LABEL2=""
 BINSIZE=0.3
@@ -75,8 +74,12 @@ SDFOLD = 1
 BLACKLIST=None
 RECALCULATE=False
 REGION_MINTAGS = 6
-WINDOW_STEP = 0.01
+WINDOW_STEP = 10
 POISSON_OPTIONS=("height", "numtags", "length")
+
+#Enrichment
+PSEUDOCOUNT=False
+LEN_NORM=False
 TMM_NORM=False
 N_NORM=False
 SKIP_HEADER=False

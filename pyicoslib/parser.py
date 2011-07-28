@@ -65,14 +65,16 @@ class PicosParser:
         if args.binsize < 0 or args.binsize > 1:
             self._error_exit("Binsize is a ratio, it should be between 0 and 1")
 
+        if args.binstep < 1:
+            self._error_exit("The window step has to be bigger than 1")
+
         if args.poisson_test not in POISSON_OPTIONS:
             self._error_exit("%s is not a valid pyicos poisson test. Please use one of the following: %s"%(args.poisson_test, POISSON_OPTIONS))
 
         if args.output_format == WIG and args.open_output == False:
-            self._big_warning('You chose as output format a WIG + closed file. This will not be visible in the UCSC genome browser. Please consider adding the --open-output flag if you are intending to use the UCSC browser with it.')
+            self._big_warning('You chose as output format a WIG closed file. This will not be visible in the UCSC genome browser. Please consider adding the --open-output flag if you are intending to use the UCSC browser with it.')
 
-        if args.N_norm == True and args.simple_counts == False:
-            self._error_exit("The normalization by number of reads --N-norm should only be used in combination of --simple-counts")
+        
 
         self._file_exists(args.experiment)
         self._file_exists(args.experiment_b)
@@ -80,8 +82,10 @@ class PicosParser:
         self._file_exists(args.control)
         self._file_exists(args.replica_a)
 
+
     def new_subparser(self, *args):
         return argparse.ArgumentParser(add_help=False)
+
 
     def create_parser(self):
         read_formats = str(READ_FORMATS)
@@ -161,18 +165,20 @@ class PicosParser:
         region_format.add_argument('--region-format',default=REGION_FORMAT, help='The format the region file is written as. [default %(default)s]')
         region_format.add_argument('--open-region', action='store_true', default=OPEN_REGION, help='Define if the region file is half-open or closed notation. [Default closed]')
 
+        #enrichment flags
         enrichment_flags = self.new_subparser()
         enrichment_flags.add_argument('--stranded', action='store_true', default=STRANDED_ANALYSIS, help="Decide if the strand is taken into consideration for the analysis. This requires a region file in bed format with the strand information in its 6th column.")
         enrichment_flags.add_argument('--proximity', default=PROXIMITY, type=int, help="Determines if two regions calculated automatically are close enough to be clustered. Default %(default)s nt")
-        enrichment_flags.add_argument('--no-pseudocount', action='store_true', default=NOPSEUDOCOUNT, help="The usage of pseudocounts in the enrichment calculation allows the inclusion of regions that have n reads in one dataset and 0 reads in the other.  [Default %(default)s]")
-        enrichment_flags.add_argument('--simple-counts', action='store_true', default=SIMPLECOUNTS, help="To calculate densities, RPKM values are used by default. This flag changes the calculation to simple read counts. [Default %(default)s]")
         enrichment_flags.add_argument('--binsize', type=float, default=BINSIZE, help="The size of the bins to calculate the local sd and mean for the background model, as a ratio of total number or regions. [Default %(default)s]")        
         enrichment_flags.add_argument('--sdfold', type=float, default=SDFOLD, help="The standard deviation fold used to generate the background model. [Default %(default)s]")  
         enrichment_flags.add_argument('--recalculate', action='store_true', default=RECALCULATE, help="Recalculate the z-score when plotting. Useful for doing different plots with 'pyicos plot' [Default %(default)s]")    
         enrichment_flags.add_argument('--mintags', type=float, default=REGION_MINTAGS, help="Number of tags (of the union of the experiment and experiment_b datasets) for a region to qualify to be analyzed. [Default %(default)s]") 
-        enrichment_flags.add_argument('--binstep', type=float, default=WINDOW_STEP, help="Step of the sliding window for the calculation of the z-score, as a ratio of total number or regions. [Default %(default)s]")  
+        enrichment_flags.add_argument('--binstep', type=int, default=WINDOW_STEP, help="Step of the sliding window for the calculation of the z-score, increase if you have too many regions to increase performance. [Default %(default)s]")  
+
+
         enrichment_flags.add_argument('--tmm-norm', action='store_true', default=TMM_NORM, help="Trimming the extreme A and M to correct the dataset for the differences in read density between samples. [Default %(default)s]")
-        enrichment_flags.add_argument('--N-norm', action='store_true', default=N_NORM, help="Divide the values of A and M by the total number of reads.")
+        enrichment_flags.add_argument('--n-norm', action='store_true', default=N_NORM, help="Divide the read counts by the total number of reads (units of million reads)")
+        enrichment_flags.add_argument('--len-norm', action='store_true', default=LEN_NORM, help="Divide the read counts by region (gene, transcript...) length (reads per kilobase units)")
         enrichment_flags.add_argument('--skip-header', action='store_true', default=SKIP_HEADER, help="Skip the writing of the header for the output in the counts enrichment file. [Default %(default)s]")
 
         enrichment_flags.add_argument('--total-reads-a', type=int, default=0, help="To manually set how many reads the dataset in 'experiment' has. If not used, it will be counted from the read or counts file. Default (automatically calculated from reads or counts files)")
@@ -181,6 +187,11 @@ class PicosParser:
 
         enrichment_flags.add_argument('--a-trim', type=float, default=A_TRIM, help="Proportion of A values to be discarded when doing the TMM normalization. Only applied when combined with --tmm-norm. [Default %(default)s]")
         enrichment_flags.add_argument('--m-trim', type=float, default=M_TRIM, help="Proportion of M values to be discarded when doing the TMM normalization. Only applied when combined with --tmm-norm. [Default %(default)s]")
+
+
+        pseudocount = self.new_subparser() 
+        pseudocount.add_argument('--pseudocount', action='store_true', default=PSEUDOCOUNT, help="The usage of pseudocounts in the enrichment calculation allows the inclusion of regions that have n reads in one dataset and 0 reads in the other.  [Default %(default)s]")
+
 
         zscore = self.new_subparser()  
         zscore.add_argument('--zscore', type=float, default=ZSCORE, help="Significant Z-score value. [Default %(default)s]")        
@@ -331,7 +342,7 @@ class PicosParser:
         subparsers.add_parser('enrichcount', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using rpkm count files', parents=[counts_file, basic_parser, output_flags, replica_a, region_format, output, enrichment_flags, zscore])
 
         #enrichment operation
-        subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using mapped reads files. Pyicos output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, optional_region, region_format, output, enrichment_flags, zscore])
+        subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using mapped reads files. Pyicos output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, optional_region, region_format, output, enrichment_flags, pseudocount, zscore])
 
         #replica_b,
 
@@ -355,9 +366,9 @@ class PicosParser:
                             height_filter=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION,
                             split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, postscript = POSTSCRIPT,
                             remlabels=REMLABELS, experiment_b=EXPERIMENT, replica_a=EXPERIMENT, replica_b=EXPERIMENT, poisson_test=POISSONTEST, stranded=STRANDED_ANALYSIS,
-                            proximity=PROXIMITY, showplots=SHOWPLOTS, plot_path=PLOT_PATH, no_pseudocount=NOPSEUDOCOUNT, simple_counts=SIMPLECOUNTS, label1=LABEL1, 
+                            proximity=PROXIMITY, showplots=SHOWPLOTS, plot_path=PLOT_PATH, pseudocount=PSEUDOCOUNT, len_norm=LEN_NORM, label1=LABEL1, 
                             label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, 
-                            counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, tmm_norm=TMM_NORM, N_norm=N_NORM, skip_header=SKIP_HEADER,  
+                            counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER,  
                             total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM)
 
         args = parser.parse_args()
@@ -396,6 +407,11 @@ class PicosParser:
 
         self.validate(args)
 
+        if args.counts_file:        
+            args.experiment_format = COUNTS
+            args.experiment_b_format = COUNTS
+            args.output_format = COUNTS
+
         if not args.control_format: #If not specified, the control format is equal to the experiment format
             args.control_format = args.experiment_format
             args.open_control = args.open_experiment
@@ -407,9 +423,9 @@ class PicosParser:
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
                             args.min_delta, args.height_filter, args.delta_step, args.verbose, args.species, args.cached, args.split_proportion, args.split_absolute, 
                             args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, 
-                            args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.no_pseudocount, args.simple_counts, args.label1, 
+                            args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.pseudocount, args.len_norm, args.label1, 
                             args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, 
-                            args.tmm_norm, args.N_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim)
+                            args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
