@@ -496,7 +496,21 @@ class TestCoreObjects(unittest.TestCase):
         self.assertEqual(cluster.write_line(), 'chr1\t50\t200\t51:1.00|50:2.00|50:1.00\n')
         """
 
+    def test_normalized_counts(self):
+        total_number_reads = 1e7
+        region = Region("chr1", 1, 300)
+        c = Cluster(read=BED)
+        for i in range(0, 5):
+            c.read_line("chr1 1 100")
+            region.add_tags(c, True)
+            c.clear()
 
+        self.assertEqual(region.normalized_counts(), 5.) #simple-counts
+        self.assertEqual(region.normalized_counts(region_norm=True, total_n_norm=True, total_reads = total_number_reads), 1.666666666666667) #rpkm
+        self.assertEqual(region.normalized_counts(pseudocount=True), 6.) #with pseudocounts
+        self.assertEqual(region.normalized_counts(region_norm=True, total_n_norm=True, total_reads = total_number_reads, regions_analyzed=10000, pseudocount=True), 1.998001998001998)
+        
+        
     def test_max_height_pos(self):
         cluster = Cluster(rounding=True, read=PK, write=PK)
         cluster.read_line('chr1 101 142 4:1|1:2|2:1|3:4|29:5|2:2|1:1')
