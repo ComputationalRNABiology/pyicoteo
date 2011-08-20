@@ -939,12 +939,12 @@ class Cluster(AbstractCore):
 
         return max_len/len(self) > condition
 
-    def is_significant(self, threshold, poisson_type="height"):
+    def is_significant(self, threshold, poisson_type="height", frag_size=1):
         """Returns True if the cluster is significant provided a threshold, otherwise False"""
         if poisson_type=="height":
             return threshold <= int(round(self.max_height()))
         else:
-            return threshold <= int(round(self.area()))
+            return threshold <= int(round(self.area()/frag_size))
 
     def read_line(self, line):
         self.reader.read_line(self, line)
@@ -1364,7 +1364,7 @@ class Region(AbstractCore):
         if pseudocount:
             counts += 1    
         else:
-            total_regions_analyzed = 0 #because we add 1 pseudocount per region, so we have to increase N by num-regions. If pseudocounts not are used, there is no need for this count
+            regions_analyzed = 0 #because we add 1 pseudocount per region, so we have to increase N by num-regions. If pseudocounts not are used, there is no need for this count
         
         if region_norm: #read per kilobase in region
             counts = 1e3*(counts/len(self))
@@ -1430,7 +1430,6 @@ class Region(AbstractCore):
             new_region.tags.append(tag)
 
         new_region.clusters = []
-        new_region.clusters.append(cluster for cluster in self.clusters)
         new_region.strand = self.strand
 
         for cluster in self.clusters:

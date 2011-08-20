@@ -19,7 +19,6 @@ enrichment_keys  = ['name', 'start', 'end', 'name2', 'score', 'strand', 'signal_
                     'A','M','total_reads_a','total_reads_b','num_tags_a','num_tags_b','A_prime','M_prime',
                     'total_reads_a','total_reads_b','total_reads_background_1','total_reads_background_2', 'A_median', 'mean', 'sd', 'zscore']
 
-
 #Default values for parser
 EXPERIMENT = OUTPUT = CONTROL = COUNTS_FILE = REGION = MASKER_FILE = '' #files
 EXPERIMENT_FORMAT=PK
@@ -49,7 +48,7 @@ NO_SORT=False
 DUPLICATES=0
 THRESHOLD=0
 TRIM_ABSOLUTE=0
-MAX_DELTA=500
+MAX_DELTA=250
 MIN_DELTA=20
 HEIGHT_FILTER=8
 DELTA_STEP=1
@@ -69,7 +68,7 @@ PLOT_PATH=None
 LABEL1=""
 LABEL2=""
 BINSIZE=0.3
-ZSCORE = 4
+ZSCORE = 2
 SDFOLD = 1
 BLACKLIST=None
 RECALCULATE=False
