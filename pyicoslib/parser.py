@@ -21,7 +21,7 @@ import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from defaults import *
 
-__version__ = '1.0.1'
+__version__ = '1.0.4'
 
 class PicosParser:
 
@@ -327,7 +327,7 @@ class PicosParser:
                               parents=[experiment,experiment_flags,  basic_parser, output, optional_frag_size, output_flags, round, pvalue, height, correction, threshold, species, remlabels, poisson_test])
         #modfdr analysis
         subparsers.add_parser('modfdr', help="""Use the modified FDR method to determine what clusters are significant in an specific region. Output in a clustered format only.""",
-                              parents=[experiment, experiment_flags, basic_parser, region, output, output_flags, round, pvalue, repeats, masker_file, remlabels])
+                              parents=[experiment, experiment_flags, basic_parser, region, output, output_flags, round, pvalue, repeats, remlabels]) #, masker_file 
         #remove operation
         subparsers.add_parser('remregions', help='Removes regions that overlap with another the coordinates in the "black list" file.',
                               parents=[experiment, experiment_flags, basic_parser, output_flags, blacklist, region_format, output, remlabels])
@@ -407,7 +407,7 @@ class PicosParser:
 
         self.validate(args)
 
-        if args.counts_file:        
+        if args.counts_file: #the formats are overridden when using enrichment (only of cosmetic value, when printing the flags)   
             args.experiment_format = COUNTS
             args.experiment_b_format = COUNTS
             args.output_format = COUNTS

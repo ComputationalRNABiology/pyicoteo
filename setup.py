@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name='Pyicos',
-      version='1.0.1',
+      version='1.0.4',
       description='Mapped reads analysis tool and library',
       author=u'Juan Gonzalez_Vallinas',
       author_email='juanramon.gonzalezvallinas@upf.edu',
