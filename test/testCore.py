@@ -499,14 +499,19 @@ class TestCoreObjects(unittest.TestCase):
     def test_normalized_counts(self):
         total_number_reads = 1e7
         region = Region("chr1", 1, 300)
+        region_bed12 = Region("chr1", 1, 300, exome_size = 200)
         c = Cluster(read=BED)
         for i in range(0, 5):
             c.read_line("chr1 1 100")
             region.add_tags(c, True)
+            region_bed12.add_tags(c, True)
             c.clear()
 
         self.assertEqual(region.normalized_counts(), 5.) #simple-counts
         self.assertEqual(region.normalized_counts(region_norm=True, total_n_norm=True, total_reads = total_number_reads), 1.666666666666667) #rpkm
+        self.assertEqual(region_bed12.normalized_counts(region_norm=True, total_n_norm=True, total_reads = total_number_reads), 2.5) #rpkm with exon_size
+
+
         self.assertEqual(region.normalized_counts(pseudocount=True), 6.) #with pseudocounts
         self.assertEqual(region.normalized_counts(region_norm=True, total_n_norm=True, total_reads = total_number_reads, regions_analyzed=10000, pseudocount=True), 1.998001998001998)
         

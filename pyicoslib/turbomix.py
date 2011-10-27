@@ -86,7 +86,7 @@ class Turbomix:
         self.safe_reader = utils.SafeReader(self.logger)        
         if not self.discarded_names:
             self.discarded_names = []
-        self.region_cluster = Cluster(read=region_format, read_half_open = open_region, logger=self.logger)
+     
         #Reusable cluster objects 
         try:
             self.cluster = Cluster(read=self.experiment_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_experiment, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, logger=self.logger, cached=cached)
@@ -254,9 +254,10 @@ class Turbomix:
         self.do_discard = DISCARD_ARTIFACTS in self.operations
         self.do_dupremove = REMOVE_DUPLICATES in self.operations
         self.tag_to_cluster = (not self.experiment_format in CLUSTER_FORMATS and self.output_format in CLUSTER_FORMATS)
+        self.use_MA = USE_MA in self.operations
         self.logger.info("")
         self.logger.info('***********************************************')
-        self.logger.info('Pyicos running...')
+        self.logger.info('Pyicos running... (PID: %s)'%os.getpid())
         if self.control_path:
             self.process_all_files_paired(self.experiment_path, self.control_path)
         elif self.experiment_b_path:
@@ -403,8 +404,10 @@ class Turbomix:
         if self.output_format == SPK:
             if format == ELAND:
                 return lambda x:(x.split()[6],x.split()[8],int(x.split()[7]),len(x.split()[1]))
+            elif format == SAM:
+                return lambda x:(x.split()[2], x.split()[1], int(x.split()[3]), len(x.split()[9]))
             else:
-                return lambda x:(x.split()[0],x.split()[5],int(x.split()[1]),int(x.split()[2]))
+                return lambda x:(x.split()[0], x.split()[5], int(x.split()[1]), int(x.split()[2]))
         else:
             if format == ELAND:
                 return lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
@@ -927,10 +930,16 @@ class Turbomix:
 
     def _region_from_sline(self, sline):
             try:
+                strand = None
+                exome_size = 0
                 if self.stranded_analysis:
-                    return Region(sline[0], int(sline[1]), int(sline[2]), name2=sline[3], strand=sline[5])
-                else:
-                    return Region(sline[0], int(sline[1]), int(sline[2]), name2=sline[3]) 
+                    strand = sline[5]
+                elif self.region_format == BED12:
+                    for size in sline[10].split(","):
+                       exome_size += int(size)
+
+                return Region(sline[0], int(sline[1]), int(sline[2]), name2=sline[3], strand=strand, exome_size=exome_size)
+
             except ValueError:
                 pass #discarding header
 
@@ -1168,7 +1177,7 @@ class Turbomix:
         numreads_background_2 = 0
         total_reads_background_1 = 0
         total_reads_background_2 = 0
-        self.use_MA = USE_MA in self.operations
+        
         self.regions_analyzed_count = 0
         enrichment_result = [] #This will hold the name, start and end of the region, plus the A, M, 'A and 'M
         out_file = open(self.current_output_path, 'wb')
@@ -1272,7 +1281,7 @@ class Turbomix:
         msg = "Calculating enrichment in regions"
         if self.counts_file: 
             self.sorted_region_path = self.counts_file
-            if not self.total_reads_a or not self.total_reads_b or (not self.total_reads_replica and self.use_replica):
+            if (not self.total_reads_a or not self.total_reads_b or (not self.total_reads_replica and self.use_replica)) and not self.use_MA:
                 self.logger.info("... counting from counts file NOT IMPLEMENTED. Please specify the total number of reads for the files with --total-reads-a --total-reads-b and --total-reads-replica if using one.")
                 sys.exit(1)
             if not self.total_reads_a:
@@ -1304,6 +1313,7 @@ class Turbomix:
         file_a_reader = file_b_reader = replica_a_reader = None
         self.use_replica = (bool(self.replica_a_path) or (bool(self.counts_file) and self.total_reads_replica > 1))
         self.logger.debug("Use replica: %s"%self.use_replica)
+        
         self._calculate_total_lengths()
         if not self.counts_file:
             file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
@@ -1312,7 +1322,7 @@ class Turbomix:
                 replica_a_reader = utils.SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)
 
             if self.sorted_region_path:
-                self.logger.info('Using region file %s'%self.region_path)
+                self.logger.info('Using region file %s (%s)'%(self.region_path, self.region_format))
             else:
                 self.calculate_region() #create region file semi automatically
 
@@ -1389,8 +1399,12 @@ class Turbomix:
             w = self._sub_tmm(float(value[signal_1]), float(value[signal_2]), self.total_reads_a, reads_2)                  
             arriba += w*float(value[M])
             abajo += w
+        try:
+            factor = 2**(arriba/abajo)
+        except ZeroDivisionError:
+            self.logger.warning("Division by zero, TMM factor could not be calculated.")
+            factor = 1
 
-        factor = 2**(arriba/abajo)
         if replica:    
             self.logger.info("Replica TMM Normalization Factor: %s"%factor)
         else:
@@ -1423,7 +1437,7 @@ class Turbomix:
             self.logger.warning("The bin size results in a sliding window smaller than 50, adjusting window to 50 in order to get statistically meaningful results.")
             bin_size = 50
 
-        bin_step = self.bin_step
+        bin_step = max(1, int(round(self.bin_step*bin_size)))
         self.logger.info("Enrichment window calculation using a sliding window size of %s, sliding with a step of %s"%(bin_size, bin_step))
         self.logger.info("... calculating zscore...")
         enrichment_result = self.__load_enrichment_result(values_path)
