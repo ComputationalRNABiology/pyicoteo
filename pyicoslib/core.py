@@ -126,7 +126,7 @@ class AbstractCore:
 ###################################
 class ReaderFactory:
     def create_reader(self, format, half_open=False, cached=True):
-        if format == BED:
+        if format == BED or format == BED12:
             return BedReader(format, half_open, cached)
         elif format == PK or format == SPK:
             return PkReader(format, half_open, cached)
@@ -176,6 +176,11 @@ class Reader:
         return True
 
 class BedReader(Reader):
+
+    def _add_extra_fields(self, cluster, line):
+        cluster.extra_fields = []
+        for field in range(6, len(line)):
+            cluster.extra_fields.append(line[field])
 
     def _add_name(self, cluster, line):
         if len(line) > 3:
@@ -232,8 +237,11 @@ class BedReader(Reader):
                     self._add_name(cluster, line)
                     self._add_score(cluster, line)
                     self._add_strand(cluster, line)
+                    
                     cluster.tag_length = len(cluster)
                     cluster.append_level(cluster.end-cluster.start+1, cluster.normalize_factor)
+
+            self._add_extra_fields(cluster, line)
 
         except (ValueError, IndexError):
             raise InvalidLine
@@ -372,7 +380,7 @@ class WriterFactory:
     def create_writer(self, format, half_open, span=0):
         if format == ELAND:
             return ElandWriter(format, half_open, span)
-        if format == BED:
+        if format == BED or format == BED12:
             return BedWriter(format, half_open, span)
         elif format == WIG:
             return WigWriter(format, half_open, span)
@@ -418,6 +426,7 @@ class ElandWriter(Writer):
 class BedWriter(Writer):
     def write_line(self, cluster):
         bed_blueprint = '%s\t%s\t%s\t%s\t%s\t%s\n'
+            
         if cluster.is_empty():
             return ''
         else:
@@ -430,7 +439,14 @@ class BedWriter(Writer):
                         lines = '%s%s'%(lines, bed_blueprint%(tag.name, tag.start+self.correction, tag.end, tag.name2, tag.score, tag.strand))
                 return lines
             else:
-                return bed_blueprint%(cluster.name, cluster.start+self.correction, cluster.end, cluster.name2, cluster.score,  cluster.strand)
+                if cluster.extra_fields:
+                    fields = [cluster.name, str(cluster.start+self.correction), str(cluster.end), cluster.name2, str(cluster.score),  cluster.strand]
+                    for extra in cluster.extra_fields:
+                        fields.append(extra)
+
+                    return "%s\n"%("\t".join(fields))
+                else:    
+                    return bed_blueprint%(cluster.name, cluster.start+self.correction, cluster.end, cluster.name2, cluster.score,  cluster.strand)
 
 class SamWriter(Writer):
     def write_line(self, cluster):
@@ -600,6 +616,7 @@ class Cluster(AbstractCore):
         self.tag_length = tag_length
         self.sequence = sequence
         self._tag_cache = []
+        self.extra_fields = []
         self.read_count = 0
         self.strand = strand
         self.p_value = None
@@ -1336,7 +1353,7 @@ class Cluster(AbstractCore):
 #   REGION  OBJECT    #
 #######################
 class Region(AbstractCore):
-    def __init__(self, name='undefined', start=0, end=-1, name2='noname', strand=None, logger=None, cached=True):
+    def __init__(self, name='undefined', start=0, end=-1, name2='noname', strand=None, logger=None, cached=True, exome_size=0):
         self.start = int(start)
         self.end = int(end)
         self.name = name
@@ -1344,6 +1361,7 @@ class Region(AbstractCore):
         self.strand = strand
         self.tags = []
         self.clusters = []
+        self.exome_size = exome_size
         self.logger = logger
         self.cached = cached
 
@@ -1351,6 +1369,7 @@ class Region(AbstractCore):
         return (self.start is not 0 and self.end is not 0 and self.name is not None)
 
     def rpkm(self, total_reads, total_regions_analyzed=0, pseudocount=False):
+        #DEPRECATED Doesnt take into consideration BED12 starts
         """Original definition: Reads per kilobase of exon model per million mapped reads. We generalize to: Reads per kilobase of region per million mapped reads. Added 1 pseudocount per region to avoid 0s"""
         if not pseudocount:
             total_regions_analyzed=0
@@ -1367,7 +1386,13 @@ class Region(AbstractCore):
             regions_analyzed = 0 #because we add 1 pseudocount per region, so we have to increase N by num-regions. If pseudocounts not are used, there is no need for this count
         
         if region_norm: #read per kilobase in region
-            counts = 1e3*(counts/len(self))
+            if self.exome_size:  #If an exome size is provided, use this to normalize the reads
+                length = self.exome_size
+            else:
+                length = len(self)               
+
+            counts = 1e3*(counts/length)
+
 
         if total_n_norm: #per million reads in the sample
             counts = 1e6*(counts/(regions_analyzed+total_reads))
@@ -1434,6 +1459,8 @@ class Region(AbstractCore):
 
         for cluster in self.clusters:
             new_region.clusters.append(cluster)
+
+        new_region.exome_size = self.exome_size
 
         return new_region
 
@@ -1639,7 +1666,7 @@ class Region(AbstractCore):
             return covered/total
         else:
             return 0
-
+  
 
     def get_metacluster(self):
         """Returns a cluster object that contains the levels of all previous clusters combined, with gaps (zeros) between them"""

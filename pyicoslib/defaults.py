@@ -2,6 +2,7 @@
 ELAND = 'eland'
 ELAND_EXPORT = 'eland_export'
 BED = 'bed'
+BED12 = 'bed12'
 WIG = 'bed_wig'
 VARIABLE_WIG = 'variable_wig'
 FIXED_WIG = 'fixed_wig'
@@ -14,6 +15,7 @@ WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
 READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM, COUNTS) #formats that we actually can read as
 WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
 
+REGION_FORMATS = (BED, BED12)
 #Enrichment header
 enrichment_keys  = ['name', 'start', 'end', 'name2', 'score', 'strand', 'signal_a', 'signal_b', 'signal_prime_1', 'signal_prime_2',
                     'A','M','total_reads_a','total_reads_b','num_tags_a','num_tags_b','A_prime','M_prime',
@@ -73,7 +75,7 @@ SDFOLD = 1
 BLACKLIST=None
 RECALCULATE=False
 REGION_MINTAGS = 6
-WINDOW_STEP = 10
+WINDOW_STEP = 0.1
 POISSON_OPTIONS=("height", "numtags", "length")
 
 #Enrichment
@@ -87,6 +89,7 @@ TOTAL_READS_B=None
 TOTAL_READS_REPLICA=None
 A_TRIM=0.05
 M_TRIM=0.25
+SKIP_PLOT=False
 
 #CONSTANTS
 PLUS_STRAND = "+"

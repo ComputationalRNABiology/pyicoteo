@@ -42,18 +42,6 @@ def pearson(list_one, list_two):
     That means X tends to be small when Y is big.
     A score close to zero indicates little correlation between the two
     datasets.
-    This script is cobbled together from a variety of sources, linked
-    in the sources section below.
-    h3. Example usage
-    >> import calculate
-    >> calculate.pearson([6,5,2], [2,5,6])
-    -0.8461538461538467
-
-    h3. A Warning
-
-    Correlation does not equal causation. Just because the two
-    datasets are closely related doesn't not mean that one causes
-    the other to be the way it is.
 
     h3. Sources
     http://en.wikipedia.org/wiki/Pearson_product-moment_correlation_coefficient
