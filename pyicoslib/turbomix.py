@@ -71,7 +71,7 @@ class Turbomix:
                  postscript=POSTSCRIPT, showplots=SHOWPLOTS, plot_path=PLOT_PATH, pseudocount=PSEUDOCOUNT, len_norm=LEN_NORM, label1=LABEL1, 
                  label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, counts_file=COUNTS_FILE, 
                  region_mintags=REGION_MINTAGS, bin_step=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER, total_reads_a=TOTAL_READS_A, 
-                 total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM):
+                 total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica_flag=USE_REPLICA):
 
         self.__dict__.update(locals())
         self.normalize_factor = 1
@@ -1069,7 +1069,7 @@ class Turbomix:
                 label_control = self.label2
             else:         
                 if self.replica_a_path:
-                    label_control = '%s(A) VS %s(A)'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
+                    label_control = '%s(A) VS %s(A)'%(os.path.basename(self.real_experiment_path), os.path.basename(self.replica_a_path))
                 else:
                     label_control = 'Background distribution'
 
@@ -1104,9 +1104,7 @@ class Turbomix:
                     positive_point = self.zscore*float(enrich["sd"])+float(enrich["mean"])
                     negative_point = -self.zscore*float(enrich["sd"])+float(enrich["mean"])
                     A_median = float(enrich["A_median"])
-                    if (A_median, positive_point) not in all_points:
-                        all_points.append((A_median, positive_point, negative_point))
-
+                    all_points.append((A_median, positive_point, negative_point))
                     if abs(float(enrich["zscore"])) < self.zscore:
                         M.append(float(enrich["M"]))
                         A.append(float(enrich["A"]))
@@ -1118,7 +1116,6 @@ class Turbomix:
                     A_prime.append(float(enrich["A_prime"]))
                 except ValueError:
                     pass #to skip the header
-            
             all_points.sort(key= lambda x:x[0])
             
             for t in all_points:
@@ -1282,14 +1279,24 @@ class Turbomix:
         if self.counts_file: 
             self.sorted_region_path = self.counts_file
             if (not self.total_reads_a or not self.total_reads_b or (not self.total_reads_replica and self.use_replica)) and not self.use_MA:
-                self.logger.info("... counting from counts file NOT IMPLEMENTED. Please specify the total number of reads for the files with --total-reads-a --total-reads-b and --total-reads-replica if using one.")
-                sys.exit(1)
-            if not self.total_reads_a:
-                self.total_reads_a = 1
-            if not self.total_reads_b:
-                self.total_reads_b = 1
-            if not self.total_reads_replica:
-                self.total_reads_replica = 1
+                self.logger.info("... counting from counts file...")
+                self.total_reads_a = 0
+                self.total_reads_b = 0
+                if self.total_reads_replica:
+                    self.total_reads_replica = 0
+                else:
+                    self.total_reads_replica = 1
+                for line in open(self.counts_file):
+                    try:
+                        enrich = dict(zip(enrichment_keys, line.split()))
+                        self.total_reads_a += float(enrich["signal_a"])
+                        self.total_reads_b += float(enrich["signal_b"])
+                        if self.use_replica:
+                            self.total_reads_replica += float(enrich["signal_prime_2"])
+                    except ValueError:
+                        self.logger.debug("(Counting) skip header...")
+
+
         else:
             self.logger.info("... counting number of lines in files...")
             if not self.total_reads_a:
@@ -1311,7 +1318,7 @@ class Turbomix:
 
     def enrichment(self):
         file_a_reader = file_b_reader = replica_a_reader = None
-        self.use_replica = (bool(self.replica_a_path) or (bool(self.counts_file) and self.total_reads_replica > 1))
+        self.use_replica = (bool(self.replica_a_path) or (bool(self.counts_file) and self.use_replica_flag))
         self.logger.debug("Use replica: %s"%self.use_replica)
         
         self._calculate_total_lengths()
@@ -1524,8 +1531,11 @@ class Turbomix:
         if self.showplots:
             show()
         else:
-            figure_path = '%s/%s_%s.%s'%(self._output_dir(), figure_name, os.path.basename(self.current_output_path), exten)
-            savefig(figure_path)
+            figure_path = '%s/%s_%s.%s'%(self._output_dir(), figure_name, os.path.basename(self.current_output_path), exten) 
+            import warnings 
+            with warnings.catch_warnings(): #To make the RuntimeWarning go away
+                warnings.simplefilter("ignore")
+                savefig(figure_path)
             self.logger.info("%s figure saved to %s"%(figure_name, figure_path))
         clf()
         
