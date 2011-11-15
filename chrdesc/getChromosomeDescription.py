@@ -4,7 +4,6 @@ import MySQLdb
 from MySQLdb import OperationalError, ProgrammingError
 
 def retrieve_chrinfo(schema):
-
         try:
             print 'trying to retrieve chromosome length from ucsc (%s)...'%schema
             db = MySQLdb.connection(host="genome-mysql.cse.ucsc.edu",user="genome",db=schema)

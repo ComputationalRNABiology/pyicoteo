@@ -21,7 +21,7 @@ import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from defaults import *
 
-__version__ = '1.0.5'
+__version__ = '1.0.6TEST'
 
 class PicosParser:
 
@@ -195,6 +195,9 @@ class PicosParser:
         zscore = self.new_subparser()  
         zscore.add_argument('--zscore', type=float, default=ZSCORE, help="Significant Z-score value. [Default %(default)s]")        
 
+        use_replica = self.new_subparser()
+        use_replica.add_argument("--use-replica", action='store_true', default=USE_REPLICA, help="Indicates that for the calculation of the counts tables, a replica was used. [Default %(default)s]")
+
         label = self.new_subparser()
         label.add_argument('--label', default=LABEL, help='The label that will identify the experiment')
 
@@ -338,7 +341,7 @@ class PicosParser:
         subparsers.add_parser('enrichma', help='An enrichment test based on the MA plots using the pyicos count files with the MA information. It will ignore the counts information, and directly use whatever values found in the M and A columns and zscore information to plot the data. Useful to re-plot the data by adjusting the zscore for visualization purposes.', parents=[counts_file, basic_parser, output_flags, replica_a, region_format, output, enrichment_flags, zscore])
 
         #rpkm operation
-        subparsers.add_parser('enrichcount', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using rpkm count files', parents=[counts_file, basic_parser, output_flags, replica_a, region_format, output, enrichment_flags,total_reads_flags, zscore])
+        subparsers.add_parser('enrichcount', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using rpkm count files', parents=[counts_file, basic_parser, output_flags, replica_a, region_format, output, enrichment_flags,total_reads_flags, zscore, use_replica])
 
         #enrichment operation
         subparsers.add_parser('enrichment', help='(UNDER DEVELOPMENT) An enrichment test based on the MA plots using mapped reads files. Pyicos output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, replica_a, optional_region, region_format, output, enrichment_flags, total_reads_flags, pseudocount, zscore])
@@ -368,7 +371,7 @@ class PicosParser:
                             proximity=PROXIMITY, showplots=SHOWPLOTS, plot_path=PLOT_PATH, pseudocount=PSEUDOCOUNT, len_norm=LEN_NORM, label1=LABEL1, 
                             label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, 
                             counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER,  
-                            total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM)
+                            total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica=USE_REPLICA)
 
         args = parser.parse_args()
 
@@ -424,7 +427,7 @@ class PicosParser:
                             args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, 
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.pseudocount, args.len_norm, args.label1, 
                             args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, 
-                            args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim)
+                            args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim, args.use_replica)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
