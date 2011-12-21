@@ -21,7 +21,7 @@ import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from defaults import *
 
-__version__ = '1.0.6TEST'
+__version__ = '1.0.6'
 
 class PicosParser:
 
@@ -140,7 +140,7 @@ class PicosParser:
         basic_parser.add_argument('--showplots', action='store_true', default=SHOWPLOTS, help='Show the plots as they are being calculated by matplotlib. Note that the execution will be stopped until you close the window pop up that will arise')
         basic_parser.add_argument('--label1', default=LABEL1, help="Manually define the second label of the graphs.")
         basic_parser.add_argument('--label2', default=LABEL2, help="Manually define the second label of the graphs.")
-
+        basic_parser.add_argument('--tempdir', default=TEMPDIR, help="Manually define the temporary directory where Pyicos will write. By default Pyicos will use the temporary directory the system provides (For example, /tmp in unix systems)")
         output = self.new_subparser()
         output.add_argument('output', help='The output file or directory')
 
@@ -371,7 +371,8 @@ class PicosParser:
                             proximity=PROXIMITY, showplots=SHOWPLOTS, plot_path=PLOT_PATH, pseudocount=PSEUDOCOUNT, len_norm=LEN_NORM, label1=LABEL1, 
                             label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, 
                             counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER,  
-                            total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica=USE_REPLICA)
+                            total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, 
+                            use_replica=USE_REPLICA, tempdir=TEMPDIR)
 
         args = parser.parse_args()
 
@@ -427,7 +428,8 @@ class PicosParser:
                             args.repeats, args.masker_file, args.max_correlations, args.keep_temp, args.experiment_b, args.replica_a, args.replica_b, args.poisson_test, 
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.pseudocount, args.len_norm, args.label1, 
                             args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, 
-                            args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim, args.use_replica)
+                            args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim, 
+                            args.use_replica, args.tempdir)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')

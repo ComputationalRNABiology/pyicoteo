@@ -71,9 +71,13 @@ class Turbomix:
                  postscript=POSTSCRIPT, showplots=SHOWPLOTS, plot_path=PLOT_PATH, pseudocount=PSEUDOCOUNT, len_norm=LEN_NORM, label1=LABEL1, 
                  label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, counts_file=COUNTS_FILE, 
                  region_mintags=REGION_MINTAGS, bin_step=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER, total_reads_a=TOTAL_READS_A, 
-                 total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica_flag=USE_REPLICA):
+                 total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica_flag=USE_REPLICA, tempdir=TEMPDIR):
 
         self.__dict__.update(locals())
+        if type(self.tempdir) is not list:
+            self.tempdir = [self.tempdir] 
+            print "ENLIST!!!", self.tempdir
+
         self.normalize_factor = 1
         self.set_logger(verbose, debug)
         self.is_sorted = False
@@ -337,7 +341,12 @@ class Turbomix:
 
     def _filter_file(self, file_path, temp_name, remove_temp, file_format, file_open):
         """Assumes sorted file. Extend and removal of duplicates go here"""
-        new_file_path = "%s/tempfilter%s_%s"%(gettempdir(), os.getpid(), temp_name)
+        if self.tempdir:
+            td = self.tempdir[0]
+        else:
+            td = gettempdir()
+
+        new_file_path = "%s/tempfilter%s_%s"%(td, os.getpid(), temp_name)
         new_file = open(new_file_path, 'w')
         self.logger.info("Filtering %s file..."%temp_name)
         previous_line = ''
@@ -426,14 +435,14 @@ class Turbomix:
             self.replica_a_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'replica_a', logger=self.logger)
             self.replica_b_preprocessor = utils.BigSort(self.experiment_format, self.open_control, self.frag_size, 'replica_b', logger=self.logger)
             self.control_preprocessor = utils.BigSort(self.control_format, self.open_control, self.frag_size, 'control', logger=self.logger)
-
+                       
             if self.no_sort:
                 self.logger.warning('Input sort skipped. Results might be wrong.')
                 self.current_experiment_path = experiment_path
             elif not self.counts_file:
                 self.logger.info('Sorting experiment file...')
                 self.is_sorted = True
-                sorted_experiment_file = self.experiment_preprocessor.sort(experiment_path, None, self.get_lambda_func(self.experiment_format))
+                sorted_experiment_file = self.experiment_preprocessor.sort(experiment_path, None, self.get_lambda_func(self.experiment_format), self.tempdir)
                 self.current_experiment_path = sorted_experiment_file.name
                 self.temp_experiment = True
 
@@ -443,7 +452,7 @@ class Turbomix:
                     self.current_control_path = control_path
                 else:
                     self.logger.info('Sorting control file...')
-                    sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format))
+                    sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format), self.tempdir)
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
             
@@ -453,7 +462,7 @@ class Turbomix:
                     self.current_control_path = control_path
                 elif not self.counts_file:
                     self.logger.info('Sorting experiment_b file...')
-                    sorted_control_file = self.experiment_b_preprocessor.sort(control_path, None, self.get_lambda_func(self.experiment_format))
+                    sorted_control_file = self.experiment_b_preprocessor.sort(control_path, None, self.get_lambda_func(self.experiment_format), self.tempdir)
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
             
@@ -463,7 +472,7 @@ class Turbomix:
                     self.current_replica_a_path = self.replica_a_path
                 else:
                     self.logger.info('Sorting replica_a file...')
-                    sorted_replica_a_file = self.replica_a_preprocessor.sort(self.replica_a_path, None, self.get_lambda_func(self.experiment_format))
+                    sorted_replica_a_file = self.replica_a_preprocessor.sort(self.replica_a_path, None, self.get_lambda_func(self.experiment_format), self.tempdir)
                     self.current_replica_a_path = sorted_replica_a_file.name
                     self.temp_replica = True
 
@@ -473,14 +482,14 @@ class Turbomix:
                     self.current_replica_b_path = self.replica_b_path
                 else:
                     self.logger.info('Sorting replica_b file...')
-                    sorted_replica_b_file = self.replica_b_preprocessor.sort(self.replica_b_path, None, self.get_lambda_func(self.experiment_format))
+                    sorted_replica_b_file = self.replica_b_preprocessor.sort(self.replica_b_path, None, self.get_lambda_func(self.experiment_format), self.tempdir)
                     self.current_replica_b_path = sorted_replica_b_file.name
                     self.temp_replica_b = True
 
         if self.region_path:
             self.logger.info("Sorting region file...")
             self.region_preprocessor = utils.BigSort(self.region_format, self.open_region, None, 'region', logger=self.logger)
-            self.sorted_region_file = self.region_preprocessor.sort(self.region_path, None, self.get_lambda_func(BED))
+            self.sorted_region_file = self.region_preprocessor.sort(self.region_path, None, self.get_lambda_func(BED), self.tempdir)
             self.sorted_region_path = self.sorted_region_file.name
 
 
@@ -943,6 +952,24 @@ class Turbomix:
             except ValueError:
                 pass #discarding header
 
+
+    def _region_from_dual(self, line):
+            try:
+
+                self.cluster_aux.clear()
+                self.cluster_aux.read_line(line)
+                strand = None
+                if self.stranded_analysis:
+                    strand = self.cluster_aux.strand
+                ret = Region(self.cluster_aux.name, self.cluster_aux.start, self.cluster_aux.end, name2=self.cluster_aux.name2, strand=strand)
+                self.cluster_aux.clear()
+                return ret                
+            except ValueError:
+                pass #discarding header
+
+
+
+
     def __calc_reg_write(self, region_file, count, calculated_region):
         if count > self.region_mintags:
             region_file.write(calculated_region.write()) 
@@ -972,10 +999,10 @@ class Turbomix:
         readcount = 1
         for line in dual_reader:
             if not calculated_region: #first region only
-                calculated_region = self._region_from_sline(line.split())
+                calculated_region = self._region_from_dual(line)
                 calculated_region.end += self.proximity
             else:
-                new_region = self._region_from_sline(line.split())
+                new_region = self._region_from_dual(line)
                 new_region.end += self.proximity
                 if calculated_region.overlap(new_region):
                     calculated_region.join(new_region)
@@ -1000,13 +1027,13 @@ class Turbomix:
         numreads_minus = 1
         dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.logger)
         for line in dual_reader:
-            new_region = self._region_from_sline(line.split())
+            new_region = self._region_from_dual(line)
             new_region.end += self.proximity
             if not (region_plus and new_region.strand == PLUS_STRAND):
-                region_plus = self._region_from_sline(line.split())
+                region_plus = self._region_from_dual(line)
                
             elif not (region_plus and new_region.strand == PLUS_STRAND):
-                region_minus = self._region_from_sline(line.split())
+                region_minus = self._region_from_dual(line)
 
             else:
                 if region_plus.overlap(new_region) and region_plus.strand == new_region.strand:
@@ -1121,39 +1148,40 @@ class Turbomix:
             for t in all_points:
                 (A_medians.append(t[0]), points.append(t[1]), minus_points.append(t[2])) 
                     
+            if points:
+                margin = 1.1
+                A_medians.append(biggest_A*margin)
+                points.append(points[-1])
+                minus_points.append(minus_points[-1])
+                A_medians.insert(0, smallest_A)
+                points.insert(0, points[0])
+                minus_points.insert(0, minus_points[0])
+                self.logger.info("Plotting points...")
+                subplot(211)
+                xlabel('A')
+                ylabel('M')
 
-            margin = 1.1
-            A_medians.append(biggest_A*margin)
-            points.append(points[-1])
-            minus_points.append(minus_points[-1])
-            A_medians.insert(0, smallest_A)
-            points.insert(0, points[0])
-            minus_points.insert(0, minus_points[0])
-            self.logger.info("Plotting points...")
-            subplot(211)
-            xlabel('A')
-            ylabel('M')
+                axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
+                plot(A_prime, M_prime, '.', label=label_control, color = '#666666')
+                plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
+                plot(A_medians, minus_points,  'r--')            
+                axhline(0, linestyle='--', color="grey", alpha=0.75)  
+                legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
 
-            axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
-            plot(A_prime, M_prime, '.', label=label_control, color = '#666666')
-            plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
-            plot(A_medians, minus_points,  'r--')            
-            axhline(0, linestyle='--', color="grey", alpha=0.75)  
-            legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
+                subplot(212)
+                axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
+                plot(A, M, 'k.', label=label_main)
+                plot(A_significant, M_significant, 'r.', label="%s (significant)"%label_main)
+                plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
+                plot(A_medians, minus_points, 'r--')
+                axhline(0, linestyle='--', color="grey", alpha=0.75)
+                xlabel('A')
+                ylabel('M')
 
-            subplot(212)
-            axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
-            plot(A, M, 'k.', label=label_main)
-            plot(A_significant, M_significant, 'r.', label="%s (significant)"%label_main)
-            plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
-            plot(A_medians, minus_points, 'r--')
-            axhline(0, linestyle='--', color="grey", alpha=0.75)
-            xlabel('A')
-            ylabel('M')
-
-            legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
-            self._save_figure("enrichment_MA")
-
+                legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
+                self._save_figure("enrichment_MA")
+            else:
+                self.logger.warning("Nothing to plot.")
         except ImportError:
             if self.debug:
                 raise

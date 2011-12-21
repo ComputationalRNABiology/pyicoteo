@@ -197,6 +197,7 @@ class BigSort:
                 if current_chunk:
                     if self.logger: self.logger.debug("Chunk: len current_chunk: %s chunks: %s temp_file_size %s buffer_size %s"%(len(current_chunk), len(chunks), self.temp_file_size, self.buffer_size))
                     current_chunk.sort(key=key)
+
                     output_chunk = open(os.path.join(tempdir,'%06i_%s_%s'%(len(chunks), os.getpid(), self.id)),'w+b',self.temp_file_size)
                     output_chunk.writelines(current_chunk)
                     output_chunk.flush()
@@ -212,9 +213,9 @@ class BigSort:
 
         finally:
             input_file.close()
-            
-        if output is None:
-            output = "%s/tempsort%s_%s"%(gettempdir(), os.getpid(), self.id)
+        
+        if output is None:       
+            output = "%s/tempsort%s_%s"%(tempdirs[0], os.getpid(), self.id)
         
         output_file = open(output,'wb',self.temp_file_size)
         
