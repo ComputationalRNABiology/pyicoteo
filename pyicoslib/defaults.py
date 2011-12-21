@@ -77,6 +77,8 @@ RECALCULATE=False
 REGION_MINTAGS = 6
 WINDOW_STEP = 0.1
 POISSON_OPTIONS=("height", "numtags", "length")
+TEMPDIR=[]
+
 
 #Enrichment
 PSEUDOCOUNT=False
