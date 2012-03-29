@@ -5,8 +5,33 @@ from tempfile import gettempdir
 from heapq import heappop, heappush
 from itertools import islice, cycle, chain
 
+
+
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 from defaults import *
+from bam import BamReader, BamFetcher
+
+
+def open_file(path, format=None, gzipped=False, logger=None):
+    """to open files that are not binary format, like the BAM and gzip files"""
+    if format == BAM:
+        return BamReader(path, logger)
+    elif gzipped:
+        print "Open Gzipped! (not implemented)"
+        sys.exit(1)
+
+    else:
+        return open(path)
+
+
+
+def read_fetcher(file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
+    if experiment_format == BAM:
+        return BamFetcher(file_path, experiment_format, read_half_open, rounding, cached, logger)
+    else:
+        return SortedFileClusterReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
+
+
 
 
 def add_slash_to_path(path):
@@ -27,8 +52,6 @@ def poisson(actual, mean):
     
     except OverflowError:
         return 0
-
-
 
 
 def pearson(list_one, list_two):
@@ -115,6 +138,7 @@ class SafeReader:
                 if self.logger: self.logger.debug("Skipping invalid (%s) line: %s"%(cluster.reader.format, line))
                 self.invalid_count += 1
     
+
 
 class BigSort:
     """
@@ -372,7 +396,7 @@ class SortedFileClusterReader:
     """
     def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
         self.__dict__.update(locals())
-        self.file_iterator = open(file_path)
+        self.file_iterator = open_file(file_path, format=experiment_format, logger=logger)
         self.__initvalues()
         self.safe_reader = SafeReader()
     
@@ -421,6 +445,7 @@ class SortedFileClusterReader:
             fast_cursor += 1
             if self._read_line_load_cache(fast_cursor):
                 return clusters
+        if clusters: print clusters[0]
         return clusters
 
     def safe_read_line(self, cluster, line):

@@ -1,5 +1,6 @@
 import unittest
-from pyicoslib.core import Cluster, DifferentChromosome, InvalidLine, Region, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG, FIXED_WIG, VARIABLE_WIG, SAM
+from pyicoslib.core import Cluster, DifferentChromosome, InvalidLine, Region
+from pyicoslib.defaults import *
 
 class TestCoreObjects(unittest.TestCase):
     def setUp(self):
@@ -222,6 +223,21 @@ class TestCoreObjects(unittest.TestCase):
        #Correcto       
        #chr17 184   304   29:1.00|45:2.00|47:1.00 2.0     .       71235   166.0"""
 
+    def test_strand_add(self):
+        c = Cluster(read=BED, cached=True)
+        c2 = Cluster(read=BED, cached=True)
+        c3 = Cluster(read=BED, cached=True)
+        c4 = Cluster(read=BED, cached=True)
+        c.read_line("chr1 1 100 0 0 +")
+        c2.read_line("chr1 1 100 0 0 +")
+        c3.read_line("chr1 1 100 0 0 -")
+        c4.read_line("chr1 1 100 0 0 -")
+        plus = c + c2
+        minus = c3 + c4
+        dot = c2 + c3
+        self.assertEqual(plus.strand, PLUS_STRAND)
+        self.assertEqual(dot.strand, NO_STRAND)
+        self.assertEqual(minus.strand, MINUS_STRAND)
 
 
     def test_internal_representations(self):
