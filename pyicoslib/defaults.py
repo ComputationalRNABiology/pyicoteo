@@ -9,10 +9,11 @@ FIXED_WIG = 'fixed_wig'
 PK = 'bed_pk'
 SPK = 'bed_spk'
 SAM = 'sam'
+BAM = 'bam'
 COUNTS = 'counts'
 CLUSTER_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG, PK, SPK)
 WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
-READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM, COUNTS) #formats that we actually can read as
+READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM, BAM, COUNTS) #formats that we actually can read as
 WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
 
 REGION_FORMATS = (BED, BED12)
@@ -78,7 +79,7 @@ REGION_MINTAGS = 6
 WINDOW_STEP = 0.1
 POISSON_OPTIONS=("height", "numtags", "length")
 TEMPDIR=[]
-
+SAMTOOLSPATH="samtools"
 
 #Enrichment
 PSEUDOCOUNT=False
@@ -98,7 +99,7 @@ USE_REPLICA=False
 PLUS_STRAND = "+"
 MINUS_STRAND = "-"
 NO_STRAND = "."
-EPSILON=1.0842021724855044e-19 #The smallest number above 0. Got from running 1./sys.maxint
+EPSILON=1.0842021724855044e-19 #The smallest number above 0. Got from running 1./sys.maxint It could be smaller (it can always be), but hey, I guess this one will do. Also, computers and decimal precision, hopefully this will not be rounded to 0 in some architectures. 
 
 NORMALIZE = 'normalize'
 EXTEND = 'extend'

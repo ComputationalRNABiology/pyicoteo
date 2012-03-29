@@ -21,7 +21,9 @@ import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from defaults import *
 
-__version__ = '1.0.6'
+
+VERSION = "1.1"
+__version__ = VERSION
 
 class PicosParser:
 
@@ -106,23 +108,12 @@ class PicosParser:
 
         experiment_b = self.new_subparser()
         experiment_b.add_argument('experiment_b',  help='The experiment file B')
-        #No neccesary anyway
-        #experiment_b_flags = self.new_subparser()
-        #experiment_b_flags.add_argument('--open-experiment-b', action='store_true', default=OPEN_EXPERIMENT, help='Defines if the experiment is half-open or closed notation. [Default %(default)s]')
-        #experiment_b_flags.add_argument( '--experiment-b-format',default=EXPERIMENT_FORMAT,  dest='control_format', help="""The format the experiment file is written as.
-        #                         The options are %s. [Default pk]"""%read_formats)
-
         replica_a = self.new_subparser()
         replica_a.add_argument('--replica-a', help='Experiment A replica file')
-        
-        #replica_b = self.new_subparser()
-        #replica_b.add_argument('--replica-b', help='Experiment B replica file')
-
         control = self.new_subparser()
         control.add_argument('control', help='The control file or directory')
         control_format = self.new_subparser()
         control_format.add_argument('--control-format', default=CONTROL_FORMAT, help='The format the control file is written as. [default: The same as experiment format]')
-
         optional_control = self.new_subparser()
         optional_control.add_argument('--control', help='The control file or directory')
         open_control = self.new_subparser()
@@ -141,6 +132,9 @@ class PicosParser:
         basic_parser.add_argument('--label1', default=LABEL1, help="Manually define the second label of the graphs.")
         basic_parser.add_argument('--label2', default=LABEL2, help="Manually define the second label of the graphs.")
         basic_parser.add_argument('--tempdir', default=TEMPDIR, help="Manually define the temporary directory where Pyicos will write. By default Pyicos will use the temporary directory the system provides (For example, /tmp in unix systems)")
+        basic_parser.add_argument('--samtools-path', default=SAMTOOLSPATH, help="Define where samtools is installed, for reading BAM files [Default: Assumes it's part of the PATH]")
+
+
         output = self.new_subparser()
         output.add_argument('output', help='The output file or directory')
 
@@ -202,7 +196,7 @@ class PicosParser:
         label.add_argument('--label', default=LABEL, help='The label that will identify the experiment')
 
         span = self.new_subparser()
-        span.add_argument('--span', default=SPAN, help='The span of the variable and fixed wig formats', type=int)
+        span.add_argument('--span', default=SPAN, help='The span of the variable and fixed wig formats [Default %(default)s]', type=int)
 
         round = self.new_subparser()
         round.add_argument('--round',action='store_true',dest='rounding', default=ROUNDING, help='Round the final results to an integer')
@@ -312,7 +306,7 @@ class PicosParser:
         #split operation
         subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, split_proportion, split_absolute, label, remlabels])
         #trim operation
-        subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, trim_absolute, trim_proportion, label, remlabels])
+        subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, trim_absolute, trim_proportion, label, remlabels, span])
         #discard operation
         subparsers.add_parser('discard', help='Discards artifacts from a file. Only accepts pk or wig as output.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, span, label, remlabels])
         #remove duplicates operation
@@ -372,7 +366,7 @@ class PicosParser:
                             label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, 
                             counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER,  
                             total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, 
-                            use_replica=USE_REPLICA, tempdir=TEMPDIR)
+                            use_replica=USE_REPLICA, tempdir=TEMPDIR, samtools_path=SAMTOOLSPATH)
 
         args = parser.parse_args()
 
@@ -429,7 +423,7 @@ class PicosParser:
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.pseudocount, args.len_norm, args.label1, 
                             args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, 
                             args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim, 
-                            args.use_replica, args.tempdir)
+                            args.use_replica, args.tempdir, args.samtools_path)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')

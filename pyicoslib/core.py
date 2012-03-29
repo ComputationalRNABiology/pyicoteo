@@ -134,7 +134,7 @@ class ReaderFactory:
             return WigReader(format, half_open, cached)
         elif format == ELAND:
             return ElandReader(format, half_open, cached)
-        elif format == SAM:
+        elif format == SAM or format == BAM:
             return SamReader(format, half_open, cached)
         elif format == COUNTS:
             return None
@@ -281,7 +281,7 @@ class SamReader(Reader):
                     if cluster.strand != new_strand:
                         cluster.strand == NOSTRAND
 
-        except (ValueError, IndexError):
+        except (ValueError, IndexError, AttributeError):
             raise InvalidLine
 
     def quality_filter(self, line):
@@ -388,7 +388,7 @@ class WriterFactory:
             return VariableWigWriter(format, half_open, span)
         elif format == PK or format == SPK:
             return PkWriter(format, half_open, span)
-        elif format == SAM:
+        elif format == SAM or format == BAM:
             return SamWriter(format, half_open, span)
         elif format == COUNTS:
             None
@@ -450,7 +450,7 @@ class BedWriter(Writer):
 
 class SamWriter(Writer):
     def write_line(self, cluster):
-        sam_blueprint = '%s\t%s\t%s\t%s\t255\t%sM0S\t=\t0\t0\t%s\t%s\n'
+        sam_blueprint = '%s\t%s\t%s\t%s\t255\t%sM\t*\t0\t0\t%s\t%s\n'
         if cluster.is_empty():
             return ''
         else:
@@ -466,10 +466,10 @@ class SamWriter(Writer):
                 for tag in split_tags:
                     tags = cluster.decompose()
                     for tag in tags:
-                        lines = '%s%s'%(lines, sam_blueprint%(tag.name2, samflag, tag.name, tag.start+self.correction, len(tag), tag.sequence, (len(tag)+self.correction)*'?'))
+                        lines = '%s%s'%(lines, sam_blueprint%(tag.name2, samflag, tag.name, tag.start+self.correction, len(tag), tag.sequence, (len(tag)+self.correction)*'I'))
                 return lines
             else:
-                return sam_blueprint%(cluster.name2, samflag, cluster.name, cluster.start+self.correction, len(cluster), cluster.sequence, (len(cluster)+self.correction)*'?')
+                return sam_blueprint%(cluster.name2, samflag, cluster.name, cluster.start+self.correction, len(cluster), cluster.sequence, (len(cluster)+self.correction)*'I')
 
 
 class WigWriter(Writer):
@@ -596,6 +596,7 @@ class Cluster(AbstractCore):
                  read=PK, write=PK, read_half_open=False, write_half_open=False, normalize_factor=1., tag_length=0, sequence=None, span=20, cached=False, logger=None):
         """If you want the object to operate with integers instead
         of floats, set the rounding flag to True."""
+        self._fast_init()
         self.logger = logger
         self.name = name
         self.start = int(start)
@@ -615,11 +616,17 @@ class Cluster(AbstractCore):
         self.write_as(write, write_half_open, span)
         self.tag_length = tag_length
         self.sequence = sequence
-        self._tag_cache = []
-        self.extra_fields = []
-        self.read_count = 0
+
         self.strand = strand
+
+
+    def _fast_init(self):
+        """stuff that all cluster instances should have. To generate and copy cluster objects faster"""
+        self._tag_cache = []
+        self.extra_fields = []       
+        self.read_count = 0
         self.p_value = None
+
 
     def is_singleton(self):
         if self._tag_cache:
@@ -749,7 +756,7 @@ class Cluster(AbstractCore):
             ret_cluster.start = self.start
             ret_cluster.end = self.end
             ret_cluster.restart_levels()
-            ret_cluster._tag_cache = []
+            ret_cluster._fast_init()
 
             if self._tag_cache: 
                 for tag in self._tag_cache:
@@ -785,6 +792,7 @@ class Cluster(AbstractCore):
                     self.logger.error('Complex wig or pk clusters extension are not supported . Convert your files to a "tag" format (bed or sam).')
                     raise InvalidLine
 
+                self.sequence = None #deleting the sequence because the extension makes the sequence invalid (and incidentally screws up the counting of the length in the SAM format too)
                 if self.strand is MINUS_STRAND:
                     previous_start = self.start
                     self.start = self.end - extension + 1
@@ -1130,16 +1138,14 @@ class Cluster(AbstractCore):
         """
         Adds the levels of 2 selfs, activating the + operator for this type of object results = self + self2
         """
-        """if self._levels: 
-            print "Adding with LEVELS"
-        if self._tag_cache: 
-            print 'Adding with CACHE'"""
         if other._tag_cache:
             #for start, end, dup in other._tag_cache: 
             self.add_tag_cached(other._tag_cache[0][0], other._tag_cache[0][1]) #TODO only works when other._tag_cache = 1. For performance. Change if needed.
             
             self.start = min(self.start, other.start)
             self.end = max(self.end, other.end)
+            if self.strand != other.strand:
+                self.strand = "."    
             return self
         else: 
             result = self.copy_cluster()
@@ -1346,7 +1352,7 @@ class Cluster(AbstractCore):
             return False
 
     def __str__(self):
-        return "<Cluster object> chr: %s start: %s end: %s name: %s "%(self.name, self.start, self.end, self.name2)
+        return "<Cluster object> name: %s start: %s end: %s name2: %s "%(self.name, self.start, self.end, self.name2)
 
 
 #######################
@@ -1418,7 +1424,6 @@ class Region(AbstractCore):
 
     def swap(self, region_b, ratio=1):
         "Given 2 regions, return 2 new regions with the reads of both regions mixed aleatoriely"
-        #ratio=50.
         swap1 = Region(self.name, self.start, self.end)
         swap2 = Region(self.name, self.start, self.end)
         self.__sub_swap(self, swap1, swap2, ratio)

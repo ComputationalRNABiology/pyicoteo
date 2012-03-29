@@ -28,6 +28,7 @@ from tempfile import gettempdir
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 from defaults import *
 import utils
+import bam
 
 class OperationFailed(Exception):
     pass                 
@@ -39,7 +40,7 @@ class Turbomix:
     """
     
     def set_logger(self, verbose, debug):
-        logging_format= "%(asctime)s - %(levelname)s - %(message)s"
+        logging_format= "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
         logging.basicConfig(filename="pyicos.log", format=logging_format)
         self.logger = logging.getLogger("pyicos.log")
         if self.debug:
@@ -55,7 +56,7 @@ class Turbomix:
         else:
             ch.setLevel(logging.WARNING)
 
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter("%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s")
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
 
@@ -71,12 +72,13 @@ class Turbomix:
                  postscript=POSTSCRIPT, showplots=SHOWPLOTS, plot_path=PLOT_PATH, pseudocount=PSEUDOCOUNT, len_norm=LEN_NORM, label1=LABEL1, 
                  label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, counts_file=COUNTS_FILE, 
                  region_mintags=REGION_MINTAGS, bin_step=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER, total_reads_a=TOTAL_READS_A, 
-                 total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica_flag=USE_REPLICA, tempdir=TEMPDIR):
+                 total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica_flag=USE_REPLICA, tempdir=TEMPDIR,
+                 samtools_path=SAMTOOLSPATH):
 
         self.__dict__.update(locals())
         if type(self.tempdir) is not list:
             self.tempdir = [self.tempdir] 
-            print "ENLIST!!!", self.tempdir
+
 
         self.normalize_factor = 1
         self.set_logger(verbose, debug)
@@ -237,7 +239,7 @@ class Turbomix:
         """Returns the total number of cells in a file"""
         num = 0.
         cluster = Cluster(read=file_format, logger=self.logger)
-        for line in open(file_path, 'rb'):
+        for line in utils.open_file(file_path, file_format, logger=self.logger):
             self.safe_read_line(cluster, line)
             for level in cluster: 
                 num += level[0]*level[1]
@@ -355,17 +357,17 @@ class Turbomix:
 
         cluster_same = Cluster(read=file_format, write=file_format, rounding=self.rounding, read_half_open = file_open, write_half_open = file_open, tag_length=self.tag_length, span = self.span, logger=self.logger, cached=self.cached)
 
-        for line in open(file_path):
+        for line in utils.open_file(file_path, file_format, logger=self.logger):
             #print line
             self.cluster.clear()
-            self.cluster.read_line(line)
+            self.safe_read_line(self.cluster, line)
             if self.cluster.start == cluster_same.start and self.cluster.end == cluster_same.end and self.cluster.name == cluster_same.name and self.cluster.strand == cluster_same.strand:
                 equal_lines+=1
             else:
                 equal_lines=0
 
             cluster_same.clear()
-            cluster_same.read_line(line)   
+            self.safe_read_line(cluster_same, line)
      
             if self.do_heuremove:
                 cluster_same = self.remove_regions(cluster_same)
@@ -379,7 +381,7 @@ class Turbomix:
                 self.duplicates_found += 1
 
             cluster_same.clear() #Need to re-read to allow combination of extend and remove duplicates
-            cluster_same.read_line(line) 
+            self.safe_read_line(cluster_same, line)
 
         new_file.flush()
         new_file.close()
@@ -400,27 +402,30 @@ class Turbomix:
         return new_file_path     
     
     def filter_files(self):
-        """Filter the files removing the duplicates, calculates the enrichment based on the reads."""
+        """Filter the files removing the duplicates."""
         #TODO normalize should go here too
         self.current_experiment_path = self._filter_file(self.current_experiment_path, "experiment", self.temp_experiment, self.experiment_format, self.open_experiment)
+        if self.experiment_format == BAM: 
+            self.experiment_format = SAM
         self.temp_experiment = True
         if self.current_control_path:
             self.current_control_path = self._filter_file(self.current_control_path, "control", self.temp_control, self.control_format, self.open_control)
             self.temp_control = True
-
+            if self.control_format == BAM: 
+                self.control_format = SAM
 
     def get_lambda_func(self, format):
         if self.output_format == SPK:
             if format == ELAND:
                 return lambda x:(x.split()[6],x.split()[8],int(x.split()[7]),len(x.split()[1]))
-            elif format == SAM:
+            elif format == SAM or format == BAM:
                 return lambda x:(x.split()[2], x.split()[1], int(x.split()[3]), len(x.split()[9]))
             else:
                 return lambda x:(x.split()[0], x.split()[5], int(x.split()[1]), int(x.split()[2]))
         else:
             if format == ELAND:
                 return lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
-            elif format == SAM:
+            elif format == SAM or format == BAM:
                 return lambda x:(x.split()[2], int(x.split()[3]), len(x.split()[9]))
             else:
                 return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]))
@@ -433,11 +438,10 @@ class Turbomix:
             self.experiment_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment', logger=self.logger)
             self.experiment_b_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment_b', logger=self.logger)
             self.replica_a_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'replica_a', logger=self.logger)
-            self.replica_b_preprocessor = utils.BigSort(self.experiment_format, self.open_control, self.frag_size, 'replica_b', logger=self.logger)
             self.control_preprocessor = utils.BigSort(self.control_format, self.open_control, self.frag_size, 'control', logger=self.logger)
                        
-            if self.no_sort:
-                self.logger.warning('Input sort skipped. Results might be wrong.')
+            if self.no_sort or self.experiment_format == BAM:
+                if self.no_sort: self.logger.warning('Input sort skipped. Results might be wrong.')
                 self.current_experiment_path = experiment_path
             elif not self.counts_file:
                 self.logger.info('Sorting experiment file...')
@@ -447,8 +451,8 @@ class Turbomix:
                 self.temp_experiment = True
 
             if self.do_subtract:
-                if self.no_sort:
-                    self.logger.warning('Control sort skipped. Results might be wrong.')
+                if self.no_sort or self.experiment_format == BAM:
+                    if self.no_sort: self.logger.warning('Control sort skipped. Results might be wrong.')
                     self.current_control_path = control_path
                 else:
                     self.logger.info('Sorting control file...')
@@ -457,8 +461,8 @@ class Turbomix:
                     self.temp_control = True
             
             if ENRICHMENT in self.operations:  
-                if self.no_sort:
-                    self.logger.warning('Experiment_b sort skipped. Results might be wrong.')
+                if self.no_sort or self.experiment_format == BAM:
+                    if self.no_sort:  self.logger.warning('Experiment_b sort skipped. Results might be wrong.')
                     self.current_control_path = control_path
                 elif not self.counts_file:
                     self.logger.info('Sorting experiment_b file...')
@@ -467,8 +471,8 @@ class Turbomix:
                     self.temp_control = True
             
             if self.replica_a_path:  
-                if self.no_sort:
-                    self.logger.info('replica_a sort skipped')
+                if self.no_sort or self.experiment_format == BAM:
+                    if self.no_sort: self.logger.warning('replica_a sort skipped')
                     self.current_replica_a_path = self.replica_a_path
                 else:
                     self.logger.info('Sorting replica_a file...')
@@ -476,21 +480,16 @@ class Turbomix:
                     self.current_replica_a_path = sorted_replica_a_file.name
                     self.temp_replica = True
 
-            if self.replica_b_path:
-                if self.no_sort:
-                    self.logger.info('replica_b sort skipped')
-                    self.current_replica_b_path = self.replica_b_path
-                else:
-                    self.logger.info('Sorting replica_b file...')
-                    sorted_replica_b_file = self.replica_b_preprocessor.sort(self.replica_b_path, None, self.get_lambda_func(self.experiment_format), self.tempdir)
-                    self.current_replica_b_path = sorted_replica_b_file.name
-                    self.temp_replica_b = True
-
         if self.region_path:
-            self.logger.info("Sorting region file...")
-            self.region_preprocessor = utils.BigSort(self.region_format, self.open_region, None, 'region', logger=self.logger)
-            self.sorted_region_file = self.region_preprocessor.sort(self.region_path, None, self.get_lambda_func(BED), self.tempdir)
-            self.sorted_region_path = self.sorted_region_file.name
+            if self.no_sort or self.experiment_format == BAM:
+                if self.no_sort:
+                    self.logger.warning('region sort skipped')
+                self.sorted_region_path = self.region_path
+            else:
+                self.logger.info("Sorting region file...")
+                self.region_preprocessor = utils.BigSort(self.region_format, self.open_region, None, 'region', logger=self.logger)
+                self.sorted_region_file = self.region_preprocessor.sort(self.region_path, None, self.get_lambda_func(BED), self.tempdir)
+                self.sorted_region_path = self.sorted_region_file.name
 
 
 
@@ -524,18 +523,14 @@ class Turbomix:
          
             if self.control_path:
                 self.control_reader_simple = utils.SortedFileReader(self.current_control_path, self.control_format, rounding=self.rounding, logger=self.logger)
-                self.control_reader = utils.SortedFileClusterReader(self.current_control_path, self.control_format, rounding=self.rounding, cached=self.cached, logger=self.logger)
-
-            if self.region_path:
-                self.region_reader = utils.SortedFileClusterReader(self.sorted_region_path, BED, rounding=self.rounding, cached=self.cached, logger=self.logger)
+                self.control_reader = utils.read_fetcher(self.current_control_path, self.control_format, rounding=self.rounding, cached=self.cached, logger=self.logger)
 
             if self.blacklist:
-                self.blacklist_reader = utils.SortedFileClusterReader(self.blacklist, BED, rounding=self.rounding, cached=self.cached, logger=self.logger)
+                self.blacklist_reader = utils.read_fetcher(self.blacklist, BED, rounding=self.rounding, cached=self.cached, logger=self.logger)
 
             if STRAND_CORRELATION in self.operations:
-                self.strand_correlation()
-            
-            if self.do_dupremove or (EXTEND in self.operations and STRAND_CORRELATION in self.operations) or self.do_heuremove:
+                self.strand_correlation()          
+            if self.do_dupremove or (EXTEND in self.operations and (STRAND_CORRELATION in self.operations or self.experiment_format == BAM or self.control_format == BAM)) or self.do_heuremove:
                 self.filter_files()
 
             if NORMALIZE in self.operations:
@@ -659,8 +654,8 @@ class Turbomix:
             output = None
         else:
             output = open(self.current_output_path, 'wb')
-        experiment = file(self.current_experiment_path, 'rb')
 
+        experiment = utils.open_file(self.current_experiment_path, self.experiment_format, logger=self.logger)
         if self.output_format == WIG or self.output_format == VARIABLE_WIG:
             output.write('track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.label)
 
@@ -728,20 +723,22 @@ class Turbomix:
     def poisson_analysis(self, name=''):
         """
         We do 3 different poisson statistical tests per name for each experiment file:
-        
-        Nucleotide analysis:
-        This analysis takes the nucleotide as the unit to analize. We give a p-value for each "height"
-        of read per nucleotides using an accumulated poisson. With this test we can infer more accurately 
-        what nucleotides in the cluster are part of the DNA binding site.
  
         Cluster analysis:
         This analysis takes as a basic unit the "cluster" profile and performs a poisson taking into account the height
         of the profile. This will help us to better know witch clusters are statistically significant and which are product of chromatine noise
 
-        We do this by calculating the acumulated maximum height for all existing clusters and dividing it by the number of clusters. This gives us the average height of a cluster.
-        Given a mean and a   height k the poisson function gives us the probability p of one cluster having a height k by chance. With this if we want, for example,
-        to know what is the probability of getting a cluster higher than k = 7, we accumulate the p-values for poisson(k"0..6", mean).
+        We do this by calculating the average height of clusters in a given chromosome. Given this mean, we calculate the p-value for each height k the poisson
+        function gives us the probability p of one cluster having a height k by chance. 
+        With this if we want, for example, to know what is the probability of getting a cluster higher than k = 7, we accumulate the p-values 
+        for poisson(k"0..6", mean), and calculate 1 - sum(poisson(k, mean))
         
+        Nucleotide analysis:
+        This analysis takes the nucleotide as the unit to analize. We give a p-value for each "height"
+        of read per nucleotides using an accumulated poisson. With this test we can infer more accurately 
+        what nucleotides in the cluster are part of the DNA binding site.
+
+
         Number of reads analysis:
         We analize the number of reads of the cluster. Number of reads = sum(xi *yi ) / read_length
 
@@ -1202,7 +1199,7 @@ class Turbomix:
         numreads_background_2 = 0
         total_reads_background_1 = 0
         total_reads_background_2 = 0
-        
+        self.logger.debug("Inside _calculate_MA")
         self.regions_analyzed_count = 0
         enrichment_result = [] #This will hold the name, start and end of the region, plus the A, M, 'A and 'M
         out_file = open(self.current_output_path, 'wb')
@@ -1226,8 +1223,9 @@ class Turbomix:
                     signal_background_2 = float(sline[9])*replica_factor
                 else:
                     tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON)
+                    if len(tags_a) > 100: self.logger.debug("Getting tags...")  
                     tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON)
-
+                    if len(tags_a) > 100: self.logger.debug("tags_a: %s tags_b: %s"%(len(tags_a), len(tags_b)))
                     if self.use_replica:            
                         replica_tags = replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON)
 
@@ -1241,10 +1239,12 @@ class Turbomix:
                         signal_b = region_b.normalized_counts(self.len_norm, self.n_norm, self.total_regions, self.pseudocount, factor, self.total_reads_b)
                         self.already_norm = True
   
+                
                 if not self.counts_file:
                     if (self.pseudocount and (tags_a or tags_b)) or (not self.pseudocount and tags_a and tags_b): 
                         if self.use_replica:
                             replica_a = region_of_interest.copy()
+                            
                             replica_a.add_tags(replica_tags)
                             numreads_background_1 = len(tags_a)
                             numreads_background_2 = len(replica_tags)
@@ -1255,6 +1255,7 @@ class Turbomix:
 
                         elif region_a:
                             swap1, swap2 = region_a.swap(region_b, factor)
+                            if len(tags_a) > 100: self.logger.debug("Swap1 Region: %s len: %s "%(swap1, len(swap1.tags)))
                             numreads_background_1 = len(swap1.tags)
                             numreads_background_2 = len(swap2.tags)
                             total_reads_background_1 = total_reads_background_2 = self.average_total_reads
@@ -1291,14 +1292,12 @@ class Turbomix:
                         A_prime = self.__enrichment_A(signal_background_1, signal_background_2)
                         M_prime = self.__enrichment_M(signal_background_1, signal_background_2)
 
-
                     out_file.write("%s\n"%("\t".join([region_of_interest.write().rstrip("\n"), str(signal_a), str(signal_b), str(signal_background_1), str(signal_background_2), str(A), str(M), str(self.total_reads_a), str(self.total_reads_b), str(len(tags_a)), str(len(tags_b)),  str(A_prime), str(M_prime), str(total_reads_background_1), str(total_reads_background_2), str(numreads_background_1), str(numreads_background_2)])))
                     self.regions_analyzed_count += 1
 
-
-
         out_file.flush()
         out_file.close()
+        self.logger.debug("LEAVING _calculate_MA")
         return out_file.name
 
 
@@ -1327,12 +1326,25 @@ class Turbomix:
 
         else:
             self.logger.info("... counting number of lines in files...")
+            "MIRAR nref para los BAM = Profit"
             if not self.total_reads_a:
-                self.total_reads_a = sum(1 for line in open(self.current_experiment_path))
+                if self.experiment_format == BAM:
+                    self.total_reads_a = bam.size(self.current_experiment_path)
+                    print self.total_reads_a
+                else:
+                    self.total_reads_a = sum(1 for line in utils.open_file(self.current_experiment_path, self.experiment_format, logger=self.logger))
             if not self.total_reads_b:
-                self.total_reads_b = sum(1 for line in open(self.current_control_path))
+                if self.experiment_format == BAM:
+                    self.total_reads_b = bam.size(self.current_control_path)
+                    print self.total_reads_b
+                else:
+                    self.total_reads_b = sum(1 for line in utils.open_file(self.current_control_path, self.control_format, logger=self.logger))
             if self.use_replica and not self.total_reads_replica:
-                self.total_reads_replica = sum(1 for line in open(self.replica_a_path))
+                if self.experiment_format  == BAM:
+                    self.total_reads_replica = bam.size(self.replica_a_path)
+                else:
+                    self.total_reads_replica = sum(1 for line in utils.open_file(self.replica_a_path, self.replica_a_format, logger=self.logger))
+                    print self.total_reads_replica
 
             if self.use_replica:
                 msg = "%s using replicas..."%msg
@@ -1351,10 +1363,10 @@ class Turbomix:
         
         self._calculate_total_lengths()
         if not self.counts_file:
-            file_a_reader = utils.SortedFileClusterReader(self.current_experiment_path, self.experiment_format, cached=self.cached)
-            file_b_reader = utils.SortedFileClusterReader(self.current_control_path, self.experiment_format, cached=self.cached)
+            file_a_reader = utils.read_fetcher(self.current_experiment_path, self.experiment_format, cached=self.cached, logger=self.logger)
+            file_b_reader = utils.read_fetcher(self.current_control_path, self.experiment_format, cached=self.cached, logger=self.logger)
             if self.use_replica:
-                replica_a_reader = utils.SortedFileClusterReader(self.current_replica_a_path, self.experiment_format, cached=self.cached)
+                replica_a_reader = utils.read_fetcher(self.current_replica_a_path, self.experiment_format, cached=self.cached, logger=self.logger)
 
             if self.sorted_region_path:
                 self.logger.info('Using region file %s (%s)'%(self.region_path, self.region_format))
@@ -1477,6 +1489,7 @@ class Turbomix:
         self.logger.info("... calculating zscore...")
         enrichment_result = self.__load_enrichment_result(values_path)
         enrichment_result.sort(key= lambda x:(float(x["A_prime"])))
+        self.logger.debug("Number of loaded counts: %s"%len(enrichment_result))        
         self.points = []
         #get the standard deviations
         for i in range(0, num_regions-bin_size+bin_step, bin_step):
@@ -1502,7 +1515,7 @@ class Turbomix:
             A_median = a_acum / len(result_chunk)
 
             self.points.append([A_median, mean, sd]) #The A asigned to the window, the mean and the standard deviation  
-            self.logger.debug("Window of %s length, with A median: %s mean: %s sd: %s"%(len(result_chunk), self.points[-1][0], self.points[-1][1], self.points[-1][2]))  
+            #self.logger.debug("Window of %s length, with A median: %s mean: %s sd: %s"%(len(result_chunk), self.points[-1][0], self.points[-1][1], self.points[-1][2], len(self.points)))  
 
         #update z scores
         for entry in enrichment_result:
@@ -1572,9 +1585,9 @@ class Turbomix:
         self.logger.info("Running modfdr filter with %s p-value threshold and %s repeats..."%(self.p_value, self.repeats))
         old_output = '%s/before_modfdr_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
         shutil.move(os.path.abspath(self.current_output_path), old_output)
-        cluster_reader = utils.SortedFileClusterReader(old_output, self.output_format, cached=self.cached)
+        cluster_reader = utils.read_fetcher(old_output, self.output_format, cached=self.cached)
         #if self.masker_file:
-        #    masker_reader = utils.SortedFileClusterReader(self.masker_file, BED, cached=self.cached)
+        #    masker_reader = utils.read_fetcher(self.masker_file, BED, cached=self.cached)
         filtered_output = open(self.current_output_path, 'w+')
         unfiltered_output = open('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
         for region_line in open(self.sorted_region_path):
@@ -1599,7 +1612,7 @@ class Turbomix:
         self.analyzed_pairs = 0.
         acum_length = 0.
         num_analyzed = 0
-        for line in open(self.current_experiment_path):
+        for line in utils.open_file(self.current_experiment_path, self.experiment_format, logger=self.logger):
             line_read = Cluster(read=self.experiment_format)
             line_read.read_line(line)
             if line_read.strand == PLUS_STRAND:
