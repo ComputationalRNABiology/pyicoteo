@@ -1343,7 +1343,7 @@ class Turbomix:
                 if self.experiment_format  == BAM:
                     self.total_reads_replica = bam.size(self.replica_a_path)
                 else:
-                    self.total_reads_replica = sum(1 for line in utils.open_file(self.replica_a_path, self.replica_a_format, logger=self.logger))
+                    self.total_reads_replica = sum(1 for line in utils.open_file(self.replica_a_path, self.experiment_format, logger=self.logger))
                     print self.total_reads_replica
 
             if self.use_replica:
