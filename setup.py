@@ -11,6 +11,6 @@ setup(name='Pyicos',
       packages = ['pyicoslib.lib', 'chrdesc'],
       data_files = [('chrdesc', ['chrdesc/mm8', 'chrdesc/mm9', 'chrdesc/hg18', 'chrdesc/hg19']), ('test_files', ['test_files/p300.bed', 'test_files/control.bed'])],
       scripts = ['pyicos'],
-      py_modules = ['pyicoslib.core', 'pyicoslib.turbomix','pyicoslib.utils', 'pyicoslib.parser', 'pyicoslib.defaults']
+      py_modules = ['pyicoslib.core', 'pyicoslib.turbomix','pyicoslib.utils', 'pyicoslib.parser', 'pyicoslib.defaults', 'pyicoslib.bam']
      )
 
