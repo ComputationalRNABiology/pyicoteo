@@ -615,18 +615,18 @@ class Turbomix:
     def _to_cluster_conversion(self, experiment, output):
         #load the first read
         self.logger.debug("_to_cluster_conversion: running clustering...")
-
         while self.cluster.is_empty():
             self.cluster_aux2.clear()
-            self.safe_read_line(self.cluster_aux2, experiment.next())
+            self.safe_read_line(self.cluster, experiment.next())
             if not self.cluster_aux2.is_empty():
                 self.cluster_aux2.copy_cluster_data(self.cluster)
 
+        #print "OVERLAP", self.end, self._tag_cache, other.end, other._tag_cache
         for line in experiment:
             self.cluster_aux.clear()
             self.safe_read_line(self.cluster_aux, line)
             if not self.cluster_aux.is_empty():
-                if self.cluster_aux.touches(self.cluster_aux2):
+                if self.cluster_aux.touches(self.cluster):
                     self.cluster += self.cluster_aux
                     self.cluster_aux2.clear()
                     self.cluster_aux.copy_cluster_data(self.cluster_aux2)

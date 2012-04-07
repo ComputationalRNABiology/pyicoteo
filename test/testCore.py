@@ -113,11 +113,6 @@ class TestCoreObjects(unittest.TestCase):
         self.assertEqual(cluster.write_line(), 'chr1\t1\t10\t1\nchr1\t10\t100\t2\nchr1\t100\t130\t1\n')
 
 
-
-
-
-
-
     def read_and_extend(self, cluster, line, extension):
         cluster_aux = Cluster(read=BED, write=BED, read_half_open=True, write_half_open=True, rounding = True)
         if cluster.is_empty():
