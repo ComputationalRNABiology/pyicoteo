@@ -233,7 +233,7 @@ class BedReader(Reader):
                     line = line.split()
                     cluster.name = line[0]
                     cluster.start = int(line[1])+self.correction
-                    cluster.end = int(line[2])
+                    cluster.end = max(cluster.end, int(line[2]))
                     self._add_name(cluster, line)
                     self._add_score(cluster, line)
                     self._add_strand(cluster, line)
