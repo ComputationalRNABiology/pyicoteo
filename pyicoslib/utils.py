@@ -445,7 +445,6 @@ class SortedFileClusterReader:
             fast_cursor += 1
             if self._read_line_load_cache(fast_cursor):
                 return clusters
-        if clusters: print clusters[0]
         return clusters
 
     def safe_read_line(self, cluster, line):
