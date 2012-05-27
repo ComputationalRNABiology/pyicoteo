@@ -1140,8 +1140,7 @@ class Cluster(AbstractCore):
         """
         if other._tag_cache:
             #for start, end, dup in other._tag_cache: 
-            self.add_tag_cached(other._tag_cache[0][0], other._tag_cache[0][1]) #TODO only works when other._tag_cache = 1. For performance. Change if needed.
-            
+            self.add_tag_cached(other._tag_cache[0][0], other._tag_cache[0][1]) #TODO only works when other._tag_cache == 1. For performance. Change if needed.
             self.start = min(self.start, other.start)
             self.end = max(self.end, other.end)
             if self.strand != other.strand:

@@ -132,7 +132,7 @@ class PicosParser:
         basic_parser.add_argument('--label1', default=LABEL1, help="Manually define the second label of the graphs.")
         basic_parser.add_argument('--label2', default=LABEL2, help="Manually define the second label of the graphs.")
         basic_parser.add_argument('--tempdir', default=TEMPDIR, help="Manually define the temporary directory where Pyicos will write. By default Pyicos will use the temporary directory the system provides (For example, /tmp in unix systems)")
-        basic_parser.add_argument('--samtools-path', default=SAMTOOLSPATH, help="Define where samtools is installed, for reading BAM files [Default: Assumes it's part of the PATH]")
+        basic_parser.add_argument('--samtools', default=USESAMTOOLS, action='store_true', help="Use samtools for reading BAM files [Default: Pyicos uses its own library] (reading BAM works without samtools for convert, extend, and other operations, but not for enrichment yet)]")
 
 
         output = self.new_subparser()
@@ -366,7 +366,7 @@ class PicosParser:
                             label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, 
                             counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER,  
                             total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, 
-                            use_replica=USE_REPLICA, tempdir=TEMPDIR, samtools_path=SAMTOOLSPATH)
+                            use_replica=USE_REPLICA, tempdir=TEMPDIR, use_samtools=USESAMTOOLS)
 
         args = parser.parse_args()
 
@@ -423,7 +423,7 @@ class PicosParser:
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.pseudocount, args.len_norm, args.label1, 
                             args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, 
                             args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim, 
-                            args.use_replica, args.tempdir, args.samtools_path)
+                            args.use_replica, args.tempdir, args.samtools)
 
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')

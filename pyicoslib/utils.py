@@ -9,7 +9,7 @@ from itertools import islice, cycle, chain
 
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 from defaults import *
-from bam import BamReader, BamFetcher
+from bam import BamReader, BamFetcher, BamFetcherSamtools
 
 
 def open_file(path, format=None, gzipped=False, logger=None):
@@ -25,7 +25,10 @@ def open_file(path, format=None, gzipped=False, logger=None):
 
 
 
-def read_fetcher(file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
+def read_fetcher(file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None, use_samtools=False):
+    if use_samtools and experiment_format == BAM:
+        return BamFetcherSamtools(file_path, experiment_format, read_half_open, rounding, cached, logger)
+
     if experiment_format == BAM:
         return BamFetcher(file_path, experiment_format, read_half_open, rounding, cached, logger)
     else:

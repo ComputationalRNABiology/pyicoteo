@@ -2,8 +2,12 @@ import struct
 import zlib
 import sys
 from math import ceil, floor
+import subprocess
+
 from defaults import *
 from pyicoslib.core import Cluster, InvalidLine
+
+
 
 SEQUENCE_TRANS = list('=ACMGRSVTWYHKDBN')
 CIGAR_TRANS = list('MIDNSHP=X')
@@ -360,7 +364,6 @@ def BamReader(path, logger=None, tell=None, read_start=0, chr_dict = None):
     #TODO check that everything is 0 for truncate
 
 
-
 class BamFetcher:
 
     def __init__(self, bam_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
@@ -382,8 +385,6 @@ class BamFetcher:
         self.num_references = s_int32(self.bai_file.read(4))[0]
         self.get_chrdict()
         self.get_reference_tells()
-
-
 
 
     def get_reference_tells(self):
@@ -497,6 +498,28 @@ class BamFetcher:
         else:
             print "No clusters found!"
         print
+
+        return clusters
+        
+
+class BamFetcherSamtools(BamFetcher):
+    def get_overlaping_clusters(self, region, overlap=1):    
+        clusters = []
+        proc = subprocess.Popen("samtools view %s %s:%s-%s"%(self.bam_path, region.name, region.start, region.end), stdout=subprocess.PIPE, shell=True)
+        out, err = proc.communicate()
+        lines = filter(None, out.split("\n"))
+        for line in lines:
+            c = Cluster(read=SAM, cached=False, read_half_open=self.read_half_open, rounding=self.rounding)
+            try:
+                c.read_line(line)
+            except InvalidLine:
+                print "Invalid line, .bam or .bai corrupt"
+                break
+
+            if c.overlap(region) >= overlap:                
+                clusters.append(c)
+            elif c.start > region.end or c.name != region.name:
+                break
 
         return clusters
         
