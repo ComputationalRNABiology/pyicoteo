@@ -279,7 +279,7 @@ class SamReader(Reader):
                     cluster.sequence = ''
                     cluster.name2 = ''
                     if cluster.strand != new_strand:
-                        cluster.strand == NOSTRAND
+                        cluster.strand == NO_STRAND
 
         except (ValueError, IndexError, AttributeError):
             raise InvalidLine

@@ -3,7 +3,7 @@ import zlib
 import sys
 from math import ceil, floor
 from defaults import *
-from pyicoslib.core import Cluster
+from pyicoslib.core import Cluster, InvalidLine
 
 SEQUENCE_TRANS = list('=ACMGRSVTWYHKDBN')
 CIGAR_TRANS = list('MIDNSHP=X')
@@ -74,6 +74,7 @@ def read_gzip_header(f):
         #TODO probar si merece la pena hacer checks de los headers (tiempo vs mirar si el BAM esta bien formado)
         id1 = s_uint8(f.read(1))[0]
         id2 = s_uint8(f.read(1))[0]
+        #print "signature:", id1, id2
         method = s_uint8(f.read(1))[0]
         flags = s_uint8(f.read(1))[0]
         mtime = s_uint32(f.read(4))[0]
@@ -311,52 +312,52 @@ def BamReader(path, logger=None, tell=None, read_start=0, chr_dict = None):
     if tell:
         f.seek(tell)
 
+    extra_len = read_gzip_header(f) #get the field extra_len from the gzip header
+    while extra_len:
+        cdata = read_bgzf(f, extra_len) #get the compressed bam data from the CDATA extra field
+        dec = "%s%s"%(dec, zlib.decompress(cdata, -15)) #decompress the CDATA field
+        if first:
+            first = False
+        else:                        
+            dec_cursor = 0
+
+        if bam_header:
+            bam_header = False
+            dec, dec_cursor, header, chr_dict = read_bam_header(dec, dec_cursor)
+            if header: yield header
+
+        
+        while dec:
+            if block_size == 0: 
+                if len(dec[dec_cursor:]) < 4:
+                    dec, extra_len = get_new_dec(dec, dec_cursor, f)
+                    if first:
+                        first = False
+                    else:                        
+                        dec_cursor = 0
+                    if not dec: #its over
+                        break
+
+                new_cursor = dec_cursor+4                
+                block_size = s_uint32(dec[dec_cursor:new_cursor])[0]
+                dec_cursor = new_cursor            
+                if block_size > len(dec[dec_cursor:]):
+                    dec, extra_len = get_new_dec(dec, dec_cursor, f)
+                    if first:
+                        first = False
+                    else:                        
+                        dec_cursor = 0
+                    if not dec: #its over
+                        break
+
+            yield_line, dec, dec_cursor = read_alignment(dec, dec_cursor, block_size, chr_dict)
+            yield yield_line
+            block_size = 0
+
+        gzip_tail = f.read(8)
         extra_len = read_gzip_header(f) #get the field extra_len from the gzip header
-        while extra_len:
-            cdata = read_bgzf(f, extra_len) #get the compressed bam data from the CDATA extra field
-            dec = "%s%s"%(dec, zlib.decompress(cdata, -15)) #decompress the CDATA field
-            if first:
-                first = False
-            else:                        
-                dec_cursor = 0
 
-            if bam_header:
-                bam_header = False
-                dec, dec_cursor, header, chr_dict = read_bam_header(dec, dec_cursor)
-                if header: yield header
-
-            
-            while dec:
-                if block_size == 0: 
-                    if len(dec[dec_cursor:]) < 4:
-                        dec, extra_len = get_new_dec(dec, dec_cursor, f)
-                        if first:
-                            first = False
-                        else:                        
-                            dec_cursor = 0
-                        if not dec: #its over
-                            break
-
-                    new_cursor = dec_cursor+4                
-                    block_size = s_uint32(dec[dec_cursor:new_cursor])[0]
-                    dec_cursor = new_cursor            
-                    if block_size > len(dec[dec_cursor:]):
-                        dec, extra_len = get_new_dec(dec, dec_cursor, f)
-                        if first:
-                            first = False
-                        else:                        
-                            dec_cursor = 0
-                        if not dec: #its over
-                            break
-
-                yield_line, dec, dec_cursor = read_alignment(dec, dec_cursor, block_size, chr_dict)
-                yield yield_line
-                block_size = 0
-
-            gzip_tail = f.read(8)
-            extra_len = read_gzip_header(f) #get the field extra_len from the gzip header
-
-        #TODO check that everything is 0 for truncate
+    #TODO check that everything is 0 for truncate
 
 
 
@@ -445,40 +446,57 @@ class BamFetcher:
         else:
             interval_end = int(floor((region.end-LINEAR_SIZE*4)/LINEAR_SIZE))
 
+        #so we dont fall off the reference, in case an overflow region appears
+        interval_start = min(n_intv-1, interval_start)
+        interval_end = min(n_intv-1, interval_end)
         #skip to the start interval
-        self.bai_file.read(8*interval_start)
+        self.bai_file.read(8*(interval_start))
         num_intervals = interval_end-interval_start+1
-        start_seek = None
+        print n_intv, interval_start, interval_end
+        print "Num_intervals", num_intervals, 
+        ioffset = None 
         for n in range(0, num_intervals):
             ioffset = s_uint64(self.bai_file.read(8))[0]
             if ioffset:
-                start_seek = ioffset
                 break
+            else:
+                print "discarded:", ioffset,
 
-        coffset = int(start_seek >> 16)
-        uoffset = int(start_seek&2**16-1) #El acceso al seek del fichero descomprimido (el dec)
-        return coffset, uoffset
-        
+        print
+        if ioffset:
+            coffset = int(ioffset >> 16)
+            uoffset = int(ioffset&65535) #El acceso al seek del fichero descomprimido (el dec)
+            return coffset, uoffset
+        else:
+            return 0,0 #start of the reference file
+
   
     def get_overlaping_clusters(self, region, overlap=1):
         clusters = []
         bam_tell, read_start = self.get_bam_tell(region)
-        r = BamReader(self.bam_path, self.logger, bam_tell, read_start, self.chr_dict_inv)
-        for line in r:
-            
-            c = Cluster(read=SAM, cached=False, read_half_open=self.read_half_open, rounding=self.rounding)
-            c.read_line(line)
-            if c.overlap(region) >= overlap:                
-                clusters.append(c)
-            elif c.start > region.end:
-                break
+        print "TELL", bam_tell, read_start
+        if bam_tell or region.start < LINEAR_SIZE*4:
+            r = BamReader(self.bam_path, self.logger, bam_tell, read_start, self.chr_dict_inv)
+            for line in r:
+                c = Cluster(read=SAM, cached=False, read_half_open=self.read_half_open, rounding=self.rounding)
+                try:
+                    c.read_line(line)
+                except InvalidLine:
+                    print "Invalid line, .bam or .bai corrupt"
+                    break
 
-        print region
-        if len(clusters) > 1:
+                if c.overlap(region) >= overlap:                
+                    clusters.append(c)
+                elif c.start > region.end or c.name != region.name:
+                    break
+
+        if len(clusters) > 0:
             print "Num clusters", len(clusters)
             print "first:", clusters[0].start, clusters[0].end
-            print "end:", clusters[-1].start, clusters[-1].end
-            print 
+            if len(clusters) > 1: print "end:", clusters[-1].start, clusters[-1].end
+        else:
+            print "No clusters found!"
+        print
 
         return clusters
         

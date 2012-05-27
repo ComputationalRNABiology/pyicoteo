@@ -16,7 +16,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import os.path
 import sys
 import os
-import shutil
+
+
 import logging
 import math
 import random
@@ -29,6 +30,14 @@ from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSu
 from defaults import *
 import utils
 import bam
+
+try:
+    from shutil import move
+except:
+    print "WARNING: Couldn't import shutil, using os.rename instead"
+    from os import rename as move 
+
+
 
 class OperationFailed(Exception):
     pass                 
@@ -358,7 +367,6 @@ class Turbomix:
         cluster_same = Cluster(read=file_format, write=file_format, rounding=self.rounding, read_half_open = file_open, write_half_open = file_open, tag_length=self.tag_length, span = self.span, logger=self.logger, cached=self.cached)
 
         for line in utils.open_file(file_path, file_format, logger=self.logger):
-            #print line
             self.cluster.clear()
             self.safe_read_line(self.cluster, line)
             if self.cluster.start == cluster_same.start and self.cluster.end == cluster_same.end and self.cluster.name == cluster_same.name and self.cluster.strand == cluster_same.strand:
@@ -881,7 +889,7 @@ class Turbomix:
         """Discards the clusters that dont go past the threadshold calculated by the poisson analysis"""
         current_directory = self._current_directory()
         old_output = '%s/before_cut_%s'%(current_directory, os.path.basename(self.current_output_path))
-        shutil.move(os.path.abspath(self.current_output_path), old_output)
+        move(os.path.abspath(self.current_output_path), old_output)
         filtered_output = open(self.current_output_path, 'w+')
 
         if self.poisson_test == 'height':
@@ -976,7 +984,6 @@ class Turbomix:
         """
         Calculate a region file using the reads present in the both main files to analyze. 
         """
-
         self.logger.info('Generating regions...')
         self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))
         region_file = open(self.sorted_region_path, 'wb')
@@ -986,6 +993,7 @@ class Turbomix:
         else:
             self.calculate_region_notstranded(dual_reader, region_file)    
 
+        region_file.flush()
 
     def __cr_append(self, regions, region):
         regions.append(region)
@@ -1205,6 +1213,7 @@ class Turbomix:
         out_file = open(self.current_output_path, 'wb')
         for region_line in open(region_path):
             sline = region_line.split()
+
             region_of_interest = self._region_from_sline(sline)            
             if region_of_interest:
                 region_a = None
@@ -1330,13 +1339,11 @@ class Turbomix:
             if not self.total_reads_a:
                 if self.experiment_format == BAM:
                     self.total_reads_a = bam.size(self.current_experiment_path)
-                    print self.total_reads_a
                 else:
                     self.total_reads_a = sum(1 for line in utils.open_file(self.current_experiment_path, self.experiment_format, logger=self.logger))
             if not self.total_reads_b:
                 if self.experiment_format == BAM:
                     self.total_reads_b = bam.size(self.current_control_path)
-                    print self.total_reads_b
                 else:
                     self.total_reads_b = sum(1 for line in utils.open_file(self.current_control_path, self.control_format, logger=self.logger))
             if self.use_replica and not self.total_reads_replica:
@@ -1344,7 +1351,6 @@ class Turbomix:
                     self.total_reads_replica = bam.size(self.replica_a_path)
                 else:
                     self.total_reads_replica = sum(1 for line in utils.open_file(self.replica_a_path, self.experiment_format, logger=self.logger))
-                    print self.total_reads_replica
 
             if self.use_replica:
                 msg = "%s using replicas..."%msg
@@ -1390,7 +1396,7 @@ class Turbomix:
             #move output file to old output
             #use as input
             old_output = '%s/notnormalized_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
-            shutil.move(os.path.abspath(self.current_output_path), old_output)
+            move(os.path.abspath(self.current_output_path), old_output)
             out_path = self._calculate_MA(old_output, True, tmm_factor, replica_tmm_factor, True) #recalculate with the new factor, using the counts again
 
         self.logger.info("%s regions analyzed."%self.regions_analyzed_count)
@@ -1544,7 +1550,7 @@ class Turbomix:
 
         enrichment_result.sort(key=lambda x:(x["name"], int(x["start"]), int(x["end"])))
         old_file_path = '%s/before_zscore_%s'%(self._current_directory(), os.path.basename(values_path)) #create path for the outdated file
-        shutil.move(os.path.abspath(values_path), old_file_path) #move the file
+        move(os.path.abspath(values_path), old_file_path) #move the file
         new_file = file(values_path, 'w') #open a new file in the now empty file space  
         if not self.skip_header:
             new_file.write('\t'.join(enrichment_keys))
@@ -1584,7 +1590,7 @@ class Turbomix:
     def modfdr(self):
         self.logger.info("Running modfdr filter with %s p-value threshold and %s repeats..."%(self.p_value, self.repeats))
         old_output = '%s/before_modfdr_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
-        shutil.move(os.path.abspath(self.current_output_path), old_output)
+        move(os.path.abspath(self.current_output_path), old_output)
         cluster_reader = utils.read_fetcher(old_output, self.output_format, cached=self.cached)
         #if self.masker_file:
         #    masker_reader = utils.read_fetcher(self.masker_file, BED, cached=self.cached)
