@@ -79,7 +79,7 @@ REGION_MINTAGS = 6
 WINDOW_STEP = 0.1
 POISSON_OPTIONS=("height", "numtags", "length")
 TEMPDIR=[]
-SAMTOOLSPATH="samtools"
+USESAMTOOLS=False
 
 #Enrichment
 PSEUDOCOUNT=False

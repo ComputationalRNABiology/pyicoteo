@@ -82,10 +82,10 @@ class Turbomix:
                  label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, counts_file=COUNTS_FILE, 
                  region_mintags=REGION_MINTAGS, bin_step=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER, total_reads_a=TOTAL_READS_A, 
                  total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica_flag=USE_REPLICA, tempdir=TEMPDIR,
-                 samtools_path=SAMTOOLSPATH):
+                 use_samtools=USESAMTOOLS):
 
         self.__dict__.update(locals())
-        if type(self.tempdir) is not list:
+        if type(self.tempdir) is not list: #
             self.tempdir = [self.tempdir] 
 
 
@@ -624,30 +624,20 @@ class Turbomix:
         #load the first read
         self.logger.debug("_to_cluster_conversion: running clustering...")
         while self.cluster.is_empty():
-            self.cluster_aux2.clear()
             self.safe_read_line(self.cluster, experiment.next())
-            if not self.cluster_aux2.is_empty():
-                self.cluster_aux2.copy_cluster_data(self.cluster)
 
-        #print "OVERLAP", self.end, self._tag_cache, other.end, other._tag_cache
         for line in experiment:
             self.cluster_aux.clear()
             self.safe_read_line(self.cluster_aux, line)
             if not self.cluster_aux.is_empty():
                 if self.cluster_aux.touches(self.cluster):
                     self.cluster += self.cluster_aux
-                    self.cluster_aux2.clear()
-                    self.cluster_aux.copy_cluster_data(self.cluster_aux2)
-
                 else:
                     if not self.cluster.is_empty():
                         self.process_cluster(self.cluster, output)
-
-                    self.cluster.clear()
-                    self.cluster_aux2.clear()
-                    self.safe_read_line(self.cluster_aux2, line)
-                    if not self.cluster_aux2.is_empty():
-                        self.cluster_aux2.copy_cluster_data(self.cluster)  
+                        self.cluster.clear()
+                        
+                    self.safe_read_line(self.cluster, line)
 
         if not self.cluster.is_empty(): #Process the last cluster
             self.process_cluster(self.cluster, output)
@@ -1335,7 +1325,6 @@ class Turbomix:
 
         else:
             self.logger.info("... counting number of lines in files...")
-            "MIRAR nref para los BAM = Profit"
             if not self.total_reads_a:
                 if self.experiment_format == BAM:
                     self.total_reads_a = bam.size(self.current_experiment_path)
@@ -1369,10 +1358,10 @@ class Turbomix:
         
         self._calculate_total_lengths()
         if not self.counts_file:
-            file_a_reader = utils.read_fetcher(self.current_experiment_path, self.experiment_format, cached=self.cached, logger=self.logger)
-            file_b_reader = utils.read_fetcher(self.current_control_path, self.experiment_format, cached=self.cached, logger=self.logger)
+            file_a_reader = utils.read_fetcher(self.current_experiment_path, self.experiment_format, cached=self.cached, logger=self.logger, use_samtools=self.use_samtools)
+            file_b_reader = utils.read_fetcher(self.current_control_path, self.experiment_format, cached=self.cached, logger=self.logger, use_samtools=self.use_samtools)
             if self.use_replica:
-                replica_a_reader = utils.read_fetcher(self.current_replica_a_path, self.experiment_format, cached=self.cached, logger=self.logger)
+                replica_a_reader = utils.read_fetcher(self.current_replica_a_path, self.experiment_format, cached=self.cached, logger=self.logger, use_samtools=self.use_samtools)
 
             if self.sorted_region_path:
                 self.logger.info('Using region file %s (%s)'%(self.region_path, self.region_format))
