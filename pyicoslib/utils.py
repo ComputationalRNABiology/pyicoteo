@@ -8,8 +8,12 @@ from itertools import islice, cycle, chain
 
 
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
+
 from defaults import *
 from bam import BamReader, BamFetcher, BamFetcherSamtools
+
+class OperationFailed(Exception):
+    pass                 
 
 
 def open_file(path, format=None, gzipped=False, logger=None):
@@ -19,30 +23,26 @@ def open_file(path, format=None, gzipped=False, logger=None):
     elif gzipped:
         print "Open Gzipped! (not implemented)"
         sys.exit(1)
-
     else:
-        return open(path)
+        return open(path, 'rb')
 
-
-
-def read_fetcher(file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None, use_samtools=False):
-    if use_samtools and experiment_format == BAM:
-        return BamFetcherSamtools(file_path, experiment_format, read_half_open, rounding, cached, logger)
-
-    if experiment_format == BAM:
-        return BamFetcher(file_path, experiment_format, read_half_open, rounding, cached, logger)
+def read_fetcher(file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None, use_samtools=False, access_sequential=True, only_counts=False):
+    if access_sequential and experiment_format == BAM:
+        return SortedFileClusterReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
+    elif use_samtools and experiment_format == BAM:
+        return BamFetcherSamtools(file_path, read_half_open, rounding, cached, logger)
+    #elif experiment_format == BAM:
+        #return BamFetcher(file_path, read_half_open, rounding, cached, logger) #doesnt work yet
+    elif only_counts:
+        return SortedFileCountReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
     else:
         return SortedFileClusterReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
-
-
-
 
 def add_slash_to_path(path):
     if path[-1] != '/':
         path = '%s/'%path
     return path
     
-
 def poisson(actual, mean):
     '''From StackOverflow: This algorithm is iterative,
         to keep the components from getting too large or small'''
@@ -55,7 +55,6 @@ def poisson(actual, mean):
     
     except OverflowError:
         return 0
-
 
 def pearson(list_one, list_two):
     """
@@ -141,8 +140,6 @@ class SafeReader:
                 if self.logger: self.logger.debug("Skipping invalid (%s) line: %s"%(cluster.reader.format, line))
                 self.invalid_count += 1
     
-
-
 class BigSort:
     """
     This class can sort huge files without loading them fully into memory.
@@ -197,7 +194,6 @@ class BigSort:
                     self.cluster.read_line(line)
                     if self.frag_size:
                         self.cluster.extend(self.frag_size)
-
                 except InvalidLine:
                     if self.logger: self.logger.debug('Discarding middle invalid line: %s'%line)
                                    
@@ -224,7 +220,6 @@ class BigSort:
                 if current_chunk:
                     if self.logger: self.logger.debug("Chunk: len current_chunk: %s chunks: %s temp_file_size %s buffer_size %s"%(len(current_chunk), len(chunks), self.temp_file_size, self.buffer_size))
                     current_chunk.sort(key=key)
-
                     output_chunk = open(os.path.join(tempdir,'%06i_%s_%s'%(len(chunks), os.getpid(), self.id)),'w+b',self.temp_file_size)
                     output_chunk.writelines(current_chunk)
                     output_chunk.flush()
@@ -232,12 +227,10 @@ class BigSort:
                     chunks.append(output_chunk.name)
                 else:
                     break
-
         except KeyboardInterrupt: #If there is an interruption, delete all temporary files and raise the exception for further processing.
             print 'Removing temporary files...'
             self.remove_chunks(chunks)
             raise
-
         finally:
             input_file.close()
         
@@ -282,7 +275,6 @@ class BigSort:
             else:
                 heappush(values,(key(value),index,value,iterator,chunk))
  
-
 class DualSortedReader:
     """Given two sorted files of tags in a format supported by Pyicos, iterates through them returning them in order"""
     def __init__(self, file_a_path, file_b_path, format, read_half_open=False, logger=None):
@@ -366,7 +358,6 @@ class SortedFileReader:
             self.safe_read_line(c, self.line)
         return c
 
-
     def overlapping_clusters(self, region, overlap=1):
         if self.logger: self.logger.debug("YIELD OVER: Started...")
         self.rewind()
@@ -391,7 +382,6 @@ class SortedFileReader:
     def safe_read_line(self, cluster, line):
         self.safe_reader.safe_read_line(cluster, line)
 
-
 class SortedFileClusterReader:
     """
     Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
@@ -400,15 +390,13 @@ class SortedFileClusterReader:
     def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
         self.__dict__.update(locals())
         self.file_iterator = open_file(file_path, format=experiment_format, logger=logger)
+        self.logger.debug('Fetcher used for %s: Sequential Sorted Cluster Reader'%file_path)
         self.__initvalues()
         self.safe_reader = SafeReader()
     
     def __initvalues(self):
         self.slow_cursor = 1
         self.cluster_cache = dict() 
-        self.invalid_count = 0
-        self.invalid_limit = 2000
-
 
     def rewind(self):
         """Start again reading the file from the start"""
@@ -416,17 +404,17 @@ class SortedFileClusterReader:
         self.__initvalues()
 
     def _read_line_load_cache(self, cursor):
-        """Loads the cache if the line read by the cursor is not there yet.
-        If the line is empty, it means that the end of file was reached,
-        so this function sends a signal for the parent function to halt.
-        If the region is stranded, the only tags returned will be the ones of that strand"""
+        """Loads the cache if the line read by the cursor is not there yet. If the line is empty, it means that the end of file was reached,
+        so this function sends a signal for the parent function to halt. If the region is stranded, the only tags returned will be the ones of that strand"""
         if cursor not in self.cluster_cache:
             try:
                 line = self.file_iterator.next()
             except StopIteration:
                 return True
+
             self.cluster_cache[cursor] = Cluster(read=self.experiment_format, read_half_open=self.read_half_open, rounding=self.rounding, cached=self.cached, logger=self.logger)
             self.safe_read_line(self.cluster_cache[cursor], line)
+
         return False
 
     def get_overlaping_clusters(self, region, overlap=1):
@@ -439,6 +427,7 @@ class SortedFileClusterReader:
             self.slow_cursor+=1
             if self._read_line_load_cache(self.slow_cursor):
                 return clusters
+
         #get intersections
         fast_cursor = self.slow_cursor
         while self.cluster_cache[fast_cursor].start <= region.end and self.cluster_cache[fast_cursor].name == region.name:
@@ -448,8 +437,81 @@ class SortedFileClusterReader:
             fast_cursor += 1
             if self._read_line_load_cache(fast_cursor):
                 return clusters
+
         return clusters
 
     def safe_read_line(self, cluster, line):
         self.safe_reader.safe_read_line(cluster, line)
+
+
+
+
+class SortedFileCountReader:
+    """
+    Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
+    and retrieves the *counts* (number of reads) that overlap with the region specified. Because this class doesn't store the reads, but only counts them, 
+    doesn't have memory problems when encountering huge clusters of reads.  
+    """
+    def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
+        self.__dict__.update(locals())
+        self.file_iterator = open_file(file_path, format=experiment_format, logger=logger)
+        self.logger.debug('Fetcher used for %s: Sequential Sorted Counts Reader'%file_path)
+        self.safe_reader = SafeReader()
+        self.__initvalues()        
+    
+    def rewind(self):
+        """Start again reading the file from the start"""
+        self.file_iterator.seek(0)
+        self.__initvalues()
+        
+    def __initvalues(self):
+        self.slow_seek = 0
+        self.current_tag = Cluster()
+
+    def _read_next_tag(self):
+        """Loads the cache if the line read by the cursor is not there yet. If the line is empty, it means that the end of file was reached,
+        so this function sends a signal for the parent function to halt. If the region is stranded, the only tags returned will be the ones of that strand"""
+        try:
+            line = self.file_iterator.readline()
+        except StopIteration:
+            return True
+
+        if line == '':
+            return True
+
+        self.current_tag = Cluster(read=self.experiment_format, read_half_open=self.read_half_open, rounding=self.rounding, cached=False, logger=self.logger)
+        self.safe_read_line(self.current_tag, line)        
+        return False
+
+    def get_overlaping_counts(self, region, overlap=1):
+        counts = 0
+        #load last seek
+
+        self.file_iterator.seek(self.slow_seek)
+        self.current_tag = Cluster()
+        #advance slow seek 
+        while (self.current_tag.name < region.name) or (self.current_tag.name == region.name and region.start > self.current_tag.end):     
+            self.slow_seek = self.file_iterator.tell()
+            if self._read_next_tag():
+                return counts  
+            #print "Avanza", self.current_tag.name, region.name, region.start, self.current_tag.end
+
+        #get intersections
+        while self.current_tag.start <= region.end and self.current_tag.name == region.name:
+            if self.current_tag.overlap(region) >= overlap:
+                if not region.strand or region.strand == self.current_tag.strand:
+                    counts += 1
+
+            if self._read_next_tag():
+                return counts
+
+        return counts
+
+    def safe_read_line(self, cluster, line):
+        self.safe_reader.safe_read_line(cluster, line)
+
+
+
+
+
 

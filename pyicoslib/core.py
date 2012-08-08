@@ -212,8 +212,7 @@ class BedReader(Reader):
                     cluster.start = new_start
                     cluster.end = int(line[2])
                     cluster.tag_length = len(cluster) #if the cluster is empty, its the perfect moment to read the tag length of the first read. We assume that all reads are the same, inside the cluster, so in the case that they vary (not that common), the randomness of choosing this should cancel the bias.  
-                    self._add_strand(cluster, line)
-                    
+                    self._add_strand(cluster, line) 
                 else:
                     cluster.add_tag_cached(new_start, line[2])
                     cluster.start = min(cluster.start, new_start)
@@ -237,12 +236,10 @@ class BedReader(Reader):
                     self._add_name(cluster, line)
                     self._add_score(cluster, line)
                     self._add_strand(cluster, line)
-                    
                     cluster.tag_length = len(cluster)
                     cluster.append_level(cluster.end-cluster.start+1, cluster.normalize_factor)
 
             self._add_extra_fields(cluster, line)
-
         except (ValueError, IndexError):
             raise InvalidLine
 
@@ -910,8 +907,6 @@ class Cluster(AbstractCore):
         else:
             return [self]
 
-
-
         return clusters
 
     def __subsplit(self, new_cluster, clusters, nucleotides, length):
@@ -1383,25 +1378,25 @@ class Region(AbstractCore):
             pseudo = 1
         return (1e9*float(len(self.tags)+pseudo))/(len(self)*(total_regions_analyzed+total_reads))
 
-    def normalized_counts(self, region_norm=False, total_n_norm=False, regions_analyzed=0, pseudocount=False, tmm_factor = 1, total_reads = 1):
-        counts = float(len(self.tags))      
+    def normalized_counts(self, region_norm=False, total_n_norm=False, regions_analyzed=0, pseudocount=False, tmm_factor = 1, total_reads = 1, counts = None):
+        if not counts:
+            counts = float(len(self.tags))      
+
         if pseudocount:
-            counts += 1    
+            counts += 1
         else:
-            regions_analyzed = 0 #because we add 1 pseudocount per region, so we have to increase N by num-regions. If pseudocounts not are used, there is no need for this count
-        
+            regions_analyzed = 0 #because we add 1 pseudocount per region, so we have to increase N by num-regions. If pseudocounts not are used, there is no need for this count      
         if region_norm: #read per kilobase in region
             if self.exome_size:  #If an exome size is provided, use this to normalize the reads
                 length = self.exome_size
             else:
                 length = len(self)               
 
-            counts = 1e3*(counts/length)
-
+            counts = 1e3*(float(counts)/length)
 
         if total_n_norm: #per million reads in the sample
             counts = 1e6*(counts/(regions_analyzed+total_reads))
-
+    
         return counts*tmm_factor
 
 
@@ -1430,7 +1425,7 @@ class Region(AbstractCore):
         return (swap1, swap2)
 
     def __str__(self):
-        return "chr: %s start: %s end: %s number_of_tags: %s"%(self.name, self.start, self.end, len(self.tags))
+        return "chr: %s start: %s end: %s name: %s number_of_tags: %s"%(self.name, self.start, self.end, self.name2, len(self.tags))
 
     def _numpos_higher_than(self, h, nis):
         ret = 0
@@ -1454,6 +1449,7 @@ class Region(AbstractCore):
         new_region.name = self.name
         new_region.name2 = self.name2
         new_region.logger = self.logger
+        new_region.cached = self.cached
         new_region.tags = []
         for tag in self.tags:   
             new_region.tags.append(tag)
@@ -1467,6 +1463,8 @@ class Region(AbstractCore):
         new_region.exome_size = self.exome_size
 
         return new_region
+
+
 
     def max_height(self):
         max_height = 0
@@ -1712,5 +1710,25 @@ class Region(AbstractCore):
             strand = '.'
         
         return "%s\t%s\t%s\t%s\t0\t%s\n"%(self.name, self.start, self.end, self.name2, strand)
+
+
+    def get_array(self):
+        """Returns the heights of the whole region, including 0s between clusters"""
+        ret = []
+        prev_end = self.start # with this we get the 0s between the start of the region and the first cluster
+        for cluster in self.clusters:
+            cluster._flush_tag_cache()
+            #get the 0s between clusters
+            for i in range(prev_end, cluster.start):
+                ret.append(0)
+            ret.extend(cluster.get_heights())
+            prev_end = cluster.end+1
+            
+        #the 0s after the last cluster
+        for i in range(prev_end, self.end+1):
+            ret.append(0)        
+
+        return ret
+
 
 
