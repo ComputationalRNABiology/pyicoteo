@@ -7,8 +7,10 @@ chrdesc/hg19
 chrdesc/mm8
 chrdesc/mm9
 pyicoslib/__init__.py
+pyicoslib/bam.py
 pyicoslib/core.py
 pyicoslib/defaults.py
+pyicoslib/enrichment.py
 pyicoslib/parser.py
 pyicoslib/turbomix.py
 pyicoslib/utils.py

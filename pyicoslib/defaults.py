@@ -94,6 +94,11 @@ A_TRIM=0.05
 M_TRIM=0.25
 SKIP_PLOT=False
 USE_REPLICA=False
+SEQUENTIAL=False
+EXPERIMENT_LABEL = 'Experiment'
+REPLICA_LABEL = 'Replica'
+TITLE_LABEL = ''  
+COUNT_FILTER=0
 
 #CONSTANTS
 PLUS_STRAND = "+"
@@ -120,7 +125,7 @@ ENRICHMENT = 'enrichment'
 CALCZSCORE = 'zscore'
 PLOT='plot'
 
-
+CHECK_REPLICAS = 'checkrep'
 
 
 

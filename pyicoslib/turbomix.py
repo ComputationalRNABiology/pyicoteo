@@ -12,11 +12,10 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-
+from __future__ import with_statement
 import os.path
 import sys
 import os
-
 
 import logging
 import math
@@ -30,6 +29,7 @@ from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSu
 from defaults import *
 import utils
 import bam
+import enrichment
 
 try:
     from shutil import move
@@ -38,9 +38,9 @@ except:
     from os import rename as move 
 
 
-
 class OperationFailed(Exception):
     pass                 
+
 
 class Turbomix:
     """
@@ -69,7 +69,6 @@ class Turbomix:
         ch.setFormatter(formatter)
         self.logger.addHandler(ch)
 
-
     def __init__(self, experiment_path, output_path, experiment_format=BED, output_format=PK, label=LABEL, 
                  open_experiment=OPEN_EXPERIMENT, open_output=OPEN_OUTPUT, debug = DEBUG, rounding=ROUNDING, tag_length = TAG_LENGTH, discarded_names = REMLABELS,
                  control_path = CONTROL, control_format = PK, open_control = OPEN_CONTROL, region_path = REGION, region_format = PK, 
@@ -77,18 +76,18 @@ class Turbomix:
                  trim_percentage=TRIM_PROPORTION, no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, 
                  min_delta=MIN_DELTA, correlation_height=HEIGHT_FILTER, delta_step=DELTA_STEP, verbose=VERBOSE, species=SPECIES, cached=CACHED, split_proportion=SPLIT_PROPORTION, 
                  split_absolute=SPLIT_ABSOLUTE, repeats=REPEATS, masker_file=MASKER_FILE, max_correlations=MAX_CORRELATIONS, keep_temp=KEEP_TEMP, experiment_b_path=EXPERIMENT,
-                 replica_a_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, stranded_analysis=STRANDED_ANALYSIS, proximity=PROXIMITY, 
+                 replica_path=EXPERIMENT, replica_b_path=EXPERIMENT, poisson_test=POISSONTEST, stranded_analysis=STRANDED_ANALYSIS, proximity=PROXIMITY, 
                  postscript=POSTSCRIPT, showplots=SHOWPLOTS, plot_path=PLOT_PATH, pseudocount=PSEUDOCOUNT, len_norm=LEN_NORM, label1=LABEL1, 
                  label2=LABEL2, binsize=BINSIZE, zscore=ZSCORE, blacklist=BLACKLIST, sdfold=SDFOLD, recalculate=RECALCULATE, counts_file=COUNTS_FILE, 
                  region_mintags=REGION_MINTAGS, bin_step=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER, total_reads_a=TOTAL_READS_A, 
                  total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica_flag=USE_REPLICA, tempdir=TEMPDIR,
-                 use_samtools=USESAMTOOLS):
-
+                 use_samtools=USESAMTOOLS, access_sequential = SEQUENTIAL, experiment_label = EXPERIMENT_LABEL, replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, 
+                 count_filter = COUNT_FILTER):
         self.__dict__.update(locals())
         if type(self.tempdir) is not list: #
             self.tempdir = [self.tempdir] 
 
-
+        self.stranded_analysis = (output_format == SPK)
         self.normalize_factor = 1
         self.set_logger(verbose, debug)
         self.is_sorted = False
@@ -108,7 +107,6 @@ class Turbomix:
             self.cluster_aux = Cluster(read=self.experiment_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_experiment, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, logger=self.logger, cached=cached)
             self.cluster_aux2 = Cluster(read=self.experiment_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_experiment, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, logger=self.logger, cached=cached)
             self.control_cluster = Cluster(read=experiment_format, read_half_open = open_experiment, logger=self.logger, cached=cached)
-
         except ConversionNotSupported:
             self.logger.error('Reading "%s" and writing "%s" is not supported.\n'%(self.experiment_format, self.output_format))
             utils.list_available_formats()
@@ -139,33 +137,25 @@ class Turbomix:
         self.sorted_by_pyicos = False
         self.sorted_region_path = ''
 
+    def __icant(self, message, print_formats=False):
+        self.logger.error(message)
+        if print_formats: print CLUSTER_FORMATS
+        sys.exit(0)
+
     def i_cant_do(self):
         """Quits and exists if exits if the combination of non possible operations"""
         if FILTER in self.operations and POISSON not in self.operations and not self.threshold:
-            self.logger.error("Can't do Filter without Poisson or a fixed threshold\n")
-            sys.exit(0)
+            self.__icant("Can't do Filter without Poisson or a fixed threshold\n")
         elif (SUBTRACT or SPLIT or POISSON) in self.operations and (self.output_format not in CLUSTER_FORMATS):
-            self.logger.error("Can't get the output as tag format (eland, bed) for Subtract, Split, Poisson filtering please use a clustered format")
-            print CLUSTER_FORMATS
-            sys.exit(0)
+            self.__icant("Can't get the output as tag format (eland, bed) for Subtract, Split, Poisson filtering please use a clustered format", True)
         elif EXTEND in self.operations and self.experiment_format in CLUSTER_FORMATS:
-            self.logger.error("Can't extend if the experiment is a clustered format ")
-            print CLUSTER_FORMATS
-            sys.exit(0)
+            self.__icant("Can't extend if the experiment is a clustered format ", True)
         elif STRAND_CORRELATION in self.operations and self.experiment_format in CLUSTER_FORMATS:
-            self.logger.error("Can't perform strand correlation operation if the experiment is a clustered format ")
-            print CLUSTER_FORMATS
-            sys.exit(0)
-        
+            self.__icant("Can't perform strand correlation operation if the experiment is a clustered format ", True)
         elif ENRICHMENT in self.operations and MODFDR in self.operations:
-            print
-            self.logger.error("Enrichment and ModFDR operations are not compatible")
-            sys.exit(0)
-
+            self.__icant("\nEnrichment and ModFDR operations are not compatible")
         elif ENRICHMENT in self.operations and POISSON in self.operations:
-            print
-            self.logger.error("Enrichment and Poisson operations are not compatible")
-            sys.exit(0)             
+            self.__icant("\nEnrichment and Poisson operations are not compatible")           
     
         
     def _add_slash_to_path(self, path):
@@ -235,13 +225,15 @@ class Turbomix:
             self.logger.info('Control file:%s'%self.current_control_path)
             if self.do_normalize:
                 self.logger.info('The file %s will be normalized to match %s'%(self.current_experiment_path, self.current_control_path))
+
             if self.do_subtract:
                 self.logger.info('The file %s will be subtracted from %s'%(self.current_control_path, self.current_experiment_path))
 
     def get_normalize_factor(self, experiment, control):
-        ret = self.numcells(control, self.control_format)/self.numcells(experiment, self.experiment_format)
+        ret = self.numcells(experiment, self.experiment_format)/self.numcells(control, self.control_format)
         self.result_log.write('Normalization factor: %s\n'%(ret))
         self.logger.info('Normalization factor: %s\n'%(ret))
+
         return ret
     
     def numcells(self, file_path, file_format):
@@ -252,7 +244,9 @@ class Turbomix:
             self.safe_read_line(cluster, line)
             for level in cluster: 
                 num += level[0]*level[1]
+
             cluster.clear()
+
         return num  
     
     def safe_read_line(self, cluster, line):
@@ -283,7 +277,6 @@ class Turbomix:
             self.process_all_files_recursive(self.counts_file, self.output_path)
         else:
             self.process_all_files_recursive(self.experiment_path, self.output_path)
-
 
     def process_all_files_paired(self, path_a, path_b):
         if os.path.isdir(path_a):
@@ -338,9 +331,6 @@ class Turbomix:
         if self.control_path:
             self.logger.info('Calculating normalization factor...')
             self.normalize_factor = self.get_normalize_factor(self.current_experiment_path, self.current_control_path)
-            self.cluster.normalize_factor = self.normalize_factor
-            self.cluster_aux.normalize_factor = self.normalize_factor
-            self.cluster_aux2.normalize_factor = self.normalize_factor
 
     def _manage_temp_file(self, path):
         """A temporary file that is no longer needed is given, and depending on the value of self.keep_temp its removed or kept"""
@@ -363,9 +353,7 @@ class Turbomix:
         previous_line = ''
         equal_lines = 0
         self.cluster.clear()
-
         cluster_same = Cluster(read=file_format, write=file_format, rounding=self.rounding, read_half_open = file_open, write_half_open = file_open, tag_length=self.tag_length, span = self.span, logger=self.logger, cached=self.cached)
-
         for line in utils.open_file(file_path, file_format, logger=self.logger):
             self.cluster.clear()
             self.safe_read_line(self.cluster, line)
@@ -393,7 +381,6 @@ class Turbomix:
 
         new_file.flush()
         new_file.close()
-
         if EXTEND in self.operations:
             self.logger.info("Resorting %s after extension..."%temp_name)
             sorter = utils.BigSort(file_format, file_open, 0, 'fisort%s'%temp_name, logger=self.logger)
@@ -415,6 +402,7 @@ class Turbomix:
         self.current_experiment_path = self._filter_file(self.current_experiment_path, "experiment", self.temp_experiment, self.experiment_format, self.open_experiment)
         if self.experiment_format == BAM: 
             self.experiment_format = SAM
+
         self.temp_experiment = True
         if self.current_control_path:
             self.current_control_path = self._filter_file(self.current_control_path, "control", self.temp_control, self.control_format, self.open_control)
@@ -422,21 +410,14 @@ class Turbomix:
             if self.control_format == BAM: 
                 self.control_format = SAM
 
+
     def get_lambda_func(self, format):
-        if self.output_format == SPK:
-            if format == ELAND:
-                return lambda x:(x.split()[6],x.split()[8],int(x.split()[7]),len(x.split()[1]))
-            elif format == SAM or format == BAM:
-                return lambda x:(x.split()[2], x.split()[1], int(x.split()[3]), len(x.split()[9]))
-            else:
-                return lambda x:(x.split()[0], x.split()[5], int(x.split()[1]), int(x.split()[2]))
+        if format == ELAND:
+            return lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
+        elif format == SAM or format == BAM:
+            return lambda x:(x.split()[2], int(x.split()[3]), len(x.split()[9]))
         else:
-            if format == ELAND:
-                return lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
-            elif format == SAM or format == BAM:
-                return lambda x:(x.split()[2], int(x.split()[3]), len(x.split()[9]))
-            else:
-                return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]))
+            return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]))
 
 
     def decide_sort(self, experiment_path, control_path=None):
@@ -445,9 +426,8 @@ class Turbomix:
         if self.tag_to_cluster or self.do_subtract or self.do_heuremove or self.do_dupremove or MODFDR in self.operations or ENRICHMENT in self.operations or REMOVE_REGION in self.operations or STRAND_CORRELATION in self.operations or self.frag_size:
             self.experiment_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment', logger=self.logger)
             self.experiment_b_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment_b', logger=self.logger)
-            self.replica_a_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'replica_a', logger=self.logger)
-            self.control_preprocessor = utils.BigSort(self.control_format, self.open_control, self.frag_size, 'control', logger=self.logger)
-                       
+            self.replica_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'replica', logger=self.logger)
+            self.control_preprocessor = utils.BigSort(self.control_format, self.open_control, self.frag_size, 'control', logger=self.logger)        
             if self.no_sort or self.experiment_format == BAM:
                 if self.no_sort: self.logger.warning('Input sort skipped. Results might be wrong.')
                 self.current_experiment_path = experiment_path
@@ -478,14 +458,14 @@ class Turbomix:
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
             
-            if self.replica_a_path:  
+            if self.replica_path:  
                 if self.no_sort or self.experiment_format == BAM:
-                    if self.no_sort: self.logger.warning('replica_a sort skipped')
-                    self.current_replica_a_path = self.replica_a_path
+                    if self.no_sort: self.logger.warning('replica sort skipped')
+                    self.current_replica_path = self.replica_path
                 else:
-                    self.logger.info('Sorting replica_a file...')
-                    sorted_replica_a_file = self.replica_a_preprocessor.sort(self.replica_a_path, None, self.get_lambda_func(self.experiment_format), self.tempdir)
-                    self.current_replica_a_path = sorted_replica_a_file.name
+                    self.logger.info('Sorting replica file...')
+                    sorted_replica_file = self.replica_preprocessor.sort(self.replica_path, None, self.get_lambda_func(self.experiment_format), self.tempdir)
+                    self.current_replica_path = sorted_replica_file.name
                     self.temp_replica = True
 
         if self.region_path:
@@ -522,13 +502,11 @@ class Turbomix:
             self.result_log.write('Experiment file: %s\n'%self.current_experiment_path)
             if self.current_control_path:
                 self.result_log.write('Control file: %s\n'%self.current_control_path)
-            self.result_log.write('\n\n')
 
+            self.result_log.write('\n\n')
             self.start_operation_message()
             self.decide_sort(experiment_path, control_path)
-
             self.estimate_frag_size = self.do_poisson and not self.frag_size
-         
             if self.control_path:
                 self.control_reader_simple = utils.SortedFileReader(self.current_control_path, self.control_format, rounding=self.rounding, logger=self.logger)
                 self.control_reader = utils.read_fetcher(self.current_control_path, self.control_format, rounding=self.rounding, cached=self.cached, logger=self.logger)
@@ -538,12 +516,12 @@ class Turbomix:
 
             if STRAND_CORRELATION in self.operations:
                 self.strand_correlation()          
+
             if self.do_dupremove or (EXTEND in self.operations and (STRAND_CORRELATION in self.operations or self.experiment_format == BAM or self.control_format == BAM)) or self.do_heuremove:
                 self.filter_files()
 
             if NORMALIZE in self.operations:
                 self.normalize()
-
 
             if self.do_cut: #if we cut, we will round later
                 self.cluster.rounding = False
@@ -560,22 +538,25 @@ class Turbomix:
                     self.logger.info('%s: %s'%(name, k))
                     self.result_log.write('%s: %s\n'%(name, k))
 
+            if CHECK_REPLICAS in self.operations: 
+                self.experiment_values = []
+                self.replica_values = []
+                #enrichment.check_replica(self)
+
             #Mutually exclusive final operations
             if ENRICHMENT in self.operations:
-                self.plot_path = self.enrichment()
+                self.plot_path = enrichment.enrichment(self)
                 if CALCZSCORE in self.operations:
-                    self.plot_path = self.calculate_zscore(self.plot_path)
-
+                    self.plot_path = enrichment.calculate_zscore(self, self.plot_path)
             elif self.do_cut: 
                 self.cut()
-
             elif MODFDR in self.operations:
                 self.modfdr()
 
             #Plot and summary operations
             if PLOT in self.operations:
                   self.logger.info("Plotting...")
-                  self.plot_enrichment(self.plot_path)              
+                  enrichment.plot_enrichment(self, self.plot_path)            
 
             self.success_message(output_path)
 
@@ -583,27 +564,24 @@ class Turbomix:
             try:
                 if self.temp_experiment:
                     self._manage_temp_file(self.current_experiment_path)
-
             except AttributeError, OSError:
                 pass
+
             try:
                 if self.temp_control:
                     self._manage_temp_file(self.current_control_path)
-
             except AttributeError, OSError:
                 pass
  
             try:
                 if self.sorted_region_path:
                     self._manage_temp_file(self.sorted_region_file.name)
-
             except AttributeError, OSError:
                 pass
 
             try:
                 if self.temp_replica:
-                    self._manage_temp_file(self.current_replica_a_path)
-
+                    self._manage_temp_file(self.current_replica_path)
             except AttributeError, OSError:
                 pass
 
@@ -654,7 +632,7 @@ class Turbomix:
             output = open(self.current_output_path, 'wb')
 
         experiment = utils.open_file(self.current_experiment_path, self.experiment_format, logger=self.logger)
-        if self.output_format == WIG or self.output_format == VARIABLE_WIG:
+        if (self.output_format == WIG or self.output_format == VARIABLE_WIG) and not self.skip_header:
             output.write('track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.label)
 
         if self.output_format in CLUSTER_FORMATS and not MODFDR in self.operations and not ENRICHMENT in self.operations:
@@ -673,12 +651,12 @@ class Turbomix:
         self.logger.debug("Getting overlapping clusters...")
         self.cluster_aux.clear()
         for c in self.control_reader_simple.overlapping_clusters(region, overlap=EPSILON):
+            self.cluster_aux.normalize_factor = self.normalize_factor #add the normalization factor
+            c.normalize_factor = self.normalize_factor #add the normalization factor
             if self.cluster_aux.is_empty(): #first one
-               c.copy_cluster_data(self.cluster_aux)
-           
+               c.copy_cluster_data(self.cluster_aux)           
             elif self.cluster_aux.touches(c):
                 self.cluster_aux += c
-
             else:
                 region.clusters.append(self.cluster_aux.copy_cluster())
                 self.logger.debug("Region clusters length: %s "%len(region.clusters))
@@ -701,6 +679,7 @@ class Turbomix:
         region = Region(cluster.name, cluster.start, cluster.end)
         if self.blacklist_reader.get_overlaping_clusters(region, overlap=EPSILON):
             cluster.clear() 
+
         return cluster
 
     def _correct_bias(self, p_value):
@@ -751,7 +730,6 @@ class Turbomix:
         try:
             #print '%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)
             for line in open('%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)):
-                
                 chrom, length = line.split()
                 if chrom == name:
                     found = True
@@ -765,7 +743,6 @@ class Turbomix:
         self.result_log.write('---------------\n\n')
         self.result_log.write('Correction factor: %s\n\n'%(self.correction_factor))
         self.reads_per_bp =  self.total_bp_with_reads / self.chr_length*self.correction_factor
-        
         p_nucleotide = 1.
         p_cluster = 1.
         p_numtags = 1.
@@ -775,13 +752,10 @@ class Turbomix:
             p_nucleotide -= utils.poisson(k, self.reads_per_bp) #analisis nucleotide
             p_cluster -= utils.poisson(k, self.acum_height/self.total_clusters) #analysis cluster
             p_numtags -= utils.poisson(k, self.total_reads/self.total_clusters) #analysis numtags
-
             p_nucleotide = self._correct_bias(p_nucleotide)
             p_cluster = self._correct_bias(p_cluster)
             p_numtags = self._correct_bias(p_numtags)
-
             self.result_log.write('%s\t%.8f\t%.8f\t%.8f\n'%(k, p_nucleotide, p_cluster, p_numtags))
-            
             if name not in self.poisson_results['length'].keys() and p_nucleotide < self.p_value: #if we don't have a height k that is over the p_value yet, write it.
                 self.poisson_results["length"][name] = k
 
@@ -794,16 +768,12 @@ class Turbomix:
             if k not in self.maxheight_to_pvalue:
                 self.maxheight_to_pvalue[k] = {}
             self.maxheight_to_pvalue[k][name] = p_cluster
-
             if k not in self.numtags_to_pvalue:
                 self.numtags_to_pvalue[k] = {}
             self.numtags_to_pvalue[k][name] = p_numtags
-
-
             k+=1
 
     def poisson_retrieve_data(self, cluster):
-
         if self.estimate_frag_size: #TODO We need to estimate the fragment size if not provided
             if cluster.tag_length:
                 self.frag_size = cluster.tag_length
@@ -815,6 +785,7 @@ class Turbomix:
         for length, height in cluster:
             self.total_bp_with_reads+=length
             acum_numtags += length*height
+
         self.chr_length = max(self.chr_length, cluster.end)
         max_height = cluster.max_height()
         #numtags per cluster
@@ -881,7 +852,6 @@ class Turbomix:
         old_output = '%s/before_cut_%s'%(current_directory, os.path.basename(self.current_output_path))
         move(os.path.abspath(self.current_output_path), old_output)
         filtered_output = open(self.current_output_path, 'w+')
-
         if self.poisson_test == 'height':
             msg = "Filtering using cluster height..."
         else:
@@ -893,18 +863,20 @@ class Turbomix:
             wig_header = 'track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.label
             filtered_output.write(wig_header)
             unfiltered_output.write(wig_header)
-        cut_cluster = Cluster(read=self.output_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_output, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, logger=self.logger, normalize_factor = self.normalize_factor)
+
+   
+        cut_cluster = Cluster(read=self.output_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_output, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, logger=self.logger)
+
+        print 
         self.logger.info('Writing filtered and unfiltered file...')
         for line in open(old_output):
             cut_cluster.clear()
             self.safe_read_line(cut_cluster, line)
             try:
                 if self.poisson_test == 'height':
-                    cut_cluster.p_value = self.maxheight_to_pvalue[int(round(cut_cluster.max_height()))][cut_cluster.name]
-                    
+                    cut_cluster.p_value = self.maxheight_to_pvalue[int(round(cut_cluster.max_height()))][cut_cluster.name]  
                 else:
-                    cut_cluster.p_value = self.numtags_to_pvalue[int(round(cut_cluster.area()/self.frag_size))][cut_cluster.name]
-            
+                    cut_cluster.p_value = self.numtags_to_pvalue[int(round(cut_cluster.area()/self.frag_size))][cut_cluster.name]      
             except KeyError:
                 cut_cluster.p_value = 0 #If the cluster is not in the dictionary, it means its too big, so the p_value will be 0
 
@@ -915,8 +887,7 @@ class Turbomix:
                     thres = self.poisson_results[self.poisson_test][cut_cluster.name]
                     
                 if cut_cluster.is_significant(thres, self.poisson_test, self.frag_size):
-                    filtered_output.write(cut_cluster.write_line())
-                    
+                    filtered_output.write(cut_cluster.write_line())                    
             except KeyError:
                 pass
 
@@ -933,6 +904,7 @@ class Turbomix:
         return path
 
     def _region_from_sline(self, sline):
+        if sline:
             try:
                 strand = None
                 exome_size = 0
@@ -940,623 +912,13 @@ class Turbomix:
                     strand = sline[5]
                 elif self.region_format == BED12:
                     for size in sline[10].split(","):
-                       exome_size += int(size)
-
-                return Region(sline[0], int(sline[1]), int(sline[2]), name2=sline[3], strand=strand, exome_size=exome_size)
-
-            except ValueError:
-                pass #discarding header
-
-
-    def _region_from_dual(self, line):
-            try:
-
-                self.cluster_aux.clear()
-                self.cluster_aux.read_line(line)
-                strand = None
-                if self.stranded_analysis:
-                    strand = self.cluster_aux.strand
-                ret = Region(self.cluster_aux.name, self.cluster_aux.start, self.cluster_aux.end, name2=self.cluster_aux.name2, strand=strand)
-                self.cluster_aux.clear()
-                return ret                
-            except ValueError:
-                pass #discarding header
-
-
-
-
-    def __calc_reg_write(self, region_file, count, calculated_region):
-        if count > self.region_mintags:
-            region_file.write(calculated_region.write()) 
-
-
-    def calculate_region(self):
-        """
-        Calculate a region file using the reads present in the both main files to analyze. 
-        """
-        self.logger.info('Generating regions...')
-        self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))
-        region_file = open(self.sorted_region_path, 'wb')
-        dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.logger) 
-        if self.stranded_analysis:
-            self.calculate_region_stranded(dual_reader, region_file)    
-        else:
-            self.calculate_region_notstranded(dual_reader, region_file)    
-
-        region_file.flush()
-
-    def __cr_append(self, regions, region):
-        regions.append(region)
-
-    def calculate_region_notstranded(self, dual_reader, region_file):
-        calculated_region = Region()        
-
-        readcount = 1
-        for line in dual_reader:
-            if not calculated_region: #first region only
-                calculated_region = self._region_from_dual(line)
-                calculated_region.end += self.proximity
-            else:
-                new_region = self._region_from_dual(line)
-                new_region.end += self.proximity
-                if calculated_region.overlap(new_region):
-                    calculated_region.join(new_region)
-                    readcount += 1
-                else:
-                    calculated_region.end -= self.proximity
-                    self.__calc_reg_write(region_file, readcount, calculated_region)                 
-                    calculated_region = new_region.copy()
-                    readcount = 1
-
-        if calculated_region:
-            calculated_region.end -= self.proximity
-            self.__calc_reg_write(region_file, readcount, calculated_region)                         
-
-
-    def calculate_region_stranded(self, dual_reader, region_file):
-        temp_region_file = open(self.sorted_region_path, 'wb')
-        region_plus = Region()
-        region_minus = Region()
-        regions = []
-        numreads_plus = 1
-        numreads_minus = 1
-        dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.logger)
-        for line in dual_reader:
-            new_region = self._region_from_dual(line)
-            new_region.end += self.proximity
-            if not (region_plus and new_region.strand == PLUS_STRAND):
-                region_plus = self._region_from_dual(line)
-               
-            elif not (region_plus and new_region.strand == PLUS_STRAND):
-                region_minus = self._region_from_dual(line)
-
-            else:
-                if region_plus.overlap(new_region) and region_plus.strand == new_region.strand:
-                    region_plus.join(new_region)
-                    numreads_plus += 1
-                elif region_minus.overlap(new_region) and region_minus.strand == new_region.strand:
-                    region_minus.join(new_region)
-                    numreads_minus += 1
-                else:
-                    if new_region.strand == region_plus.strand:
-                        region_plus.end -= self.proximity
-                        self.__calc_reg_write(region_file, numreads_plus, region_plus)                      
-                        region_plus = new_region.copy()  
-                        numreads_plus = 1    
-                    else:
-                        region_minus.end -= self.proximity
-                        self.__calc_reg_write(region_file, numreads_minus, region_minus)         
-                        region_minus = new_region.copy()  
-                        numreads_minus = 1    
-
-        if region_plus:
-            region_plus.end -= self.proximity
-            regions.append(region_plus)
-
-        if region_minus:
-            region_minus.end -= self.proximity
-            regions.append(region_minus)
-
-        regions.sort(key=lambda x:(x.name, x.start, x.end, x.strand))
-        for region in regions:
-            region_file.write(region.write())  
-       
-
-    def get_zscore(self, x, mean, sd):    
-        if sd > 0:
-            return float(x-mean)/sd
-        else:
-            return 0 #This points are weird anyway 
-        
-
-    def plot_enrichment(self, file_path):
-        try:
-            if self.postscript:
-                import matplotlib
-                matplotlib.use("PS")
-
-            from matplotlib.pyplot import plot, hist, show, legend, figure, xlabel, ylabel, subplot, axhline, axis
-            from matplotlib import rcParams
-            rcParams['legend.fontsize'] = 8
-            #decide labels
-            if self.label1:
-                label_main = self.label1
-            else:
-                if self.real_control_path and self.real_experiment_path:
-                    label_main = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
-                else:
-                    label_main = "A VS B"
-
-            if self.label2:
-                label_control = self.label2
-            else:         
-                if self.replica_a_path:
-                    label_control = '%s(A) VS %s(A)'%(os.path.basename(self.real_experiment_path), os.path.basename(self.replica_a_path))
-                else:
-                    label_control = 'Background distribution'
-
-            A = []
-            A_prime = []
-            M = []
-            M_significant = []
-            A_significant = []
-            M_prime = []
-            A_medians = []      
-            points = []
-            minus_points = []
-            all_points = []
-            figure(figsize=(8,6))
-            biggest_A  = -sys.maxint #for drawing
-            smallest_A = sys.maxint #for drawing
-            biggest_M = 0 #for drawing
-
-            self.logger.info("Loading table...")
-            for line in open(file_path):
-                sline = line.split()
-                try:
-                    enrich = dict(zip(enrichment_keys, sline)) 
-                    biggest_A = max(biggest_A, float(enrich["A"]))         
-                    smallest_A = min(smallest_A, float(enrich["A"]))   
-                    biggest_M = max(biggest_M, abs(float(enrich["M"])))          
-        
-                    biggest_A = max(biggest_A, float(enrich["A_prime"]))         
-                    smallest_A = min(smallest_A, float(enrich["A_prime"]))
-                    biggest_M = max(biggest_M, abs(float(enrich["M_prime"])))
-               
-                    positive_point = self.zscore*float(enrich["sd"])+float(enrich["mean"])
-                    negative_point = -self.zscore*float(enrich["sd"])+float(enrich["mean"])
-                    A_median = float(enrich["A_median"])
-                    all_points.append((A_median, positive_point, negative_point))
-                    if abs(float(enrich["zscore"])) < self.zscore:
-                        M.append(float(enrich["M"]))
-                        A.append(float(enrich["A"]))
-                    else:
-                        M_significant.append(float(enrich["M"]))                
-                        A_significant.append(float(enrich["A"]))  
-       
-                    M_prime.append(float(enrich["M_prime"]))    
-                    A_prime.append(float(enrich["A_prime"]))
-                except ValueError:
-                    pass #to skip the header
-            all_points.sort(key= lambda x:x[0])
-            
-            for t in all_points:
-                (A_medians.append(t[0]), points.append(t[1]), minus_points.append(t[2])) 
-                    
-            if points:
-                margin = 1.1
-                A_medians.append(biggest_A*margin)
-                points.append(points[-1])
-                minus_points.append(minus_points[-1])
-                A_medians.insert(0, smallest_A)
-                points.insert(0, points[0])
-                minus_points.insert(0, minus_points[0])
-                self.logger.info("Plotting points...")
-                subplot(211)
-                xlabel('A')
-                ylabel('M')
-
-                axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
-                plot(A_prime, M_prime, '.', label=label_control, color = '#666666')
-                plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
-                plot(A_medians, minus_points,  'r--')            
-                axhline(0, linestyle='--', color="grey", alpha=0.75)  
-                legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
-
-                subplot(212)
-                axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
-                plot(A, M, 'k.', label=label_main)
-                plot(A_significant, M_significant, 'r.', label="%s (significant)"%label_main)
-                plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
-                plot(A_medians, minus_points, 'r--')
-                axhline(0, linestyle='--', color="grey", alpha=0.75)
-                xlabel('A')
-                ylabel('M')
-
-                legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
-                self._save_figure("enrichment_MA")
-            else:
-                self.logger.warning("Nothing to plot.")
-        except ImportError:
-            if self.debug:
-                raise
-            self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')
-
-    def __enrichment_M(self, signal_a, signal_b):
-        return math.log(float(signal_a)/float(signal_b), 2)
-
-    def __enrichment_A(self, signal_a, signal_b):
-        return (math.log(float(signal_a), 2)+math.log(float(signal_b), 2))/2    
-       
-         
-
-    def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1, file_a_reader=None, file_b_reader=None, replica_a_reader=None):
-        tags_a = []
-        tags_b = []
-        numreads_background_1 = 0
-        numreads_background_2 = 0
-        total_reads_background_1 = 0
-        total_reads_background_2 = 0
-        self.logger.debug("Inside _calculate_MA")
-        self.regions_analyzed_count = 0
-        enrichment_result = [] #This will hold the name, start and end of the region, plus the A, M, 'A and 'M
-        out_file = open(self.current_output_path, 'wb')
-        for region_line in open(region_path):
-            sline = region_line.split()
-
-            region_of_interest = self._region_from_sline(sline)            
-            if region_of_interest:
-                region_a = None
-                replica_a = None
-                replica_tags = None
-                signal_a = -1
-                signal_b = -1
-                signal_background_1 = -1
-                signal_background_2 = -1
-                swap1 = Region()
-                swap2 = Region()
-                if read_counts:
-                    signal_a = float(sline[6])
-                    signal_b = float(sline[7])*factor
-                    signal_background_1 = float(sline[8])
-                    signal_background_2 = float(sline[9])*replica_factor
-                else:
-                    tags_a = file_a_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON)
-                    if len(tags_a) > 100: self.logger.debug("Getting tags...")  
-                    tags_b = file_b_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON)
-                    if len(tags_a) > 100: self.logger.debug("tags_a: %s tags_b: %s"%(len(tags_a), len(tags_b)))
-                    if self.use_replica:            
-                        replica_tags = replica_a_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON)
-
-                    #if we are using pseudocounts, use the union, use the intersection otherwise
-                    if (self.pseudocount and (tags_a or tags_b)) or (not self.pseudocount and tags_a and tags_b): 
-                        region_a = region_of_interest.copy()
-                        region_b = region_of_interest.copy()
-                        region_a.add_tags(tags_a, clusterize=False)
-                        region_b.add_tags(tags_b, clusterize=False)
-                        signal_a = region_a.normalized_counts(self.len_norm, self.n_norm, self.total_regions, self.pseudocount, factor, self.total_reads_a)
-                        signal_b = region_b.normalized_counts(self.len_norm, self.n_norm, self.total_regions, self.pseudocount, factor, self.total_reads_b)
-                        self.already_norm = True
-  
+                        if size: #to discard last empty value when there is an extra comma (1,2,3, instead of 1,2,3)
+                            exome_size += int(size)
                 
-                if not self.counts_file:
-                    if (self.pseudocount and (tags_a or tags_b)) or (not self.pseudocount and tags_a and tags_b): 
-                        if self.use_replica:
-                            replica_a = region_of_interest.copy()
-                            
-                            replica_a.add_tags(replica_tags)
-                            numreads_background_1 = len(tags_a)
-                            numreads_background_2 = len(replica_tags)
-                            total_reads_background_1 = self.total_reads_a
-                            total_reads_background_2 = self.total_reads_replica
-                            signal_background_1 = signal_a
-                            signal_background_2 = replica_a.normalized_counts(self.len_norm, self.n_norm, self.total_regions, self.pseudocount, replica_factor, self.total_reads_replica)
-
-                        elif region_a:
-                            swap1, swap2 = region_a.swap(region_b, factor)
-                            if len(tags_a) > 100: self.logger.debug("Swap1 Region: %s len: %s "%(swap1, len(swap1.tags)))
-                            numreads_background_1 = len(swap1.tags)
-                            numreads_background_2 = len(swap2.tags)
-                            total_reads_background_1 = total_reads_background_2 = self.average_total_reads
-                            signal_background_1 = swap1.normalized_counts(self.len_norm, self.n_norm, self.total_regions, self.pseudocount, replica_factor, self.average_total_reads)
-                            signal_background_2 = swap2.normalized_counts(self.len_norm, self.n_norm, self.total_regions, self.pseudocount, replica_factor, self.average_total_reads)
-
-                #if there is no data in the replica or in the swap and we are not using pseudocounts, dont write the data 
-                if signal_a > 0 and signal_b > 0 and signal_background_1 > 0 and signal_background_2 > 0 or self.use_MA:
-                    if self.use_MA and not self.already_norm:
-                        A = float(sline[10])
-                        M = float(sline[11])
-                        A_prime = float(sline[16])
-                        M_prime = float(sline[17])
-                    else:
-                        if not self.already_norm: #TODO refractor
-                            if self.len_norm: #read per kilobase in region
-                                signal_a = 1e3*(float(signal_a)/len(region_of_interest))
-                                signal_b = 1e3*(float(signal_b)/len(region_of_interest))
-                                signal_background_1 = 1e3*(float(signal_background_1)/len(region_of_interest))
-                                signal_background_2 = 1e3*(float(signal_background_2)/len(region_of_interest))
-  
-                            if self.n_norm: #per million reads in the sample
-                                signal_a = 1e6*(float(signal_a)/self.total_reads_a)
-                                signal_b = 1e6*(float(signal_b)/self.total_reads_b)
-                                if self.use_replica:
-                                    signal_background_1 = signal_a
-                                    signal_background_2 = 1e6*(float(signal_background_2)/self.total_reads_replica)
-                                else:
-                                    signal_background_1 = 1e6*(float(signal_background_1)/self.average_total_reads)
-                                    signal_background_2 = 1e6*(float(signal_background_2)/self.average_total_reads)                                                                    
-                                
-                        A = self.__enrichment_A(signal_a, signal_b)
-                        M = self.__enrichment_M(signal_a, signal_b)
-                        A_prime = self.__enrichment_A(signal_background_1, signal_background_2)
-                        M_prime = self.__enrichment_M(signal_background_1, signal_background_2)
-
-                    out_file.write("%s\n"%("\t".join([region_of_interest.write().rstrip("\n"), str(signal_a), str(signal_b), str(signal_background_1), str(signal_background_2), str(A), str(M), str(self.total_reads_a), str(self.total_reads_b), str(len(tags_a)), str(len(tags_b)),  str(A_prime), str(M_prime), str(total_reads_background_1), str(total_reads_background_2), str(numreads_background_1), str(numreads_background_2)])))
-                    self.regions_analyzed_count += 1
-
-        out_file.flush()
-        out_file.close()
-        self.logger.debug("LEAVING _calculate_MA")
-        return out_file.name
-
-
-    def _calculate_total_lengths(self):
-        msg = "Calculating enrichment in regions"
-        if self.counts_file: 
-            self.sorted_region_path = self.counts_file
-            if (not self.total_reads_a or not self.total_reads_b or (not self.total_reads_replica and self.use_replica)) and not self.use_MA:
-                self.logger.info("... counting from counts file...")
-                self.total_reads_a = 0
-                self.total_reads_b = 0
-                if self.total_reads_replica:
-                    self.total_reads_replica = 0
-                else:
-                    self.total_reads_replica = 1
-                for line in open(self.counts_file):
-                    try:
-                        enrich = dict(zip(enrichment_keys, line.split()))
-                        self.total_reads_a += float(enrich["signal_a"])
-                        self.total_reads_b += float(enrich["signal_b"])
-                        if self.use_replica:
-                            self.total_reads_replica += float(enrich["signal_prime_2"])
-                    except ValueError:
-                        self.logger.debug("(Counting) skip header...")
-
-
-        else:
-            self.logger.info("... counting number of lines in files...")
-            if not self.total_reads_a:
-                if self.experiment_format == BAM:
-                    self.total_reads_a = bam.size(self.current_experiment_path)
-                else:
-                    self.total_reads_a = sum(1 for line in utils.open_file(self.current_experiment_path, self.experiment_format, logger=self.logger))
-            if not self.total_reads_b:
-                if self.experiment_format == BAM:
-                    self.total_reads_b = bam.size(self.current_control_path)
-                else:
-                    self.total_reads_b = sum(1 for line in utils.open_file(self.current_control_path, self.control_format, logger=self.logger))
-            if self.use_replica and not self.total_reads_replica:
-                if self.experiment_format  == BAM:
-                    self.total_reads_replica = bam.size(self.replica_a_path)
-                else:
-                    self.total_reads_replica = sum(1 for line in utils.open_file(self.replica_a_path, self.experiment_format, logger=self.logger))
-
-            if self.use_replica:
-                msg = "%s using replicas..."%msg
-            else:
-                msg = "%s using swap..."%msg
-
-            self.logger.info(msg)
-
-        self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2        
-
-
-    def enrichment(self):
-        file_a_reader = file_b_reader = replica_a_reader = None
-        self.use_replica = (bool(self.replica_a_path) or (bool(self.counts_file) and self.use_replica_flag))
-        self.logger.debug("Use replica: %s"%self.use_replica)
-        
-        self._calculate_total_lengths()
-        if not self.counts_file:
-            file_a_reader = utils.read_fetcher(self.current_experiment_path, self.experiment_format, cached=self.cached, logger=self.logger, use_samtools=self.use_samtools)
-            file_b_reader = utils.read_fetcher(self.current_control_path, self.experiment_format, cached=self.cached, logger=self.logger, use_samtools=self.use_samtools)
-            if self.use_replica:
-                replica_a_reader = utils.read_fetcher(self.current_replica_a_path, self.experiment_format, cached=self.cached, logger=self.logger, use_samtools=self.use_samtools)
-
-            if self.sorted_region_path:
-                self.logger.info('Using region file %s (%s)'%(self.region_path, self.region_format))
-            else:
-                self.calculate_region() #create region file semi automatically
-
-            self.total_regions = sum(1 for line in open(self.sorted_region_path))
-
-        self.logger.info("... analyzing regions, calculating normalized counts, A / M and replica or swap...")
-
-        self.already_norm = False
-        out_path = self._calculate_MA(self.sorted_region_path, bool(self.counts_file), 1, 1, file_a_reader, file_b_reader, replica_a_reader)
-        self.already_norm = True
-        self.logger.debug("Already normalized: %s"%self.already_norm)
-        if self.tmm_norm:
-            self.logger.info("TMM Normalizing...")
-            tmm_factor = self.tmm_factor(out_path, self.regions_analyzed_count, False)
-            replica_tmm_factor = 1
-            if self.use_replica:
-                replica_tmm_factor = self.tmm_factor(out_path, self.regions_analyzed_count, True)
-            #move output file to old output
-            #use as input
-            old_output = '%s/notnormalized_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
-            move(os.path.abspath(self.current_output_path), old_output)
-            out_path = self._calculate_MA(old_output, True, tmm_factor, replica_tmm_factor, True) #recalculate with the new factor, using the counts again
-
-        self.logger.info("%s regions analyzed."%self.regions_analyzed_count)
-        self.logger.info("Enrichment result saved to %s"%self.current_output_path)
-        return out_path
-
-
-
-    def _sub_tmm(self, counts_a, counts_b, reads_a, reads_b):
-        return (counts_a-reads_a)/(counts_a*reads_a) + (counts_b-reads_b)/(counts_b*reads_b)            
-
-
-    def tmm_factor(self, file_counts, total_regions, replica):
-        if replica:
-            signal_1 = "signal_prime_1"
-            signal_2 = "signal_prime_2"
-            M = "M_prime"
-            reads_2 = self.total_reads_replica            
-        else:
-            signal_1 = "signal_a"
-            signal_2 = "signal_b"
-            M = "M"
-            reads_2 = self.total_reads_b
-
-        values_list = []
-        #read the file inside the values_list
-        for line in open(file_counts):
-            sline = line.split()
-            values_list.append(dict(zip(enrichment_keys, sline)))
-
-        a_trim_number = int(round(total_regions*self.a_trim))
-        #discard the bad A
-        self.logger.debug("Removing the worst A (%s regions, %s percent)"%(a_trim_number, self.a_trim*100))
-
-        values_list.sort(key=lambda x:float(x["A"])) #sort by A
-        for i in range (0, a_trim_number):
-            values_list.pop(0)
-
-        values_list.sort(key=lambda x:float(x[M])) #sort by M              
-        m_trim_number = int(round(total_regions*(self.m_trim/2))) #this number is half the value of the flag, because we will trim half below, and half over 
-
-        #remove on the left
-        for i in range(0, m_trim_number):
-            values_list.pop(0)
-        #remove on the right
-        for i in range(0, m_trim_number):
-            values_list.pop(-1)
-
-        #now calculate the normalization factor
-        arriba = 0
-        abajo = 0
-        for value in values_list:
-            w = self._sub_tmm(float(value[signal_1]), float(value[signal_2]), self.total_reads_a, reads_2)                  
-            arriba += w*float(value[M])
-            abajo += w
-        try:
-            factor = 2**(arriba/abajo)
-        except ZeroDivisionError:
-            self.logger.warning("Division by zero, TMM factor could not be calculated.")
-            factor = 1
-
-        if replica:    
-            self.logger.info("Replica TMM Normalization Factor: %s"%factor)
-        else:
-            self.logger.info("TMM Normalization Factor: %s"%factor)  
-          
-        return factor
-
-    def __load_enrichment_result(self, values_path):
-        ret = []
-        for line in open(values_path):
-            sline = line.split()
-            try:
-                float(sline[1])
-                ret.append(dict(zip(enrichment_keys, sline)))
+                return Region(sline[0], int(sline[1]), int(sline[2]), name2=sline[3], strand=strand, exome_size=exome_size)
             except ValueError:
-                pass
-
-        return ret        
-    
-
-
-
-
-
-
-    def calculate_zscore(self, values_path): 
-        num_regions = sum(1 for line in open(values_path))
-        bin_size = int(self.binsize*num_regions)
-        if bin_size < 50:
-            self.logger.warning("The bin size results in a sliding window smaller than 50, adjusting window to 50 in order to get statistically meaningful results.")
-            bin_size = 50
-
-        bin_step = max(1, int(round(self.bin_step*bin_size)))
-        self.logger.info("Enrichment window calculation using a sliding window size of %s, sliding with a step of %s"%(bin_size, bin_step))
-        self.logger.info("... calculating zscore...")
-        enrichment_result = self.__load_enrichment_result(values_path)
-        enrichment_result.sort(key= lambda x:(float(x["A_prime"])))
-        self.logger.debug("Number of loaded counts: %s"%len(enrichment_result))        
-        self.points = []
-        #get the standard deviations
-        for i in range(0, num_regions-bin_size+bin_step, bin_step):
-            #get the slice
-            if i+bin_size < num_regions:
-                result_chunk = enrichment_result[i:i+bin_size] 
-            else:
-                result_chunk = enrichment_result[i:]  #last chunk
-
-            #retrieve the values
-            mean_acum = 0
-            a_acum = 0
-            Ms_replica = []
-            for entry in result_chunk:
-                mean_acum += float(entry["M_prime"])
-                a_acum += float(entry["A_prime"])
-                Ms_replica.append(float(entry["M_prime"]))
-
-            #add them to the points of mean and sd
-            mean = mean_acum/len(result_chunk)
-            sd = math.sqrt((sum((x - mean)**2 for x in Ms_replica))/len(Ms_replica))
-            #the A median
-            A_median = a_acum / len(result_chunk)
-
-            self.points.append([A_median, mean, sd]) #The A asigned to the window, the mean and the standard deviation  
-            #self.logger.debug("Window of %s length, with A median: %s mean: %s sd: %s"%(len(result_chunk), self.points[-1][0], self.points[-1][1], self.points[-1][2], len(self.points)))  
-
-        #update z scores
-        for entry in enrichment_result:
-            entry["A_median"] = 0
-            entry["mean"] = 0
-            entry["sd"] = 0
-            entry["zscore"] = 0
-            closest_A = sys.maxint
-            sd_position = 0
-            for i in range(0, len(self.points)):
-                new_A = self.points[i][0]
-                if new_A != closest_A: #skip repeated points
-                    if abs(closest_A - float(entry["A"])) >= abs(new_A - float(entry["A"])):
-                        closest_A = new_A
-                        sd_position = i
-                    else:
-                        break #already found, no need to go further since the points are ordered
-                        
-            entry["A_median"] = closest_A
-            if self.points: #only calculate if there where enough windows, otherwise give a warning
-                self.__sub_zscore(entry, self.points[sd_position]) #the value is the biggest, use the last break
-
-        
-        if not self.points: 
-            self.logger.warning("Insufficient number of regions analyzed (%s), z-score values could not be calculated"%num_regions)
-
-        enrichment_result.sort(key=lambda x:(x["name"], int(x["start"]), int(x["end"])))
-        old_file_path = '%s/before_zscore_%s'%(self._current_directory(), os.path.basename(values_path)) #create path for the outdated file
-        move(os.path.abspath(values_path), old_file_path) #move the file
-        new_file = file(values_path, 'w') #open a new file in the now empty file space  
-        if not self.skip_header:
-            new_file.write('\t'.join(enrichment_keys))
-            new_file.write('\n') 
-
-        for entry in enrichment_result:    
-            new_file.write("\t".join(str(entry[key]) for key in enrichment_keys)+"\n")
-
-        self._manage_temp_file(old_file_path)
-        return values_path
-
-
-    def __sub_zscore(self, entry, point):
-        entry["mean"] = str(point[1])
-        entry["sd"] = str(point[2])
-        entry["zscore"] = str(self.get_zscore(float(entry["M"]), float(entry["mean"]), self.sdfold*float(entry["sd"])))
-
+                print "Error"
+                pass #discarding header
 
     def _save_figure(self, figure_name):
         if self.postscript:
@@ -1571,7 +933,7 @@ class Turbomix:
             import warnings 
             with warnings.catch_warnings(): #To make the RuntimeWarning go away
                 warnings.simplefilter("ignore")
-                savefig(figure_path)
+            savefig(figure_path)
             self.logger.info("%s figure saved to %s"%(figure_name, figure_path))
         clf()
         
@@ -1580,9 +942,7 @@ class Turbomix:
         self.logger.info("Running modfdr filter with %s p-value threshold and %s repeats..."%(self.p_value, self.repeats))
         old_output = '%s/before_modfdr_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
         move(os.path.abspath(self.current_output_path), old_output)
-        cluster_reader = utils.read_fetcher(old_output, self.output_format, cached=self.cached)
-        #if self.masker_file:
-        #    masker_reader = utils.read_fetcher(self.masker_file, BED, cached=self.cached)
+        cluster_reader = utils.read_fetcher(old_output, self.output_format, cached=self.cached, logger=self.logger)
         filtered_output = open(self.current_output_path, 'w+')
         unfiltered_output = open('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
         for region_line in open(self.sorted_region_path):
@@ -1623,7 +983,6 @@ class Turbomix:
                     positive_cluster_cache[0] += line_read
                 else:
                     positive_cluster_cache.append(line_read.copy_cluster())
-
             else:
                 if negative_cluster.is_empty() or not negative_cluster.intersects(line_read):
                     if positive_cluster.max_height() > self.correlation_height and negative_cluster.max_height() > self.correlation_height: #if we have big clusters, correlate them
@@ -1665,8 +1024,6 @@ class Turbomix:
         self.logger.info('Correlation test RESULT: You should extend this dataset to %s nucleotides'%(max_delta+average_len))
         self.result_log.write('Correlation test RESULT: You should extend this dataset to %s nucleotides\n'%(max_delta+average_len))
         self.frag_size = int(round(max_delta+average_len))
-
-
         if not data:
             self.logger.warning('Not enough data to plot the correlation graph. Lower the threshold of the --height-filter flag')
         else: 
@@ -1681,12 +1038,10 @@ class Turbomix:
                 plt.xlabel("Shift length between + and - clusters")
                 plt.ylabel("Pearson correlation coefficient")
                 self._save_figure("correlation")
-
             except ImportError:
                 if self.debug:
                     raise
                 self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library (version >1.0.1).')
-
 
     def _correlate_clusters(self, positive_cluster, negative_cluster):
         distance = negative_cluster.end-positive_cluster.start
@@ -1698,7 +1053,6 @@ class Turbomix:
                     self.delta_results[delta] = r_squared
                 else:
                     self.delta_results[delta] += r_squared
-
 
     def _analize_paired_clusters(self, positive_cluster, negative_cluster, delta):
         #from scipy.stats.stats import pearsonr Abandoned scipy

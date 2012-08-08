@@ -72,7 +72,6 @@ def size(path):
 
 
 def read_gzip_header(f):
-
     try:
         #gzip_header = f.read(10) #Gzip header
         #TODO probar si merece la pena hacer checks de los headers (tiempo vs mirar si el BAM esta bien formado)
@@ -137,7 +136,7 @@ def read_bam_header(dec, dec_cursor):
     num_chrom, dec_cursor = read_int32(dec, dec_cursor) #The number of sequences (chromosomes)
     for i in range(0, num_chrom):
         l_name, dec_cursor = read_int32(dec, dec_cursor) #length of the reference name
-        seq_name, dec_cursor = get_bytes(dec, dec_cursor, l_name) #The name of the reference sequence                
+        seq_name, dec_cursor = get_bytes(dec, dec_cursor, l_name) #The name of the reference sequence               
         l_ref, dec_cursor = read_int32(dec, dec_cursor)
         chr_dict[i] = seq_name.split("\0", 1)[0]
 
@@ -299,6 +298,30 @@ def read_alignment(dec, dec_cursor, block_size, chr_dict):
     return "\t".join([read_name.split("\0", 1)[0], str(flag), chr_dict[ref_id], str(pos+1), str(mapq), cigar_str, "*", "0", "0", sequence, qual_str] + op_fields), dec, dec_cursor
 
 
+def get_names(path):
+    """
+    Returns the list of names in the BAM. Used for knowing how to sort the region file.
+    """ 
+    f = open(path, "rb")
+    extra_len = read_gzip_header(f) #get the field extra_len from the gzip header
+    cdata = read_bgzf(f, extra_len) #get the compressed bam data from the CDATA extra field
+    dec = "%s%s"%(dec, zlib.decompress(cdata, -15)) #decompress the CDATA field
+    magic, dec_cursor = get_bytes(dec, dec_cursor, 4) #Magic BAM
+    l_text, dec_cursor = read_int32(dec, dec_cursor) # Length of the header text
+    header, dec_cursor = get_bytes(dec, dec_cursor, l_text) #The header
+    num_chrom, dec_cursor = read_int32(dec, dec_cursor) #The number of sequences (chromosomes)
+    for i in range(0, num_chrom):
+        l_name, dec_cursor = read_int32(dec, dec_cursor) #length of the reference name
+        seq_name, dec_cursor = get_bytes(dec, dec_cursor, l_name) #The name of the reference sequence               
+        l_ref, dec_cursor = read_int32(dec, dec_cursor)
+        chr_list.append(seq_name.split("\0", 1)[0])
+
+    return chr_list
+
+    
+
+
+
 
 
 def BamReader(path, logger=None, tell=None, read_start=0, chr_dict = None): 
@@ -366,10 +389,19 @@ def BamReader(path, logger=None, tell=None, read_start=0, chr_dict = None):
 
 class BamFetcher:
 
-    def __init__(self, bam_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
+    def __init__(self, bam_path, read_half_open=False, rounding=True, cached=True, logger=None):
+
+        self.logger.info('Fetcher used for %s: Bam Fetcher'%file_path)
         self.__dict__.update(locals())
         self.bai_path = "%s.bai"%bam_path
         self.bam_file = open(bam_path)
+        self.check_bai()
+        self.num_references = s_int32(self.bai_file.read(4))[0]
+        self.get_chrdict()
+        self.get_reference_tells()
+
+
+    def check_bai(self):
         try:
             self.bai_file = open(self.bai_path)
 
@@ -382,9 +414,6 @@ class BamFetcher:
             print "Invalid .bai file", self.bai_path
             sys.exit(1) #return Exception
 
-        self.num_references = s_int32(self.bai_file.read(4))[0]
-        self.get_chrdict()
-        self.get_reference_tells()
 
 
     def get_reference_tells(self):
@@ -503,11 +532,23 @@ class BamFetcher:
         
 
 class BamFetcherSamtools(BamFetcher):
+
+    def __init__(self, bam_path, read_half_open=False, rounding=True, cached=True, logger=None):
+        self.__dict__.update(locals())
+        self.logger.info('Fetcher used for %s: Bam Fetcher (using Samtools)'%bam_path)
+        self.bai_path = "%s.bai"%bam_path
+        self.bam_file = open(bam_path)
+        self.check_bai()
+
+
     def get_overlaping_clusters(self, region, overlap=1):    
         clusters = []
+        self.logger.debug('Launching Samtools for %s...'%region)
         proc = subprocess.Popen("samtools view %s %s:%s-%s"%(self.bam_path, region.name, region.start, region.end), stdout=subprocess.PIPE, shell=True)
         out, err = proc.communicate()
+        self.logger.debug('... done')
         lines = filter(None, out.split("\n"))
+        self.logger.debug('Numlines in %s: %s'%(region, len(lines)))
         for line in lines:
             c = Cluster(read=SAM, cached=False, read_half_open=self.read_half_open, rounding=self.rounding)
             try:
