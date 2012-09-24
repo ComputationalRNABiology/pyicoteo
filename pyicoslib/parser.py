@@ -321,7 +321,7 @@ class PicosParser:
     def run_parser(self):
         parser = self.create_parser()
         parser.set_defaults(experiment=EXPERIMENT, experiment_format=EXPERIMENT_FORMAT, open_experiment=OPEN_EXPERIMENT, debug=DEBUG, discard=DISCARD, output=OUTPUT, control=CONTROL, 
-                            label = LABEL, output_format=OUTPUT_FORMAT,open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, 
+                            wig_label = LABEL, output_format=OUTPUT_FORMAT,open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, 
                             open_region =OPEN_REGION,frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, 
                             correction=CORRECTION, no_subtract = NO_SUBTRACT, normalize = DO_NORMALIZE, trim_proportion=TRIM_PROPORTION,open_control=OPEN_CONTROL, 
                             no_sort=NO_SORT, duplicates=DUPLICATES, threshold=THRESHOLD, trim_absolute=TRIM_ABSOLUTE, max_delta=MAX_DELTA, min_delta=MIN_DELTA, 
@@ -376,7 +376,7 @@ class PicosParser:
             args.control_format = args.experiment_format
             args.open_control = args.open_experiment
 
-        turbomix = Turbomix(args.experiment, args.output, args.experiment_format, args.output_format, args.label, args.open_experiment, args.open_output, args.debug,
+        turbomix = Turbomix(args.experiment, args.output, args.experiment_format, args.output_format, args.wig_label, args.open_experiment, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.remlabels, args.control, args.control_format, args.open_control, args.region,
                             args.region_format, args.open_region, args.span, args.frag_size, args.p_value, args.height_limit, args.correction,
                             args.trim_proportion, args.no_sort, args.duplicates, args.threshold, args.trim_absolute, args.max_delta,
