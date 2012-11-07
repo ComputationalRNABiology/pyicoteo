@@ -22,7 +22,7 @@ from turbomix import Turbomix, OperationFailed
 from defaults import *
 
 
-VERSION = "1.1"
+VERSION = "1.1b"
 __version__ = VERSION
 
 class PicosParser:
