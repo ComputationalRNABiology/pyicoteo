@@ -1,0 +1,31 @@
+<tool id="pyicos_extend" name="Extend reads">
+  <description>Extend tags to the desired length. Takes into consideration the sense and the antisense strand</description>
+  <command interpreter="python">
+      pyicos extend $input $output $extension -f $input_format -F $output_format $is_input_open $is_output_open
+  </command>
+  <inputs>
+    <param format="tabular" name="input" type="data" label="Input file"/>
+    <param  name="input_format" type="select" label="Input format" format="text">
+        <option value="bed" selected="true">Bed</option>
+        <option value="sam">Sam</option>
+        <option value="eland">Eland</option>
+    </param>
+    <param  name="is_input_open" type="boolean" label="Is input half-open?" truevalue="--open-input" falsevalue=""/>
+    <param  name="extension" type="integer" label="Extension length" size="4" value="100"/>
+    <param  name="output_format" type="select" label="Output format">
+        <option value="bed" selected="true">Bed</option>
+        <option value="sam">Sam</option>
+        <option value="eland">Eland</option>
+    </param>
+    <param  name="is_output_open" type="boolean" label="Is output half-open?" truevalue="--open-output" falsevalue=""/>
+  </inputs>
+  <outputs>
+    <data format="tabular" name="output" />
+  </outputs>
+  <help>
+        Extend the reads of a bed file to the desired length, or a estimated one with a strand correlation calculation.
+
+        More information at: http://regulatorygenomics.upf.edu/pyicos
+  </help>
+</tool>
+
