@@ -1,0 +1,68 @@
+<tool id="pyicos_filter" name="Filter">
+  <description>Filter according to the statistical poisson distribution or the </description>
+  <command interpreter="python">
+       #if $stats.filter_test == "poisson": pyicos filter $input $control $output -f $input_format -F $output_format $is_input_open $is_output_open --control-format $control_format --p-value $pvalue $is_control_open
+       #else: pyicos modfdr $input $output $region -f $input_format -F $output_format $is_input_open $is_output_open --p-value $pvalue
+       #end
+
+  </command>  
+  <inputs>
+    <param format="tabular" name="input" type="data" label="Input file"/>
+    <param  name="input_format" type="select" label="Input format" format="text">
+        <option value="bed" selected="true">Bed</option>
+        <option value="sam">Sam</option>
+        <option value="eland">Eland</option>
+        <option value="bed_wig">Wiggle(Bed)</option>
+        <option value="bedpk">Bed pk</option>
+    </param>
+    <param  name="is_input_open" type="boolean" label="Is input half-open?" truevalue="--open-input" falsevalue=""/>
+    <param  name="output_format" type="select" label="Output format">
+        <option value="bed_wig">Wiggle(Bed)</option>
+        <option value="variable_wig">Variable Wiggle</option>
+        <option value="bedpk" selected="true">Pk(Bed)</option>
+    </param>
+
+
+    <param  name="pvalue" type="float" label="significant p-value" size="4" value="0.01"/>
+
+
+    <conditional name="stats">
+        <param name="filter_test" type="select" label="Statistical test">
+            <option value="poisson" selected="true">Poisson filtering for datasets with control</option>
+            <option value="modfdr">Modfdr for datasets without control</option>
+        </param>
+        <when value="poisson">
+                <param format="tabular" name="control" type="data" label="Control file"/>
+                <param  name="control_format" type="select" label="Control format" format="text">
+                    <option value="bed" selected="true">Bed</option>
+                    <option value="bed_wig">Wiggle(Bed)</option>
+                    <option value="sam">Sam</option>
+                    <option value="eland">Eland</option>
+                    <option value="bedpk">Bed pk</option>
+                </param>
+                <param  name="is_control_open" type="boolean" label="Is control half-open?" truevalue="--open-control" falsevalue=""/>
+
+        </when>
+        <when value="modfdr">
+             <param format="tabular" name="region" type="data" label="Region file"/>
+        </when>
+    </conditional>
+
+
+
+
+    <param  name="is_output_open" type="boolean" label="Is output half-open?" truevalue="--open-output" falsevalue=""/>
+
+    <param  name="extension" type="integer" label="Extension length" size="4" value="100"/>
+  </inputs>
+
+  <outputs>
+    <data format="tabular" name="output"></data>
+  </outputs>
+  <help>
+        A handy parser to convert any format that pyicos can read to any other format.
+  </help>
+</tool>
+
+
+

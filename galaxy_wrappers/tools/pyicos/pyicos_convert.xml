@@ -1,0 +1,45 @@
+<tool id="pyicos_convert" name="Convert">
+  <description>Convert between supported Pyicos formats.</description>
+  <command interpreter="python">
+      pyicos convert $input $output -f $input_format -F $output_format $is_input_open $is_output_open --round $round --span $span
+  </command>
+  <inputs>
+
+    <param format="tabular" name="input" type="data" label="Input file"/>
+    <param  name="input_format" type="select" label="Input format" format="text">
+        <option value="bed" selected="true">Bed</option>
+        <option value="sam">Sam</option>
+        <option value="eland">Eland</option>
+        <option value="bed_wig">Wiggle(Bed)</option>
+        <option value="bedpk">Bed pk</option>
+    </param>
+    <param  name="is_input_open" type="boolean" label="Is input half-open?" truevalue="--open-input" falsevalue=""/>
+    <conditional name="output_format_cond">
+        <param  name="output_format" type="select" label="Output format">
+            <option value="bed">Bed</option>
+            <option value="sam">Sam</option>
+            <option value="eland">Eland</option>
+            <option value="bed_wig" selected="true">Wiggle(Bed)</option>
+            <option value="variable_wig">Wiggle(Variable)</option>
+            <option value="bedpk">Bed pk</option>
+        </param>
+        <when value="variable_wig">
+            <param  name="span" type="integer" label="Variable Wig resolution" size="4" value="10"/>
+        </when>
+        <when value="bed"><!-- do nothing here --></when>
+        <when value="sam"><!-- do nothing here --></when>
+        <when value="eland"><!-- do nothing here --></when>
+        <when value="bed_wig"><!-- do nothing here --></when>
+        <when value="bedpk"><!-- do nothing here --></when>
+    </conditional>
+        <param  name="is_output_open" type="boolean" label="Is output half-open?" truevalue="--open-output" falsevalue=""/>
+        <param  name="round" type="boolean" label="Return the heights rounded to the closest integer" truevalue="--round" falsevalue="" checked="true"/>
+  </inputs>
+  <outputs>
+    <data format="tabular" name="output" />
+  </outputs>
+  <help>
+        A handy parser to convert any format that pyicos can read to any other format.
+        More information at: http://regulatorygenomics.upf.edu/pyicos
+  </help>
+</tool>
