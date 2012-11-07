@@ -2,7 +2,7 @@
 
 import unittest
 
-from test import testCore, testOperation, testParser, testUtils
+from utest import testCore, testOperation, testParser, testUtils
 
 suite1 = testCore.suite()
 suite2 = testOperation.suite()
