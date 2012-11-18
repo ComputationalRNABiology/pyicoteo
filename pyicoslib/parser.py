@@ -124,6 +124,7 @@ class PicosParser:
         basic_parser = self.new_subparser()
         basic_parser.add_argument('--debug', action='store_true', default=DEBUG)
         basic_parser.add_argument('--no-sort',action='store_true', default=NO_SORT, help='Force skip the sorting step. WARNING: Use only if you know what you are doing. Processing unsorted files assuming they are will outcome in erroneous results')
+        basic_parser.add_argument('--force-sort',action='store_true', default=False, help='Force the sorting step')
         basic_parser.add_argument('--silent' ,action='store_false', default=VERBOSE, dest='verbose', help='Run without printing in screen')
         basic_parser.add_argument('--disable-cache' ,action='store_false', default=CACHED, dest='cached', help='Disable internal reading cache. When Clustering low coverage files, it will increase speed and improve memory usage. With very read dense files, the speed will decrease.')
         basic_parser.add_argument('--keep-temp', action='store_true', default=KEEP_TEMP, help='Keep the temporary files')
@@ -333,7 +334,7 @@ class PicosParser:
                             counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER,  
                             total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, 
                             use_replica=USE_REPLICA, tempdir=TEMPDIR, samtools=USESAMTOOLS, access_sequential=SEQUENTIAL, experiment_label = EXPERIMENT_LABEL, 
-                            replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER)
+                            replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT)
         args = parser.parse_args()
         #Add any parameters found in the config file. Override them with anything found in the args later
         if sys.argv[1] == 'protocol':
@@ -385,7 +386,7 @@ class PicosParser:
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.pseudocount, args.len_norm, args.label1, 
                             args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, 
                             args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim, 
-                            args.use_replica, args.tempdir, args.samtools, args.access_sequential, args.experiment_label, args.replica_label, args.title_label, args.count_filter)
+                            args.use_replica, args.tempdir, args.samtools, args.access_sequential, args.experiment_label, args.replica_label, args.title_label, args.count_filter, args.force_sort)
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
             for operation in operations:

@@ -94,7 +94,7 @@ WINDOW_STEP = 0.1
 POISSON_OPTIONS=("height", "numtags", "length")
 TEMPDIR=[]
 USESAMTOOLS=False
-
+FORCE_SORT=False
 #Enrichment
 PSEUDOCOUNT=False
 LEN_NORM=False
