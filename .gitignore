@@ -38,3 +38,15 @@ nosetests.xml
 
 pyicos.log
 
+# Backup files
+*~
+
+# Vi stuff
+*.swp
+
+# OS generated files
+.DS_Store
+ehthumbs.db
+Icon?
+Thumbs.db
+desktop.ini
