@@ -158,7 +158,7 @@ class SafeReader:
 class BigSort:
     """
     This class can sort huge files without loading them fully into memory.
-    Based on a recipe by Tomasz Bieruta found at http://code.activestate.com/recipes/415581/
+    Based on a recipe by Tomasz Bieruta found at c
 
     NOTE: This class is becoming a preprocessing module. This is a good thing, I think! But its not
     only a sorting class then. We have to think about renaming it, or extracting functionality from it...
@@ -405,7 +405,7 @@ class SortedFileClusterReader:
     def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
         self.__dict__.update(locals())
         self.file_iterator = open_file(file_path, format=experiment_format, logger=logger)
-        self.logger.debug('Fetcher used for %s: Sequential Sorted Cluster Reader'%file_path)
+        if logger: self.logger.debug('Fetcher used for %s: Sequential Sorted Cluster Reader'%file_path)
         self.__initvalues()
         self.safe_reader = SafeReader()
     
