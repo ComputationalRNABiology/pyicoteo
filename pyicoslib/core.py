@@ -1115,13 +1115,12 @@ class Cluster(AbstractCore):
 
         pos = (first_max + last_max)/2
         return pos 
- 
+  
 
     def area(self):
         """
         Returns the area of the peak
         """
-
         sum_area = 0
         for length, height in self:
             sum_area += length*height

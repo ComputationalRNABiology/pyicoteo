@@ -148,8 +148,8 @@ class Turbomix:
             self.__icant("Can't do Filter without Poisson or a fixed threshold\n")
         elif (SUBTRACT or SPLIT or POISSON) in self.operations and (self.output_format not in CLUSTER_FORMATS):
             self.__icant("Can't get the output as tag format (eland, bed) for Subtract, Split, Poisson filtering please use a clustered format", True)
-        elif EXTEND in self.operations and self.experiment_format in CLUSTER_FORMATS:
-            self.__icant("Can't extend if the experiment is a clustered format ", True)
+        elif (EXTEND or PUSH) in self.operations and self.experiment_format in CLUSTER_FORMATS:
+            self.__icant("Can't extend or push if the experiment is a clustered format ", True)
         elif STRAND_CORRELATION in self.operations and self.experiment_format in CLUSTER_FORMATS:
             self.__icant("Can't perform strand correlation operation if the experiment is a clustered format ", True)
         elif ENRICHMENT in self.operations and MODFDR in self.operations:
@@ -162,8 +162,6 @@ class Turbomix:
         return utils.add_slash_to_path(path)
 
     def success_message(self, output_path):
-        self.result_log.write('\nSummary of operations\n')
-        self.result_log.write('---------------------\n')
         self.logger.info('Operations complete.')
         self.logger.info('')
         self.logger.info('Summary of operations:')
@@ -172,46 +170,38 @@ class Turbomix:
             self.logger.info('Convert from %s to %s.'%(self.experiment_format, self.output_format))
 
         if STRAND_CORRELATION in self.operations:
-            self.result_log.write('Strand correlation: %.0f pairs analyzed, estimated a %s nucleotides extension value'%(self.analyzed_pairs, self.frag_size))
             self.logger.info('Strand correlation')
 
         if EXTEND in self.operations:
-            self.result_log.write('Extend to %s\n'%self.frag_size)
+            self.logger.info('Extend to %s'%self.frag_size)
+
+        if PUSH in self.operations:
             self.logger.info('Extend to %s'%self.frag_size)
 
         if self.do_subtract:
-            self.result_log.write('Subtract\n')
             self.logger.info('Subtract')
 
         if self.discarded_names:
-            self.result_log.write('Discard tags: %s\n'%self.discarded_names)
             self.logger.info('Discard tags: %s'%self.discarded_names)
 
         if self.do_heuremove:
-            self.result_log.write('Heuristic Remove from %s\n'%self.region_path)
             self.logger.info('Heuristic Remove from %s'%self.region_path)
 
         if self.do_split:
-            self.result_log.write('Split\n')
             self.logger.info('Split')
 
         if DISCARD_ARTIFACTS in self.operations:
-            self.result_log.write('Discard Artifacts\n')
             self.logger.info('Discard Artifacts')
 
         if self.do_poisson:
-            self.result_log.write('Poisson\n')
             self.logger.info('Poisson')
 
         if self.do_cut:
-            self.result_log.write('Filter\n')
             self.logger.info('Filter')
 
         if self.do_dupremove:
-            self.result_log.write('Removed %s duplicates\n'%self.duplicates_found)
             self.logger.info('Removed %s duplicates, allowing up to %s'%(self.duplicates_found, self.duplicates))
 
-        self.result_log.write('Date finished: %s'%datetime.now())        
         if not NOWRITE in self.operations:
             self.logger.info('Output at: %s'%(output_path))
 
@@ -231,7 +221,6 @@ class Turbomix:
 
     def get_normalize_factor(self, experiment, control):
         ret = self.numcells(experiment, self.experiment_format)/self.numcells(control, self.control_format)
-        self.result_log.write('Normalization factor: %s\n'%(ret))
         self.logger.info('Normalization factor: %s\n'%(ret))
 
         return ret
@@ -495,15 +484,7 @@ class Turbomix:
             self.current_output_path = output_path
             self.cluster.clear()
             self.cluster_aux.clear()
-            self.result_log = open('%s/pyicos_report_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path)), 'wb')
-            self.result_log.write('Pyicos analysis report\n')
-            self.result_log.write('----------------------\n\n')
-            self.result_log.write('Date run: %s\n'%datetime.now())
-            self.result_log.write('Experiment file: %s\n'%self.current_experiment_path)
-            if self.current_control_path:
-                self.result_log.write('Control file: %s\n'%self.current_control_path)
 
-            self.result_log.write('\n\n')
             self.start_operation_message()
             self.decide_sort(experiment_path, control_path)
             self.estimate_frag_size = self.do_poisson and not self.frag_size
@@ -533,10 +514,8 @@ class Turbomix:
             if self.do_poisson: #extract info from the last name and print the thresholds
                 self.poisson_analysis(self.previous_chr)
                 self.logger.info('\nCluster thresholds for p-value %s:'%self.p_value)
-                self.result_log.write('\nCluster thresholds for p-value %s:\n'%self.p_value)
                 for name, k in self.poisson_results[self.poisson_test].items():
                     self.logger.info('%s: %s'%(name, k))
-                    self.result_log.write('%s: %s\n'%(name, k))
 
             if CHECK_REPLICAS in self.operations: 
                 self.experiment_values = []
@@ -738,16 +717,12 @@ class Turbomix:
             pass #file not found, the warning will be printed
         
         if not found: self.logger.warning("The file containing %s length for assembly %s could not be found, an aproximation will be used"%(name, self.species))
-        self.result_log.write('---------------\n')
-        self.result_log.write('%s\n'%(name))
-        self.result_log.write('---------------\n\n')
-        self.result_log.write('Correction factor: %s\n\n'%(self.correction_factor))
+        self.logger.info('Correction factor: %s\n\n'%(self.correction_factor))
         self.reads_per_bp =  self.total_bp_with_reads / self.chr_length*self.correction_factor
         p_nucleotide = 1.
         p_cluster = 1.
         p_numtags = 1.
         k = 0
-        self.result_log.write('k\tcluster_length\tcluster_height\tnumtags\n')
         while ((self.absolute_max_numtags > k) or (self.absolute_max_height > k)) and k < self.height_limit:
             p_nucleotide -= utils.poisson(k, self.reads_per_bp) #analisis nucleotide
             p_cluster -= utils.poisson(k, self.acum_height/self.total_clusters) #analysis cluster
@@ -755,7 +730,6 @@ class Turbomix:
             p_nucleotide = self._correct_bias(p_nucleotide)
             p_cluster = self._correct_bias(p_cluster)
             p_numtags = self._correct_bias(p_numtags)
-            self.result_log.write('%s\t%.8f\t%.8f\t%.8f\n'%(k, p_nucleotide, p_cluster, p_numtags))
             if name not in self.poisson_results['length'].keys() and p_nucleotide < self.p_value: #if we don't have a height k that is over the p_value yet, write it.
                 self.poisson_results["length"][name] = k
 
@@ -1009,10 +983,7 @@ class Turbomix:
         max_corr = -1
         if num_analyzed:
             average_len = acum_length/num_analyzed
-            self.result_log.write("Strand Correlation\n")
-            self.result_log.write("------------------\n\n")
             self.logger.info("Average analyzed length %s"%average_len)
-            self.result_log.write("Average analyzed length:%s\n"%average_len)
             for delta in range(self.min_delta, self.max_delta, self.delta_step):
                 if delta in self.delta_results:
                     self.delta_results[delta]=self.delta_results[delta]/self.analyzed_pairs
@@ -1022,7 +993,7 @@ class Turbomix:
                         max_corr = self.delta_results[delta]
                     self.logger.debug('Delta %s:%s'%(delta, self.delta_results[delta]))
         self.logger.info('Correlation test RESULT: You should extend this dataset to %s nucleotides'%(max_delta+average_len))
-        self.result_log.write('Correlation test RESULT: You should extend this dataset to %s nucleotides\n'%(max_delta+average_len))
+
         self.frag_size = int(round(max_delta+average_len))
         if not data:
             self.logger.warning('Not enough data to plot the correlation graph. Lower the threshold of the --height-filter flag')

@@ -122,6 +122,7 @@ EPSILON=1.0842021724855044e-19 #The smallest number above 0. Got from running 1.
 
 NORMALIZE = 'normalize'
 EXTEND = 'extend'
+PUSH = 'push'
 SUBTRACT = 'subtract'
 SPLIT = 'split'
 TRIM = 'trim'

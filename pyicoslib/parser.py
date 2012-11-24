@@ -135,6 +135,7 @@ class PicosParser:
         basic_parser.add_argument('--tempdir', default=TEMPDIR, help="Manually define the temporary directory where Pyicos will write. By default Pyicos will use the temporary directory the system provides (For example, /tmp in unix systems)")
         basic_parser.add_argument('--samtools', default=USESAMTOOLS, action='store_true', help="Use samtools for reading BAM files [Default: Pyicos uses its own library] (reading BAM works without samtools for convert, extend, and other operations, but not for enrichment yet)]")
         basic_parser.add_argument('--skip-header', action='store_true', default=SKIP_HEADER, help="Skip writing the header for the output file. [Default %(default)s]")
+        #basic_parser.add_argument('--get-report', action='store_true', default=SKIP_HEADER, help=". [Default %(default)s]")
         output = self.new_subparser()
         output.add_argument('output', help='The output file or directory')
         output_flags = self.new_subparser()
@@ -284,6 +285,9 @@ class PicosParser:
         #subparsers.add_parser('normalize', help='Normalize a pk file respect of the control.', parents=[experiment, experiment_flags, basic_parser, control, control_format, output, output_flags, open_control, round, label, span, remlabels])
         #extend operation
         subparsers.add_parser('extend', help='Extends the reads of a file to the desired length. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags,  basic_parser,  output, output_flags, frag_size, round, label, span, remlabels])
+        #push operation
+        subparsers.add_parser('push', help='Push the reads in the corresponding strand. If a read doesn\'t have a strand, will be pushed from left to right. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags, basic_parser, output, output_flags, frag_size, round, label, span, remlabels])
+
         #poisson analysis
         subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.',
                               parents=[experiment,experiment_flags,  basic_parser, output_flags, optional_frag_size, pvalue, height, correction, species, remlabels, poisson_test])
@@ -403,6 +407,8 @@ class PicosParser:
             turbomix.operations = [NORMALIZE]
         elif sys.argv[1] == 'extend':
             turbomix.operations = [EXTEND]
+        elif sys.argv[1] == 'push':
+            turbomix.operations = [PUSH]
         elif sys.argv[1] == 'strcorr':
             turbomix.operations = [STRAND_CORRELATION, NOWRITE]
         elif sys.argv[1] == 'poisson':
