@@ -163,10 +163,11 @@ class BigSort:
     NOTE: This class is becoming a preprocessing module. This is a good thing, I think! But its not
     only a sorting class then. We have to think about renaming it, or extracting functionality from it...
     """
-    def __init__(self, file_format=None, read_half_open=False, frag_size=0, id=0, logger=True, filter_chunks=True):
+    def __init__(self, file_format=None, read_half_open=False, frag_size=0, id=0, logger=True, filter_chunks=True, push_distance=0):
         self.logger = logger
         self.file_format = file_format
         self.frag_size = frag_size
+        self.push_distance = push_distance
         self.buffer_size = 320000
         self.temp_file_size = 8000000
         self.filter_chunks = filter_chunks
@@ -209,6 +210,9 @@ class BigSort:
                     self.cluster.read_line(line)
                     if self.frag_size:
                         self.cluster.extend(self.frag_size)
+
+                    if self.push_distance:
+                        self.cluster.push(self.push_distance)
                 except InvalidLine:
                     if self.logger: self.logger.debug('Discarding middle invalid line: %s'%line)
                                    

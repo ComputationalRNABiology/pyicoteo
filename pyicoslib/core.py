@@ -796,7 +796,7 @@ class Cluster(AbstractCore):
                     self.set_level_length(0, self.get_level_length(0) + (previous_start - self.start))
 
                     if self.start < 1:
-                        if self.logger: self.logger.debug('Extending the line invalidates the read. Discarding %s %s %s'%(self.name, self.start, self.end))
+                        if self.logger: self.logger.debug('Extending invalidates the read (Fell into negative). Discarding %s %s %s'%(self.name, self.start, self.end))
                         self.clear()
         
                 else:
@@ -807,6 +807,33 @@ class Cluster(AbstractCore):
             except IndexError:
                 #print 'Estoy atascado', self.start, self.end, self._levels
                 pass
+
+    def push(self, push_distance):
+        if push_distance > 0:
+            try:
+                self._flush_tag_cache()
+                if self.num_levels() > 1:
+                    self.logger.error('Operation Push is only available for tag like entries. Convert your files to a "tag" format (bed or sam).')
+                    raise InvalidLine
+
+                self.sequence = None #deleting the sequence because the push_distance makes the sequence invalid (and incidentally screws up the counting of the length in the SAM format too)
+                if self.strand is MINUS_STRAND:
+                    self.start -= push_distance
+                    self.end -= push_distance
+
+                    if self.start < 1:
+                        if self.logger: self.logger.debug('Pushing invalidates the read. (Fell into negative position) Discarding %s %s %s'%(self.name, self.start, self.end))
+                        self.clear()
+        
+                else:
+                    self.start += push_distance
+                    self.end += push_distance
+
+            except IndexError:
+                #print 'Estoy atascado', self.start, self.end, self._levels
+                pass
+
+
 
     def _subtrim(self, threshold, end, left):
         while self.num_levels() > 0:

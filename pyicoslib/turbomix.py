@@ -49,25 +49,26 @@ class Turbomix:
     """
     
     def set_logger(self, verbose, debug):
-        logging_format= "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
-        logging.basicConfig(filename="pyicos.log", format=logging_format)
-        self.logger = logging.getLogger("pyicos.log")
-        if self.debug:
-            self.logger.setLevel(logging.DEBUG)
-        else:
-            self.logger.setLevel(logging.INFO)
+        if not hasattr(self, 'logger'): #Make sure its not created twice
+            logging_format= "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
+            logging.basicConfig(filename="pyicos.log", format=logging_format)
+            self.logger = logging.getLogger("pyicos.log")
+            if self.debug:
+                self.logger.setLevel(logging.DEBUG)
+            else:
+                self.logger.setLevel(logging.INFO)
 
-        ch = logging.StreamHandler()
-        if self.debug: 
-            ch.setLevel(logging.DEBUG)
-        elif self.verbose:
-            ch.setLevel(logging.INFO)
-        else:
-            ch.setLevel(logging.WARNING)
+            ch = logging.StreamHandler()
+            if self.debug: 
+                ch.setLevel(logging.DEBUG)
+            elif self.verbose:
+                ch.setLevel(logging.INFO)
+            else:
+                ch.setLevel(logging.WARNING)
 
-        formatter = logging.Formatter("%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s")
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
+            formatter = logging.Formatter("%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s")
+            ch.setFormatter(formatter)
+            self.logger.addHandler(ch)
 
     def __init__(self, experiment_path, output_path, experiment_format=BED, output_format=PK, label=LABEL, 
                  open_experiment=OPEN_EXPERIMENT, open_output=OPEN_OUTPUT, debug = DEBUG, rounding=ROUNDING, tag_length = TAG_LENGTH, discarded_names = REMLABELS,
@@ -82,10 +83,11 @@ class Turbomix:
                  region_mintags=REGION_MINTAGS, bin_step=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER, total_reads_a=TOTAL_READS_A, 
                  total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica_flag=USE_REPLICA, tempdir=TEMPDIR,
                  use_samtools=USESAMTOOLS, access_sequential = SEQUENTIAL, experiment_label = EXPERIMENT_LABEL, replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, 
-                 count_filter = COUNT_FILTER, force_sort=FORCE_SORT):
+                 count_filter = COUNT_FILTER, force_sort=FORCE_SORT, push_distance=PUSH_DIST):
         self.__dict__.update(locals())
         if type(self.tempdir) is not list: #
             self.tempdir = [self.tempdir] 
+
 
         self.stranded_analysis = (output_format == SPK)
         self.normalize_factor = 1
@@ -176,7 +178,7 @@ class Turbomix:
             self.logger.info('Extend to %s'%self.frag_size)
 
         if PUSH in self.operations:
-            self.logger.info('Extend to %s'%self.frag_size)
+            self.logger.info('Push %s'%self.push_distance)
 
         if self.do_subtract:
             self.logger.info('Subtract')
@@ -330,7 +332,7 @@ class Turbomix:
             self.logger.info('Temporary file %s removed'%path)
 
     def _filter_file(self, file_path, temp_name, remove_temp, file_format, file_open):
-        """Assumes sorted file. Extend and removal of duplicates go here"""
+        """Assumes sorted file. Extend, pushing and removal of duplicates go here"""
         if self.tempdir:
             td = self.tempdir[0]
         else:
@@ -361,6 +363,9 @@ class Turbomix:
                 if EXTEND in self.operations:
                     cluster_same.extend(self.frag_size)
 
+                if PUSH in self.operations:
+                    cluster_same.push(self.push_distance)
+
                 new_file.write(cluster_same.write_line())
             else:
                 self.duplicates_found += 1
@@ -370,8 +375,8 @@ class Turbomix:
 
         new_file.flush()
         new_file.close()
-        if EXTEND in self.operations:
-            self.logger.info("Resorting %s after extension..."%temp_name)
+        if (EXTEND or PUSH) in self.operations:
+            self.logger.info("Resorting %s after extension/push..."%temp_name)
             sorter = utils.BigSort(file_format, file_open, 0, 'fisort%s'%temp_name, logger=self.logger)
             old_path = new_file_path
             sorted_new = sorter.sort(old_path, None, self.get_lambda_func(file_format))
@@ -383,7 +388,7 @@ class Turbomix:
 
         self.cluster.clear()
         self.cluster_aux.clear()   
-        return new_file_path     
+        return new_file_path
     
     def filter_files(self):
         """Filter the files removing the duplicates."""
@@ -413,10 +418,10 @@ class Turbomix:
         """Decide if the files need to be sorted or not."""
         #TODO refractor this, copy pasted code (warning, its not as easy as it seems)
         if self.force_sort or self.tag_to_cluster or self.do_subtract or self.do_heuremove or self.do_dupremove or MODFDR in self.operations or ENRICHMENT in self.operations or REMOVE_REGION in self.operations or STRAND_CORRELATION in self.operations or self.frag_size:
-            self.experiment_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment', logger=self.logger)
-            self.experiment_b_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment_b', logger=self.logger)
-            self.replica_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'replica', logger=self.logger)
-            self.control_preprocessor = utils.BigSort(self.control_format, self.open_control, self.frag_size, 'control', logger=self.logger)        
+            self.experiment_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment', logger=self.logger, push_distance=self.push_distance)
+            self.experiment_b_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment_b', logger=self.logger, push_distance=self.push_distance)
+            self.replica_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'replica', logger=self.logger, push_distance=self.push_distance)
+            self.control_preprocessor = utils.BigSort(self.control_format, self.open_control, self.frag_size, 'control', logger=self.logger, push_distance=self.push_distance)        
             if self.no_sort or self.experiment_format == BAM:
                 if self.no_sort: self.logger.warning('Input sort skipped. Results might be wrong.')
                 self.current_experiment_path = experiment_path

@@ -22,7 +22,7 @@ from turbomix import Turbomix, OperationFailed
 from defaults import *
 
 
-VERSION = "1.1b"
+VERSION = "1.2"
 __version__ = VERSION
 
 class PicosParser:
@@ -205,6 +205,8 @@ class PicosParser:
         frag_size.add_argument('frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by the extend operation to extend the tags, taking into consideration their strand, if provided. If the strand is not provided, Pyicos will assume positive strand.', type=int)
         optional_frag_size = self.new_subparser()
         optional_frag_size.add_argument('-x', '--frag-size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicos to reconstruct the original signal in the original wet lab experiment.', type=int)
+        push_distance = self.new_subparser()
+        push_distance.add_argument('push_distance', help='', type=int)
         no_subtract = self.new_subparser()
         no_subtract.add_argument('--no-subtract',action='store_true', default=False, help='Dont subtract the control to the output, only normalize.')
         normalize = self.new_subparser()
@@ -286,8 +288,7 @@ class PicosParser:
         #extend operation
         subparsers.add_parser('extend', help='Extends the reads of a file to the desired length. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags,  basic_parser,  output, output_flags, frag_size, round, label, span, remlabels])
         #push operation
-        subparsers.add_parser('push', help='Push the reads in the corresponding strand. If a read doesn\'t have a strand, will be pushed from left to right. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags, basic_parser, output, output_flags, frag_size, round, label, span, remlabels])
-
+        subparsers.add_parser('push', help='Push the reads in the corresponding strand. If a read doesn\'t have a strand, will be pushed from left to right. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags, basic_parser, output, output_flags, push_distance, round, label, span, remlabels])
         #poisson analysis
         subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.',
                               parents=[experiment,experiment_flags,  basic_parser, output_flags, optional_frag_size, pvalue, height, correction, species, remlabels, poisson_test])
@@ -338,7 +339,7 @@ class PicosParser:
                             counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER,  
                             total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, 
                             use_replica=USE_REPLICA, tempdir=TEMPDIR, samtools=USESAMTOOLS, access_sequential=SEQUENTIAL, experiment_label = EXPERIMENT_LABEL, 
-                            replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT)
+                            replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT, push_distance=PUSH_DIST)
         args = parser.parse_args()
         #Add any parameters found in the config file. Override them with anything found in the args later
         if sys.argv[1] == 'protocol':
@@ -390,7 +391,8 @@ class PicosParser:
                             args.stranded, args.proximity, args.postscript, args.showplots, args.plot_path, args.pseudocount, args.len_norm, args.label1, 
                             args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, 
                             args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim, 
-                            args.use_replica, args.tempdir, args.samtools, args.access_sequential, args.experiment_label, args.replica_label, args.title_label, args.count_filter, args.force_sort)
+                            args.use_replica, args.tempdir, args.samtools, args.access_sequential, args.experiment_label, args.replica_label, args.title_label, 
+                            args.count_filter, args.force_sort, args.push_distance)
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
             for operation in operations:
