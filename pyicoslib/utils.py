@@ -19,7 +19,7 @@ import sys
 from tempfile import gettempdir
 from heapq import heappop, heappush
 from itertools import islice, cycle, chain
-
+import logging
 
 
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
@@ -29,6 +29,41 @@ from bam import BamReader, BamFetcher, BamFetcherSamtools
 
 class OperationFailed(Exception):
     pass                 
+
+def sorting_lambda(format):
+    if format == ELAND:
+        return lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
+    elif format == SAM or format == BAM:
+        return lambda x:(x.split()[2], int(x.split()[3]), len(x.split()[9]))
+    else: #anything else, we fall to BED like format for sorting
+        return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]))
+
+
+def get_logger(logger_name, verbose=True, debug=False): 
+    """
+    Getting a logger in the pyicos format. 
+    This should substitute the 'passing down' logging capabilities of the Turbomix class. 
+    """
+    logging_format= "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
+    logging.basicConfig(filename=logger_name, format=logging_format)
+    logger = logging.getLogger(logger_name)
+    if debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
+    ch = logging.StreamHandler()
+    if debug: 
+        ch.setLevel(logging.DEBUG)
+    elif verbose:
+        ch.setLevel(logging.INFO)
+    else:
+        ch.setLevel(logging.WARNING)
+
+    formatter = logging.Formatter("%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s")
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+    return logger
 
 
 def open_file(path, format=None, gzipped=False, logger=None):
@@ -125,6 +160,7 @@ def pearson(list_one, list_two):
 
 
 def list_available_formats():
+    #TODO this is very bad, this function is a trap. Fix
     print 'Formats Pyicos can read:'
     for format in READ_FORMATS:
         print format
@@ -149,7 +185,7 @@ class SafeReader:
 
                 if self.logger:
                     self.logger.error('Limit of invalid lines: Check the experiment, control, and region file formats, probably the error is in there. Pyicos by default expects bedpk files, except for region files, witch are bed files')
-                print
+
                 raise OperationFailed
             else:
                 if self.logger: self.logger.debug("Skipping invalid (%s) line: %s"%(cluster.reader.format, line))
@@ -163,13 +199,13 @@ class BigSort:
     NOTE: This class is becoming a preprocessing module. This is a good thing, I think! But its not
     only a sorting class then. We have to think about renaming it, or extracting functionality from it...
     """
-    def __init__(self, file_format=None, read_half_open=False, frag_size=0, id=0, logger=True, filter_chunks=True, push_distance=0):
+    def __init__(self, file_format, read_half_open=False, frag_size=0, id=0, logger=True, filter_chunks=True, push_distance=0, buffer_size = 320000, temp_file_size = 8000000):
         self.logger = logger
         self.file_format = file_format
         self.frag_size = frag_size
         self.push_distance = push_distance
-        self.buffer_size = 320000
-        self.temp_file_size = 8000000
+        self.buffer_size = buffer_size
+        self.temp_file_size = temp_file_size
         self.filter_chunks = filter_chunks
         try:
             if self.file_format:
@@ -222,8 +258,8 @@ class BigSort:
         return filtered_chunk
 
     def sort(self, input, output=None, key=None, tempdirs=[]):
-        if key is None:
-            key = lambda x : x
+        if key is None: #unless explicitly specified, sort with the default lambda
+            key = sorting_lambda(self.file_format)
 
         if not tempdirs:
             tempdirs.append(gettempdir())
@@ -474,8 +510,9 @@ class SortedFileCountReader:
     def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
         self.__dict__.update(locals())
         self.file_iterator = open_file(file_path, format=experiment_format, logger=logger)
-        self.logger.debug('Fetcher used for %s: Sequential Sorted Counts Reader'%file_path)
-        self.safe_reader = SafeReader()
+        if logger:
+            self.logger.debug('Fetcher used for %s: Sequential Sorted Counts Reader'%file_path)
+        self.safe_reader = SafeReader(logger=logger)
         self.__initvalues()        
     
     def rewind(self):

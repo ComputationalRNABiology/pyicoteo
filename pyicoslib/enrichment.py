@@ -349,7 +349,7 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
                                 signal_background_2 = 1e6*(float(signal_background_2)/self.total_reads_replica)
                             else:
                                 signal_background_1 = 1e6*(float(signal_background_1)/self.average_total_reads)
-                                signal_background_2 = 1e6*(float(signal_background_2)/self.average_total_reads)                                                                    
+                                signal_background_2 = 1e6*(float(signal_background_2)/self.average_total_reads)
                             
                     A = __calc_A(signal_a, signal_b)
                     M = __calc_M(signal_a, signal_b)

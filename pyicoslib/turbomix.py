@@ -46,6 +46,8 @@ class Turbomix:
     """
     This class is the pipeline that makes possible the different combination of operations. 
     It has different switches that are activated by the list 'self.operations'.
+
+    #TODO Break this down. This became a blob anti-pattern. 
     """
     
     def set_logger(self, verbose, debug):
@@ -379,7 +381,7 @@ class Turbomix:
             self.logger.info("Resorting %s after extension/push..."%temp_name)
             sorter = utils.BigSort(file_format, file_open, 0, 'fisort%s'%temp_name, logger=self.logger)
             old_path = new_file_path
-            sorted_new = sorter.sort(old_path, None, self.get_lambda_func(file_format))
+            sorted_new = sorter.sort(old_path, None, utils.sorting_lambda(file_format))
             new_file_path = sorted_new.name
             self._manage_temp_file(old_path)
 
@@ -405,14 +407,6 @@ class Turbomix:
                 self.control_format = SAM
 
 
-    def get_lambda_func(self, format):
-        if format == ELAND:
-            return lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
-        elif format == SAM or format == BAM:
-            return lambda x:(x.split()[2], int(x.split()[3]), len(x.split()[9]))
-        else:
-            return lambda x:(x.split()[0],int(x.split()[1]),int(x.split()[2]))
-
 
     def decide_sort(self, experiment_path, control_path=None):
         """Decide if the files need to be sorted or not."""
@@ -428,7 +422,7 @@ class Turbomix:
             elif not self.counts_file:
                 self.logger.info('Sorting experiment file...')
                 self.is_sorted = True
-                sorted_experiment_file = self.experiment_preprocessor.sort(experiment_path, None, self.get_lambda_func(self.experiment_format), self.tempdir)
+                sorted_experiment_file = self.experiment_preprocessor.sort(experiment_path, None, utils.sorting_lambda(self.experiment_format), self.tempdir)
                 self.current_experiment_path = sorted_experiment_file.name
                 self.temp_experiment = True
 
@@ -438,7 +432,7 @@ class Turbomix:
                     self.current_control_path = control_path
                 else:
                     self.logger.info('Sorting control file...')
-                    sorted_control_file = self.control_preprocessor.sort(control_path, None, self.get_lambda_func(self.control_format), self.tempdir)
+                    sorted_control_file = self.control_preprocessor.sort(control_path, None, utils.sorting_lambda(self.control_format), self.tempdir)
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
             
@@ -448,7 +442,7 @@ class Turbomix:
                     self.current_control_path = control_path
                 elif not self.counts_file:
                     self.logger.info('Sorting experiment_b file...')
-                    sorted_control_file = self.experiment_b_preprocessor.sort(control_path, None, self.get_lambda_func(self.experiment_format), self.tempdir)
+                    sorted_control_file = self.experiment_b_preprocessor.sort(control_path, None, utils.sorting_lambda(self.experiment_format), self.tempdir)
                     self.current_control_path = sorted_control_file.name
                     self.temp_control = True
             
@@ -458,7 +452,7 @@ class Turbomix:
                     self.current_replica_path = self.replica_path
                 else:
                     self.logger.info('Sorting replica file...')
-                    sorted_replica_file = self.replica_preprocessor.sort(self.replica_path, None, self.get_lambda_func(self.experiment_format), self.tempdir)
+                    sorted_replica_file = self.replica_preprocessor.sort(self.replica_path, None, utils.sorting_lambda(self.experiment_format), self.tempdir)
                     self.current_replica_path = sorted_replica_file.name
                     self.temp_replica = True
 
@@ -470,7 +464,7 @@ class Turbomix:
             else:
                 self.logger.info("Sorting region file...")
                 self.region_preprocessor = utils.BigSort(self.region_format, self.open_region, None, 'region', logger=self.logger)
-                self.sorted_region_file = self.region_preprocessor.sort(self.region_path, None, self.get_lambda_func(BED), self.tempdir)
+                self.sorted_region_file = self.region_preprocessor.sort(self.region_path, None, utils.sorting_lambda(BED), self.tempdir)
                 self.sorted_region_path = self.sorted_region_file.name
 
 
