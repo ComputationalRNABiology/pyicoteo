@@ -13,7 +13,7 @@ except:
     from os import rename as move 
 
 """
-Differential expression related logic. 
+Differential expression and MA plot visualization.
 """
 
 def _region_from_dual(self, line):
