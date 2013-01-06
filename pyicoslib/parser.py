@@ -13,14 +13,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+
 import sys
 import os
+
+if sys.version_info < (2, 6):
+    print "Pyicos requires python 2.6 or greater (not Python 3 yet)"
+    sys.exit(1)
 
 from lib import argparse
 import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from defaults import *
-
 
 VERSION = "1.2"
 __version__ = VERSION
@@ -98,8 +102,7 @@ class PicosParser:
     def create_parser(self):
         read_formats = str(READ_FORMATS)
         write_formats = str(WRITE_FORMATS)
-        parser = argparse.ArgumentParser(version=__version__)
-        subparsers = parser.add_subparsers(help='The operation you want to perform. Note that some operations imply previous automatic operations.')
+        parser = argparse.ArgumentParser(version=__version__, description="Pyicos is a collection of tools for mapped reads processing, peak calling and comparison (differential expression/splicing/whatever).")
         #parent parsers
         experiment = self.new_subparser()
         experiment.add_argument('experiment', help='The experiment file or directory')
@@ -107,6 +110,13 @@ class PicosParser:
         experiment_flags.add_argument('-o','--open-experiment', action='store_true', dest='open_experiment', default=OPEN_EXPERIMENT, help='Defines if the experiment is half-open or closed notation. [Default %(default)s]')
         experiment_flags.add_argument( '-f','--experiment-format',default=EXPERIMENT_FORMAT,  dest='experiment_format', help="""The format the experiment file is written as.
                                  The options are %s. [Default pk]"""%read_formats)
+    
+        exp_or_count = self.new_subparser()
+        mutexc = exp_or_count.add_mutually_exclusive_group(required=True)
+        mutexc.add_argument('-reads', nargs=2, dest='experiments', help='Compare two packages.', metavar=("experiment_a","experiment_b"))
+        mutexc.add_argument('-counts', dest='counts_file', help='Verify Content of package.')
+
+
         experiment_b = self.new_subparser()
         experiment_b.add_argument('experiment_b',  help='The experiment file B')
         optional_replica = self.new_subparser()
@@ -267,6 +277,8 @@ class PicosParser:
         counts_file.add_argument('counts_file', help='The counts file. The format required is a bed file with fields "name", "start", "end", "name2", "score(ignored)", "strand", "count file a", "count file b", "count file a", "count replica a" where the counts can be RPKMs or simple counts')
         protocol_name = self.new_subparser()
         protocol_name.add_argument('protocol_name', help='The protocol configuration file.')
+        
+        subparsers = parser.add_subparsers(help='The operation you want to perform. Note that some operations imply previous automatic operations.')
         #callpeaks operation
         subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.',
                               parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_blacklist, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, species, tolerated_duplicates, poisson_test])
@@ -307,9 +319,9 @@ class PicosParser:
         #rpkm operation
         subparsers.add_parser('enrichma', help='An enrichment test based on the MA plots using the pyicos count files with the MA information. It will ignore the counts information, and directly use whatever values found in the M and A columns and zscore information to plot the data. Useful to re-plot the data by adjusting the zscore for visualization purposes.', parents=[counts_file, basic_parser, output_flags, optional_replica, region_format, output, enrichment_flags, zscore])
         #rpkm operation
-        subparsers.add_parser('enrichcount', help='An enrichment test based on the MA plots using rpkm count files', parents=[counts_file, basic_parser, output_flags, optional_replica, region_format, output, enrichment_flags, tmm_flag, total_reads_flags, zscore, use_replica])
+        #subparsers.add_parser('enrichcount', help='An enrichment test based on the MA plots using (normalized) counts', parents=[counts_file, basic_parser, output_flags, optional_replica, region_format, output, enrichment_flags, tmm_flag, total_reads_flags, zscore, use_replica])
         #enrichment operation
-        subparsers.add_parser('enrichment', help='An enrichment test based on the MA plots using mapped reads files. Pyicos output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[experiment, experiment_b, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, region_format, output, enrichment_flags, tmm_flag, total_reads_flags, pseudocount, zscore])
+        subparsers.add_parser('enrichment', help='An enrichment test based on the MA plots using mapped reads files. Pyicos output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[exp_or_count, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, region_format, output, enrichment_flags, tmm_flag, total_reads_flags, pseudocount, zscore])
         #check replicas operation TODO unfinished
         #subparsers.add_parser('checkrep', help='Check how good the replicas are.', parents=[experiment, experiment_flags, basic_parser, replica, region, region_format, checkrep_flags, output])
         #check replicas operation
@@ -365,8 +377,7 @@ class PicosParser:
                 except KeyError:
                     if key == 'input':
                         args.__dict__['experiment'] = config.get("Pyicotrocol", 'input')
-                        print
-                        print "WARNING: The keyword 'input' for the protocol files is deprecated, please use 'experiment' instead"
+                        print "\nWARNING: The keyword 'input' for the protocol files is deprecated, please use 'experiment' instead"
 
                     elif key != 'operations':
                         print 'ERROR: There is an error in your protocol file.  "%s" is not a Pyicos parameter'%key
@@ -381,6 +392,9 @@ class PicosParser:
         if not args.control_format: #If not specified, the control format is equal to the experiment format
             args.control_format = args.experiment_format
             args.open_control = args.open_experiment
+
+        if args.experiments:
+            args.experiment, args.experiment_b = args.experiments
 
         turbomix = Turbomix(args.experiment, args.output, args.experiment_format, args.output_format, args.wig_label, args.open_experiment, args.open_output, args.debug,
                             args.rounding, args.tag_length, args.remlabels, args.control, args.control_format, args.open_control, args.region,

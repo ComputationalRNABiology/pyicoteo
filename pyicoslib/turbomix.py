@@ -311,12 +311,12 @@ class Turbomix:
                 self.operate(experiment_path=os.path.abspath(dirorfile), output_path=os.path.abspath(output))
                 paths.append(output)
             except OperationFailed:
-                self.logger.warning('%s couldnt be read. Skipping to next file.'%os.path.abspath(dirorfile))
+                self.logger.warning('%s couldn\'t be read. Skipping to next file.'%os.path.abspath(dirorfile))
                 os.remove(os.path.abspath(output))
             except StopIteration:
                 self.logger.warning('%s End of file reached.'%os.path.abspath(dirorfile))
         else:
-            self.logger.error('Input "%s" doesnt exist?'%os.path.abspath(dirorfile))
+            self.logger.error('Input "%s" doesn\'t exist?'%os.path.abspath(dirorfile))
 
         return paths
 
