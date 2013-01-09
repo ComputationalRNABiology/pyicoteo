@@ -715,7 +715,9 @@ class Turbomix:
         except IOError:
             pass #file not found, the warning will be printed
         
-        if not found: self.logger.warning("The file containing %s length for assembly %s could not be found, an approximation will be used"%(name, self.species))
+        if not found: 
+            self.logger.warning("The file containing %s length for assembly %s could not be found, an approximation will be used"%(name, self.species))
+        
         self.logger.info('Correction factor: %s\n\n'%(self.correction_factor))
         self.reads_per_bp =  self.total_bp_with_reads / self.chr_length*self.correction_factor
         p_nucleotide = 1.
