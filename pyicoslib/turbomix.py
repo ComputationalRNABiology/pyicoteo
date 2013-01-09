@@ -512,7 +512,7 @@ class Turbomix:
             
             if self.do_poisson: #extract info from the last name and print the thresholds
                 self.poisson_analysis(self.previous_chr)
-                self.logger.info('\nCluster thresholds for p-value %s:'%self.p_value)
+                self.logger.info('Cluster thresholds for p-value %s:'%self.p_value)
                 for name, k in self.poisson_results[self.poisson_test].items():
                     self.logger.info('%s: %s'%(name, k))
 
@@ -706,8 +706,9 @@ class Turbomix:
         #search for the name length in the chr len files
         found = False
         try:
-            #print '%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)
-            for line in open('%s/../chrdesc/%s'%(os.path.dirname(__file__), self.species)):
+            chrlenpath = "%s/chromlen/"%os.path.dirname(os.path.abspath(__file__))
+            self.logger.debug("Chromosome length path: %s"%chrlenpath)
+            for line in open('%s%s'%(chrlenpath, self.species)):
                 chrom, length = line.split()
                 if chrom == name:
                     found = True
@@ -716,9 +717,14 @@ class Turbomix:
             pass #file not found, the warning will be printed
         
         if not found: 
-            self.logger.warning("The file containing %s length for assembly %s could not be found, an approximation will be used"%(name, self.species))
+            try:
+                from chromlen import getChromosomeDescription
+                self.logger.info("Couldn't find %s length file, trying to download from UCSC..."%self.species)
+                getChromosomeDescription.retrieve_chrinfo(self.species, chrlenpath)
+            except IOError:
+                self.logger.warning("Couldn't download lengths from UCSC for assembly %s. An approximation will be used. To download this file, run pyicos with admin privileges 'sudo pyicos...'"%(self.species))
         
-        self.logger.info('Correction factor: %s\n\n'%(self.correction_factor))
+        self.logger.info('Correction factor: %s'%(self.correction_factor))
         self.reads_per_bp =  self.total_bp_with_reads / self.chr_length*self.correction_factor
         p_nucleotide = 1.
         p_cluster = 1.

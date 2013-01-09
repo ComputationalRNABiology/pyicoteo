@@ -254,7 +254,7 @@ class PicosParser:
         threshold = self.new_subparser()
         threshold.add_argument('--threshold', help='The height threshold used to cut', type=int)
         species = self.new_subparser()
-        species.add_argument('-p', '--species', default=SPECIES, help='The species that you are analyzing. This will read the length of the chromosomes of this species from the files inside the folder "chrdesc". If the species information is not known, the filtering step will assume that the chromosomes are as long as the position of the furthest read.')
+        species.add_argument('-p', '--species', default=SPECIES, help='The species that you are analyzing. This will read the length of the chromosomes of this species from the files inside the folder "chrdesc". If the species information is not known, the filtering step will assume that the chromosomes are as long as the position of the furthest read. [Default %(default)s]')
         plot_path = self.new_subparser()
         plot_path.add_argument('plot_path', default=PLOT_PATH, help='The path of the file to plot.')
         correlation_flags = self.new_subparser()
