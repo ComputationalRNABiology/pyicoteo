@@ -7,22 +7,22 @@ Welcome
 =======
 
 Pyicos is a toolkit for the analysis of high-throughput sequenjcing data. It is designed to be flexible. It can be used several in ways:
-
-* Protocol-files_  the straightforward way to perform typical analysis on e.g. ChIP-Seq, RNA-Seq and CLIP-Seq data  
+ 
 * Command line unix tool
+* Protocol files
 * Integrated as part of a bigger pipeline
-* Auxiliary libraries inside your python scripts. 
+* Auxiliary libraries inside your python scripts
 * Galaxy_
 
 .. _Galaxy: http://regulatorygenomics.upf.edu/galaxy
-.. _Protocol-files: http://regulatorygenomics.upf.edu/group/media/pyicos_docs/protocol_files.html
 
 Pyicos can be used for the analysis of different kinds of data. The analysis starts with the genomic position of the reads, so after the sequences have been mapped to the reference genome. Pyicos offers basic operations (extending reads, subtracting a control, etc.) as well as protocol files (combination of the operations in typical workflows) to analyse for example ChIP-Seq, RNA-Seq or CLIP-Seq data.  
 
 
 
+If you have any problems or suggestions please join the `Pyicos Google Group`_ and ask! 
 
-If you have any problems or suggestions please contact juanramon.gonzalezvallinas@upf.edu or sonja.althammer@gmail.com
+.. _`Pyicos Google Group`: http://groups.google.com/group/pyicos
 
 
 Contents:

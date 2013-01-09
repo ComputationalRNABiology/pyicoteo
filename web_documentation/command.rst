@@ -188,11 +188,15 @@ Example::
 
 modFDR
 -------
-Use the modified False Discovery Rate calculation method to determine which clusters are significant in an specific region, like a transcript. This method is typically used for CLIP-Seq data. 
+Use the modified False Discovery Rate method proposed_ by Yeo et al. to determine which clusters are significant in a list of genomic regions (like genes or transcripts). This method is typically used in CLIP-Seq data that doesn't have a valid control experiment to compare against. 
 
-modFDR as explained by Yeo et al. http://www.nature.com/nsmb/journal/v16/n2/full/nsmb.1545.html
+A region of interest file is required for the method to be applied, in BED format. 
 
-.. Juanra, could you please put an example here if you have time?
+.. _proposed: http://www.nature.com/nsmb/journal/v16/n2/full/nsmb.1545.html
+
+Example::
+
+    pyicos modfdr my_experiment.bed my_regions.bed output.pk -f bed 
 
 
 convert
@@ -222,19 +226,6 @@ callpeaks
 ---------
 This commmand is a combination of previous commands (extend, normalize, subtract, remove, poisson and filter) for the task of calling peaks from a ChIP-Seq experiment (With and without control). 
 
-pyicos callpeaks experiment output
-                        [-h] [-o] [-f EXPERIMENT_FORMAT] [--debug] [--no-sort]
-                        [--silent] [--disable-cache] [--keep-temp]
-                        [--postscript] [--showplots] [--label1 LABEL1]
-                        [--label2 LABEL2] [--control CONTROL] [--control-
-                        format CONTROL_FORMAT] [--open-control] [--region
-                        REGION] [-O] [-F OUTPUT_FORMAT] [-x FRAG_SIZE]
-                        [--round] [--label LABEL] [--span SPAN] [--no-
-                        subtract] [--remlabels REMLABELS] [--p-value P_VALUE]
-                        [--k-limit K_LIMIT] [--correction CORRECTION] [--trim-
-                        proportion TRIM_PROPORTION] [-p SPECIES] [--duplicates
-                        DUPLICATES] [--poisson-test POISSON_TEST]
-
 
 Example::
 
@@ -244,11 +235,7 @@ Example::
 
 enrichment
 ---------
-Enrichment analysis can be applied on any type of -seq data, however it is NOT recommended to detect binding sites of a protein to DNA or RNA, as precision might be lost (use callpeaks or modFDR for that). Pyicos performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicos calculates Z-Scores for each region of interest. If no replicas are provided Pyicos creates technical replicas (see below).
-
-
-
-
+Enrichment analysis can be applied on any type of -seq data. Pyicos performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicos calculates Z-Scores for each region of interest. If no replicas are provided Pyicos creates technical replicas (see below).
 
 
 .. figure:: images/enrichment.png
@@ -257,10 +244,7 @@ Enrichment analysis can be applied on any type of -seq data, however it is NOT r
 If a region file is provided, Pyicos returns for each region a Z-Score (among others) which indicates the enrichment/depletion of condition A over condition B. If no region file is provided, Pyicos provides the options to take the union of reads from both conditions as a region and gives back Z-Scores for the generated regions. As regions with 0 reads in one condition might be especially interesting, Pyicos can use pseudocounts, in order to avoid a division by 0: Pyicos calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicos assumes that there is already 1 read in each region in each condition.
 
 
-
 .. figure:: images/region_definition.png
-
-
 
 
 To calculate the Z-Score, Pyicos compares the differences between condition A and condition B with the differences between A and A' (while A' is the biological replica of A). If no biological replica is available, Pyicos uses a sample swap as a reference. With sample swap we mean that reads from condition A and B are mixed randomly and divided in two sets (with size of those of A and B). In the two resulting sets we do not expect any significant differences, just like in replicas.  
@@ -284,13 +268,13 @@ name	start	end	name2	score	strand	signal_a	signal_b	signal_prime_1	signal_prime_
 
 6) strand                  =  region strand
 
-7) signal_a                =  number of reads / density in sample a overlapping the region
+7) signal_a                =  Counts in experiment A (normalized if used)
  
-8) signal_b                =  number of reads / density in sample b overlapping the region
+8) signal_b                =  Counts in experiment B (normalized if used)
 
-9) signal_prime_1          =  number of reads / density in one biological/technical replica overlapping the region
+9) signal_prime_1          =  Counts in experiment A (exactly the same as signal_a) or random background 1 (normalized if used) 
 
-10) signal_prime_2         =  number of reads / density in the other biological/technical replica overlapping the region
+10) signal_prime_2         =  Counts in experiment replica A or random background 2 (normalized if used) 
 
 11) A                      =  (log2(signal_a)+log2(signal_b))/2
 
