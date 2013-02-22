@@ -6,13 +6,16 @@ Download & Install
 ------------------
 
 
-**Download Pyicos**  `Latest version`_ from our Sourceforge repository.
+**Download Pyicos**  `Latest version`_ from our Github repository.
 
-.. _`Latest version`: http://sourceforge.net/projects/pyicos/ 
+.. _`Latest version`: https://github.com/RegulatoryGenomicsUPF/pyicos
+
+You can also download older versions (up to 1.1b) from our `Sourceforge repository`_.
+
+.. _`Sourceforge repository`: http://sourceforge.net/projects/pyicos/ 
 
 
-
-Eventhough you can use it directly (without installing) we recommend to **install it**. To do so decompress the folder and run the setup.py script with administrator privileges:
+Even though you can use it directly (without installing) we recommend to **install it**. To do so decompress the folder and run the setup.py script with administrator privileges:
 
     python setup.py install
 

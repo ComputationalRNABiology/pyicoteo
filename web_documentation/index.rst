@@ -6,7 +6,7 @@
 Welcome
 =======
 
-Pyicos is a toolkit for the analysis of high-throughput sequenjcing data. It is designed to be flexible. It can be used several in ways:
+Pyicos is a toolkit for the analysis of high-throughput sequencing data. It is designed to be flexible. It can be used in several ways:
  
 * Command line unix tool
 * Protocol files
@@ -34,6 +34,9 @@ Contents:
    Operations <operations>
    Basics <basics>
    Command-line operations <command>
+   Command-line optional arguments <arguments>
+   Command-line optional arguments 2 <arguments2>
+   Classes <classes>
    Protocol files for workflows <protocol_files>
    Case study <studies>
    Answers to case study <answers>

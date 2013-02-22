@@ -273,7 +273,7 @@ class Turbomix:
 
     def process_all_files_paired(self, path_a, path_b):
         if os.path.isdir(path_a):
-            self.logger.warning('Operating with directories will only give appropiate results if the files and the control are paired in alphabetical order.')
+            self.logger.warning('Operating with directories will only give appropriate results if the files and the control are paired in alphabetical order.')
             controls = os.listdir(path_b)
             controls.sort()
             experiments = os.listdir(path_a)
@@ -470,7 +470,7 @@ class Turbomix:
 
 
     def operate(self, experiment_path, control_path=None, output_path=None):
-        """Operate expects single paths, not directories. Its called from run() several times if the experiment for picos is a directory"""
+        """Operate expects single paths, not directories. It's called from run() several times if the experiment for pyicos is a directory"""
         #TODO This is where the combination of operations should be done. Operations should be executed in order of inclusion to the list while taking into consideration dependencies and co-runs
         try:
             self.i_cant_do()
@@ -681,7 +681,7 @@ class Turbomix:
  
         Cluster analysis:
         This analysis takes as a basic unit the "cluster" profile and performs a poisson taking into account the height
-        of the profile. This will help us to better know witch clusters are statistically significant and which are product of chromatine noise
+        of the profile. This will help us to better know which clusters are statistically significant and which are product of chromatine noise
 
         We do this by calculating the average height of clusters in a given chromosome. Given this mean, we calculate the p-value for each height k the poisson
         function gives us the probability p of one cluster having a height k by chance. 
@@ -695,7 +695,7 @@ class Turbomix:
 
 
         Number of reads analysis:
-        We analize the number of reads of the cluster. Number of reads = sum(xi *yi ) / read_length
+        We analize the number of reads of the cluster. Number of reads = sum(xi * yi) / read_length
 
         """
         if os.path.isdir(self.output_path):
@@ -828,7 +828,7 @@ class Turbomix:
         return os.path.abspath(os.path.dirname(self.current_output_path))
 
     def cut(self):
-        """Discards the clusters that dont go past the threadshold calculated by the poisson analysis"""
+        """Discards the clusters that don't go past the threshold calculated by the poisson analysis"""
         current_directory = self._current_directory()
         old_output = '%s/before_cut_%s'%(current_directory, os.path.basename(self.current_output_path))
         move(os.path.abspath(self.current_output_path), old_output)
@@ -944,7 +944,7 @@ class Turbomix:
         self.best_delta = -1
         positive_cluster = Cluster(cached=True)
         negative_cluster = Cluster(cached=True)
-        positive_cluster_cache = [] #we are trying to hold to the previous cluster
+        positive_cluster_cache = [] # we are trying to hold to the previous cluster
         self.analyzed_pairs = 0.
         acum_length = 0.
         num_analyzed = 0
@@ -966,16 +966,16 @@ class Turbomix:
                     positive_cluster_cache.append(line_read.copy_cluster())
             else:
                 if negative_cluster.is_empty() or not negative_cluster.intersects(line_read):
-                    if positive_cluster.max_height() > self.correlation_height and negative_cluster.max_height() > self.correlation_height: #if we have big clusters, correlate them
+                    if positive_cluster.max_height() > self.correlation_height and negative_cluster.max_height() > self.correlation_height: # if we have big clusters, correlate them
                         self._correlate_clusters(positive_cluster, negative_cluster)
-                        if self.max_correlations < self.analyzed_pairs: #if we analyzed enough clusters, stop
+                        if self.max_correlations < self.analyzed_pairs: # if we analyzed enough clusters, stop
                             break                     
-                    negative_cluster = line_read.copy_cluster() #after correlating, select the next cluster
+                    negative_cluster = line_read.copy_cluster() # after correlating, select the next cluster
                 else:
                     negative_cluster += line_read
                     acum_length += len(line_read)
                     num_analyzed += 1
-                #advance in the positive cluster cache if its too far behind
+                # advance in the positive cluster cache if it's too far behind
                 distance = negative_cluster.start-positive_cluster.start
                 while distance > self.max_delta or positive_cluster.name < negative_cluster.name: # if the negative clusters are too far behind, empty the positive cluster
                     positive_cluster.clear()
@@ -984,7 +984,7 @@ class Turbomix:
                     else:
                         break
 
-        #Use the results
+        # Use the results
         data = []
         max_delta = 0
         max_corr = -1
@@ -1033,20 +1033,20 @@ class Turbomix:
                     self.delta_results[delta] += r_squared
 
     def _analize_paired_clusters(self, positive_cluster, negative_cluster, delta):
-        #from scipy.stats.stats import pearsonr Abandoned scipy
+        # from scipy.stats.stats import pearsonr Abandoned scipy
         positive_array = []
         negative_array = [] 
-        #delta correction
+        # delta correction
         corrected_positive_start = positive_cluster.start + delta
-        #add zeros at the start of the earliest cluster
+        # add zeros at the start of the earliest cluster
         if corrected_positive_start > negative_cluster.start:
             self.__add_zeros(positive_array, corrected_positive_start - negative_cluster.start)
         elif negative_cluster.start > corrected_positive_start:  
             self.__add_zeros(negative_array, negative_cluster.start - corrected_positive_start)
-        #add the values of the clusters
+        # add the values of the clusters
         positive_array.extend(positive_cluster.get_heights())
         negative_array.extend(negative_cluster.get_heights())
-        #add the zeros at the end of the shortest array
+        # add the zeros at the end of the shortest array
         if len(positive_array) > len(negative_array):
             self.__add_zeros(negative_array, len(positive_array) - len(negative_array))
         elif len(positive_array) < len(negative_array):

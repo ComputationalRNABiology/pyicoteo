@@ -11,9 +11,9 @@ To see the ways of usage and a list of the subcommands you can access the comman
     pyicos -h
 
 
-If you are interested in the usage of a particular command (for example, 'normalize') and the meaning of its flags type:
+If you are interested in the usage of a particular command (for example, 'extend') and the meaning of its flags type:
 
-    pyicos normalize -h
+    pyicos extend -h
 
 
 
@@ -21,22 +21,22 @@ If you are interested in the usage of a particular command (for example, 'normal
 Here we explain briefly what each operation does and we give some examples::
 
 
-remove 
+remregions
 -------------------
 Remove regions that overlap with the regions in the "black list" file. Here usually satellites and centromers are listed.
 
 Example::
 
-    pyicos remove my_experiment.bed regions.bed my_result.bed --experiment-format bed --open-experiment --region-format bed --open-region --output-format bed --open-output 
+    pyicos remregions my_experiment.bed regions.bed my_result.bed --experiment-format bed --open-experiment --region-format bed --open-region --output-format bed --open-output 
 
-You can also use the abreviated sytax. This command is synonimous of the previous one::
+You can also use the abbreviated syntax. This command is synonimous of the previous one::
 
-    pyicos remove my_experiment.bed regions.bed my_result.bed -f bed -o --region-format bed --open-region -F bed -O 
+    pyicos remregions my_experiment.bed regions.bed my_result.bed -f bed -o --region-format bed --open-region -F bed -O 
 
 
 remduplicates
 -------------------
-Remove the duplicated reads in a file. A duplicate is a read with the same start position as a read that has already been seen. You can choose how many duplicates you want to tolerate. If you want to keep only one read for a start position set the duplicates to 0.
+Remove the duplicated reads in a file. A duplicate is a read with the same start position as a read that has already been seen. You can choose how many duplicates you want to tolerate. If you want to keep only one read for a start position, set the duplicates to 0.
 
 Example:
 
@@ -46,15 +46,15 @@ Here we tolerate 1 duplicate so a read can not occur more often than twice::
 
 
 
-labelremove
------------
-Remove all lines that have the specified tag from the file. 
-
-Example:
-
-From a SAM file, delete every entry that has has been mapped to chromosome22 and chromosome4::
-
-    pyicos labelremove my_experiment.sam no_chr4_chr22.sam chr4:chr22 --experiment-format sam --output-format sam
+.. labelremove
+.. -----------
+.. Remove all lines that have the specified tag from the file. 
+.. 
+.. Example:
+.. 
+.. From a SAM file, delete every entry that has has been mapped to chromosome22 and chromosome4::
+.. 
+..     pyicos labelremove my_experiment.sam no_chr4_chr22.sam chr4:chr22 --experiment-format sam --output-format sam
 
 
 strcorr (Strand Correlation)
@@ -86,25 +86,25 @@ To visualize the data in a genome browser we set the output to be half-open bed_
     pyicos extend my_experiment.bed my_experiment_ext.bed_wig 150 -f bed -o -F bed_wig -O
 
 
-normalize
----------
-When comparing different data sets to eachother (for example experiment and control), normalizing is a neccesary step to make them comparable. Pyicos takes into account the number of reads and their lengths and operates on a nucleotide precision level.
-
-Example:
-
-Normalize the experiment to the control (both have already been extended and converted to bedpk)::
-
-    pyicos normalize my_experiment_ext.bedpk control_ext.bedpk my_experiment_ext_norm.bedpk 
+.. normalize
+.. ---------
+.. When comparing different data sets to each other (for example experiment and control), normalizing is a necessary step to make them comparable. Pyicos takes into account the number of reads and their lengths and operates on a nucleotide precision level.
+.. 
+.. Example:
+.. 
+.. Normalize the experiment to the control (both have already been extended and converted to bedpk)::
+.. 
+..     pyicos normalize my_experiment_ext.bedpk control_ext.bedpk my_experiment_ext_norm.bedpk 
 
 
 subtract
 ---------
-Subtract the reads in one file from the reads in another file. Using background data (control) improves te results because the background distribution is not supposed to be normal, 
+Subtract the reads in one file from the reads in another file. Using background data (control) improves the results because the background distribution is not supposed to be normal, 
 and statistical approaches to obtain this have a limited reach.
 
 The most straightforward approach is to subtract the control from the sample. Make sure the sample has been **normalized** to the control beforehand!
 Pyicos maintains a 1bp resolution by subtracting the reads nucleotide by nucleotide, rather than doing a statistical approximation. 
-Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.
+Operating with directories will only give appropiate results if the files and the control are paired in alphabetical order.
 
 Example:
 
@@ -207,7 +207,7 @@ experiment: Bed, Wiggle files (bed_wiggle), SAM, Eland, bedpk (Pyicos default co
 
 output: Bed, Wiggle files (bed_wiggle, variable_wiggle), SAM, Eland, bedpk (Pyicos default compressed format), bedspk (Pyicos stranded compressed format)
 
-This operation is useful if you only want to convert your data to another format. Other operations already include a convertion if you specify different experiment and output formats.
+This operation is useful if you only want to convert your data to another format. Other operations already include a conversion if you specify different experiment and output formats.
 
 
 Examples:
@@ -224,7 +224,7 @@ Convert all pk files in a folder to bed wig files::
 
 callpeaks
 ---------
-This commmand is a combination of previous commands (extend, normalize, subtract, remove, poisson and filter) for the task of calling peaks from a ChIP-Seq experiment (With and without control). 
+This command is a combination of previous commands (extend, normalize, subtract, remove, poisson and filter) for the task of calling peaks from a ChIP-Seq experiment (With and without control). 
 
 
 Example::
@@ -314,17 +314,29 @@ name	start	end	name2	score	strand	signal_a	signal_b	signal_prime_1	signal_prime_
 Examples::
 
     # Calculations based on count data:    
-    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_Counts -f bed --region genes.bed --open-region --stranded --replica-a kidney2.bed --pseudocount --skip-header
+    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_Counts -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header
    
     # Calculations based on count data normalized by number of reads in sample:    
-    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_Counts -f bed --region genes.bed --open-region --stranded --replica-a kidney2.bed --pseudocount --skip-header --n-norm 
+    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_Counts -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm 
 
     # To use RPKM normalization    
-    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica-a kidney2.bed --pseudocount --skip-header --n-norm --len-norm
+    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm
 
     # To use TRPK normalization 
-    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica-a kidney2.bed --pseudocount --skip-header --n-norm --len-norm --tmm-norm
+    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm --tmm-norm
 
 
+
+push
+----
+Push the reads in the corresponding strand. If a read doesn\'t have a strand, it will be pushed from left to right.
+
+This operation requires tag-like files (bed, eland, sam).
+
+
+
+Example::
+
+    pyicos push my_experiment.bed my_experiment_pushed100.bed 100 -f bed -F bed
 
 

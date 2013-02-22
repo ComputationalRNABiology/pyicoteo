@@ -67,7 +67,7 @@ def get_logger(logger_name, verbose=True, debug=False):
 
 
 def open_file(path, format=None, gzipped=False, logger=None):
-    """to open files that are not binary format, like the BAM and gzip files"""
+    """To open files that are not binary format, like BAM and gzip files"""
     if format == BAM:
         return BamReader(path, logger)
     elif gzipped:
@@ -94,8 +94,8 @@ def add_slash_to_path(path):
     return path
     
 def poisson(actual, mean):
-    '''From StackOverflow: This algorithm is iterative,
-        to keep the components from getting too large or small'''
+    """From StackOverflow: This algorithm is iterative,
+       to keep the components from getting too large or small"""
     try:
         p = math.exp(-mean)
         for i in xrange(actual):
@@ -109,9 +109,9 @@ def poisson(actual, mean):
 def pearson(list_one, list_two):
     """
     Accepts paired lists and returns a number between -1 and 1,
-    known as Pearson's r, that indicates of how closely correlated
+    known as Pearson's r, that indicates how closely correlated
     the two datasets are.
-    A score of close to one indicates a high positive correlation.
+    A score close to one indicates a high positive correlation.
     That means that X tends to be big when Y is big.
     A score close to negative one indicates a high negative correlation.
     That means X tends to be small when Y is big.
@@ -149,7 +149,7 @@ def pearson(list_one, list_two):
     pearson_numerator = product_sum - (sum_one * sum_two / n)
     pearson_denominator = math.sqrt((sum_of_squares_one - pow(sum_one,2) / n) * (sum_of_squares_two - pow(sum_two,2) / n))
 
-    # To avoid avoid dividing by zero,
+    # To avoid dividing by zero,
     # catch it early on and drop out
     if pearson_denominator == 0:
         return 0
@@ -184,7 +184,7 @@ class SafeReader:
             if self.invalid_count > self.invalid_limit:
 
                 if self.logger:
-                    self.logger.error('Limit of invalid lines: Check the experiment, control, and region file formats, probably the error is in there. Pyicos by default expects bedpk files, except for region files, witch are bed files')
+                    self.logger.error('Limit of invalid lines: Check the experiment, control, and region file formats, probably the error is in there. Pyicos by default expects bedpk files, except for region files, which are bed files')
 
                 raise OperationFailed
             else:
@@ -258,7 +258,7 @@ class BigSort:
         return filtered_chunk
 
     def sort(self, input, output=None, key=None, tempdirs=[]):
-        if key is None: #unless explicitly specified, sort with the default lambda
+        if key is None: # unless explicitly specified, sort with the default lambda
             key = sorting_lambda(self.file_format)
 
         if not tempdirs:
@@ -282,7 +282,7 @@ class BigSort:
                     chunks.append(output_chunk.name)
                 else:
                     break
-        except KeyboardInterrupt: #If there is an interruption, delete all temporary files and raise the exception for further processing.
+        except KeyboardInterrupt: # If there is an interruption, delete all temporary files and raise the exception for further processing.
             print 'Removing temporary files...'
             self.remove_chunks(chunks)
             raise
@@ -340,7 +340,7 @@ class DualSortedReader:
         self.current_b = Cluster(cached=False, read=format, read_half_open=read_half_open, logger=self.logger)
         
     def __iter__(self):
-        stop_a = True #indicates if the exception StopIteration is raised by file a (True) or file b (False)
+        stop_a = True # indicates if the exception StopIteration is raised by file a (True) or file b (False)
         safe_reader = SafeReader(self.logger)
         try:
             while 1:
@@ -360,7 +360,7 @@ class DualSortedReader:
                 else:
                     self.current_b.clear()
                     yield line_b
-        except StopIteration: #we still need to print the reminder of the sorter file
+        except StopIteration: # we still need to print the reminder of the sorter file
             if stop_a:
                 while self.file_b:
                     yield line_b
@@ -425,10 +425,10 @@ class SortedFileReader:
             cached_cluster = self._get_cluster()
             #print "NEW:", cached_cluster.name, cached_cluster.start, cached_cluster.end
  
-        #get intersections
+        # get intersections
         while cached_cluster.start <= region.end and cached_cluster.name == region.name:
             if cached_cluster.overlap(region) >= overlap:
-                if not region.strand or region.strand == cached_cluster.strand: #dont include the clusters with different strand from the region  
+                if not region.strand or region.strand == cached_cluster.strand: # don't include the clusters with different strand from the region  
                     yield cached_cluster
 
             if self._read_line(): return
@@ -476,14 +476,14 @@ class SortedFileClusterReader:
         clusters = []
         if self._read_line_load_cache(self.slow_cursor):
             return clusters
-        #advance slow cursor and delete the clusters that are already passed by
+        # advance slow cursor and delete the clusters that are already passed by
         while (self.cluster_cache[self.slow_cursor].name < region.name) or (self.cluster_cache[self.slow_cursor].name == region.name and region.start > self.cluster_cache[self.slow_cursor].end):
             del self.cluster_cache[self.slow_cursor]
             self.slow_cursor+=1
             if self._read_line_load_cache(self.slow_cursor):
                 return clusters
 
-        #get intersections
+        # get intersections
         fast_cursor = self.slow_cursor
         while self.cluster_cache[fast_cursor].start <= region.end and self.cluster_cache[fast_cursor].name == region.name:
             if self.cluster_cache[fast_cursor].overlap(region) >= overlap:
@@ -505,7 +505,7 @@ class SortedFileCountReader:
     """
     Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
     and retrieves the *counts* (number of reads) that overlap with the region specified. Because this class doesn't store the reads, but only counts them, 
-    doesn't have memory problems when encountering huge clusters of reads.  
+    it doesn't have memory problems when encountering huge clusters of reads.  
     """
     def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
         self.__dict__.update(locals())
@@ -541,18 +541,18 @@ class SortedFileCountReader:
 
     def get_overlaping_counts(self, region, overlap=1):
         counts = 0
-        #load last seek
+        # load last seek
 
         self.file_iterator.seek(self.slow_seek)
         self.current_tag = Cluster()
-        #advance slow seek 
+        # advance slow seek 
         while (self.current_tag.name < region.name) or (self.current_tag.name == region.name and region.start > self.current_tag.end):     
             self.slow_seek = self.file_iterator.tell()
             if self._read_next_tag():
                 return counts  
             #print "Avanza", self.current_tag.name, region.name, region.start, self.current_tag.end
 
-        #get intersections
+        # get intersections
         while self.current_tag.start <= region.end and self.current_tag.name == region.name:
             if self.current_tag.overlap(region) >= overlap:
                 if not region.strand or region.strand == self.current_tag.strand:
