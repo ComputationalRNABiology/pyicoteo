@@ -15,6 +15,6 @@ suite.addTest(suite2)
 suite.addTest(suite3)
 suite.addTest(suite4)
 
-unittest.TextTestRunner(verbosity=0).run(suite)
+unittest.TextTestRunner(verbosity=2).run(suite)
 
 

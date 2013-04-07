@@ -3,16 +3,16 @@ import sys
 import MySQLdb
 from MySQLdb import OperationalError, ProgrammingError
 
-def retrieve_chrinfo(schema):
+def retrieve_chrinfo(schema, outpath):
         try:
             print 'trying to retrieve chromosome length from ucsc (%s)...'%schema
             db = MySQLdb.connection(host="genome-mysql.cse.ucsc.edu",user="genome",db=schema)
             db.query("""select chrom, size from chromInfo""")
             rows = db.store_result()
-            outfile = file(schema, 'w')
+            outfile = file("%s/%s"%(outpath, schema), 'w')
             for row in rows.fetch_row(10000000):
                 outfile.write('%s\t%s\n'%(row[0], row[1]))
-            print 'done!'
+
         except (OperationalError, ProgrammingError):
             print 'The schema %s doesnt have the table chromInfo'%schema
         finally:
@@ -20,7 +20,6 @@ def retrieve_chrinfo(schema):
 
 def main():
     schema = sys.argv[1]
-    print schema
     #get all the database names from the information schema in ucsc
     if schema == 'all':
         print 'retrieving all schema names...'
@@ -36,8 +35,10 @@ def main():
             db.close()
         #retrieve all chrinfo that exist
         for schema in schemas:
-            retrieve_chrinfo(schema)
+            retrieve_chrinfo(schema, os.path.dirname(__file__))
     else:
-        retrieve_chrinfo(schema)
+        retrieve_chrinfo(schema, os.path.dirname(__file__))
 
-main()
+
+if __name__ == "__main__":
+    main()

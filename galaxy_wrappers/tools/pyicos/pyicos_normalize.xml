@@ -5,15 +5,15 @@
   </command>
   <inputs>
 
-    <param format="tabular" name="input" type="data" label="Input file"/>
-    <param  name="input_format" type="select" label="Input format" format="text">
+    <param format="tabular" name="input" type="data" label="Experiment file"/>
+    <param  name="input_format" type="select" label="Experiment format" format="text">
         <option value="bed" selected="true">Bed</option>
         <option value="bed_wig">Wiggle(Bed)</option>
         <option value="sam">Sam</option>
         <option value="eland">Eland</option>
-        <option value="bedpk">Bed pk</option>
+        <option value="bed_pk">Bed pk</option>
     </param>
-    <param  name="is_input_open" type="boolean" label="Is input half-open?" truevalue="--open-input" falsevalue=""/>
+    <param  name="is_input_open" type="boolean" label="Is the Experiment half-open?" truevalue="--open-input" falsevalue=""/>
 
     <param format="tabular" name="control" type="data" label="Control file"/>
     <param  name="control_format" type="select" label="Control format" format="text">
@@ -21,7 +21,7 @@
         <option value="bed_wig">Wiggle(Bed)</option>
         <option value="sam">Sam</option>
         <option value="eland">Eland</option>
-        <option value="bedpk">Bed pk</option>
+        <option value="bed_pk">Bed pk</option>
     </param>
     <param  name="is_control_open" type="boolean" label="Is control half-open?" truevalue="--open-control" falsevalue=""/>
 
@@ -30,7 +30,7 @@
         <option value="bed_wig">Wiggle(Bed)</option>
         <option value="sam">Sam</option>
         <option value="eland">Eland</option>
-        <option value="bedpk" selected="true">Pk(Bed)</option>
+        <option value="bed_pk" selected="true">Pk(Bed)</option>
     </param>
     <param  name="is_output_open" type="boolean" label="Is output half-open?" truevalue="--open-output" falsevalue=""/>
   </inputs>

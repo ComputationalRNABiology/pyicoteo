@@ -9,8 +9,12 @@ setup(name='Pyicos',
       author=u'Juan Gonzalez_Vallinas',
       author_email='juanramon.gonzalezvallinas@upf.edu',
       url='http://regulatorygenomics.upf.edu/pyicos',
-      packages = ['pyicoslib.lib', 'chrdesc'],
-      data_files = [('chrdesc', ['chrdesc/mm8', 'chrdesc/mm9', 'chrdesc/hg18', 'chrdesc/hg19']), ('test_files', ['test_files/p300.bed', 'test_files/control.bed'])],
+      packages = ['pyicoslib.lib', 'pyicoslib.chromlen'],
+      package_data={
+          'pyicoslib.chromlen': [
+              '*'
+          ],
+      },
       scripts = ['pyicos'],
       py_modules = ['pyicoslib.core', 'pyicoslib.turbomix','pyicoslib.utils', 'pyicoslib.parser', 'pyicoslib.defaults', 'pyicoslib.bam', 'pyicoslib.enrichment']
      )

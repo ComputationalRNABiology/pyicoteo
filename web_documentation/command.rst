@@ -11,9 +11,9 @@ To see the ways of usage and a list of the subcommands you can access the comman
     pyicos -h
 
 
-If you are interested in the usage of a particular command (for example, 'normalize') and the meaning of its flags type:
+If you are interested in the usage of a particular command (for example, 'extend') and the meaning of its flags type:
 
-    pyicos normalize -h
+    pyicos extend -h
 
 
 
@@ -21,22 +21,22 @@ If you are interested in the usage of a particular command (for example, 'normal
 Here we explain briefly what each operation does and we give some examples::
 
 
-remove 
+remregions
 -------------------
 Remove regions that overlap with the regions in the "black list" file. Here usually satellites and centromers are listed.
 
 Example::
 
-    pyicos remove my_experiment.bed regions.bed my_result.bed --experiment-format bed --open-experiment --region-format bed --open-region --output-format bed --open-output 
+    pyicos remregions my_experiment.bed regions.bed my_result.bed --experiment-format bed --open-experiment --region-format bed --open-region --output-format bed --open-output 
 
-You can also use the abreviated sytax. This command is synonimous of the previous one::
+You can also use the abbreviated syntax. This command is synonimous of the previous one::
 
-    pyicos remove my_experiment.bed regions.bed my_result.bed -f bed -o --region-format bed --open-region -F bed -O 
+    pyicos remregions my_experiment.bed regions.bed my_result.bed -f bed -o --region-format bed --open-region -F bed -O 
 
 
 remduplicates
 -------------------
-Remove the duplicated reads in a file. A duplicate is a read with the same start position as a read that has already been seen. You can choose how many duplicates you want to tolerate. If you want to keep only one read for a start position set the duplicates to 0.
+Remove the duplicated reads in a file. A duplicate is a read with the same start position as a read that has already been seen. You can choose how many duplicates you want to tolerate. If you want to keep only one read for a start position, set the duplicates to 0.
 
 Example:
 
@@ -46,15 +46,15 @@ Here we tolerate 1 duplicate so a read can not occur more often than twice::
 
 
 
-labelremove
------------
-Remove all lines that have the specified tag from the file. 
-
-Example:
-
-From a SAM file, delete every entry that has has been mapped to chromosome22 and chromosome4::
-
-    pyicos labelremove my_experiment.sam no_chr4_chr22.sam chr4:chr22 --experiment-format sam --output-format sam
+.. labelremove
+.. -----------
+.. Remove all lines that have the specified tag from the file. 
+.. 
+.. Example:
+.. 
+.. From a SAM file, delete every entry that has has been mapped to chromosome22 and chromosome4::
+.. 
+..     pyicos labelremove my_experiment.sam no_chr4_chr22.sam chr4:chr22 --experiment-format sam --output-format sam
 
 
 strcorr (Strand Correlation)
@@ -86,25 +86,25 @@ To visualize the data in a genome browser we set the output to be half-open bed_
     pyicos extend my_experiment.bed my_experiment_ext.bed_wig 150 -f bed -o -F bed_wig -O
 
 
-normalize
----------
-When comparing different data sets to eachother (for example experiment and control), normalizing is a neccesary step to make them comparable. Pyicos takes into account the number of reads and their lengths and operates on a nucleotide precision level.
-
-Example:
-
-Normalize the experiment to the control (both have already been extended and converted to bedpk)::
-
-    pyicos normalize my_experiment_ext.bedpk control_ext.bedpk my_experiment_ext_norm.bedpk 
+.. normalize
+.. ---------
+.. When comparing different data sets to each other (for example experiment and control), normalizing is a necessary step to make them comparable. Pyicos takes into account the number of reads and their lengths and operates on a nucleotide precision level.
+.. 
+.. Example:
+.. 
+.. Normalize the experiment to the control (both have already been extended and converted to bedpk)::
+.. 
+..     pyicos normalize my_experiment_ext.bedpk control_ext.bedpk my_experiment_ext_norm.bedpk 
 
 
 subtract
 ---------
-Subtract the reads in one file from the reads in another file. Using background data (control) improves te results because the background distribution is not supposed to be normal, 
+Subtract the reads in one file from the reads in another file. Using background data (control) improves the results because the background distribution is not supposed to be normal, 
 and statistical approaches to obtain this have a limited reach.
 
 The most straightforward approach is to subtract the control from the sample. Make sure the sample has been **normalized** to the control beforehand!
 Pyicos maintains a 1bp resolution by subtracting the reads nucleotide by nucleotide, rather than doing a statistical approximation. 
-Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.
+Operating with directories will only give appropiate results if the files and the control are paired in alphabetical order.
 
 Example:
 
@@ -188,11 +188,15 @@ Example::
 
 modFDR
 -------
-Use the modified False Discovery Rate calculation method to determine which clusters are significant in an specific region, like a transcript. This method is typically used for CLIP-Seq data. 
+Use the modified False Discovery Rate method proposed_ by Yeo et al. to determine which clusters are significant in a list of genomic regions (like genes or transcripts). This method is typically used in CLIP-Seq data that doesn't have a valid control experiment to compare against. 
 
-modFDR as explained by Yeo et al. http://www.nature.com/nsmb/journal/v16/n2/full/nsmb.1545.html
+A region of interest file is required for the method to be applied, in BED format. 
 
-.. Juanra, could you please put an example here if you have time?
+.. _proposed: http://www.nature.com/nsmb/journal/v16/n2/full/nsmb.1545.html
+
+Example::
+
+    pyicos modfdr my_experiment.bed my_regions.bed output.pk -f bed 
 
 
 convert
@@ -203,7 +207,7 @@ experiment: Bed, Wiggle files (bed_wiggle), SAM, Eland, bedpk (Pyicos default co
 
 output: Bed, Wiggle files (bed_wiggle, variable_wiggle), SAM, Eland, bedpk (Pyicos default compressed format), bedspk (Pyicos stranded compressed format)
 
-This operation is useful if you only want to convert your data to another format. Other operations already include a convertion if you specify different experiment and output formats.
+This operation is useful if you only want to convert your data to another format. Other operations already include a conversion if you specify different experiment and output formats.
 
 
 Examples:
@@ -220,20 +224,7 @@ Convert all pk files in a folder to bed wig files::
 
 callpeaks
 ---------
-This commmand is a combination of previous commands (extend, normalize, subtract, remove, poisson and filter) for the task of calling peaks from a ChIP-Seq experiment (With and without control). 
-
-pyicos callpeaks experiment output
-                        [-h] [-o] [-f EXPERIMENT_FORMAT] [--debug] [--no-sort]
-                        [--silent] [--disable-cache] [--keep-temp]
-                        [--postscript] [--showplots] [--label1 LABEL1]
-                        [--label2 LABEL2] [--control CONTROL] [--control-
-                        format CONTROL_FORMAT] [--open-control] [--region
-                        REGION] [-O] [-F OUTPUT_FORMAT] [-x FRAG_SIZE]
-                        [--round] [--label LABEL] [--span SPAN] [--no-
-                        subtract] [--remlabels REMLABELS] [--p-value P_VALUE]
-                        [--k-limit K_LIMIT] [--correction CORRECTION] [--trim-
-                        proportion TRIM_PROPORTION] [-p SPECIES] [--duplicates
-                        DUPLICATES] [--poisson-test POISSON_TEST]
+This command is a combination of previous commands (extend, normalize, subtract, remove, poisson and filter) for the task of calling peaks from a ChIP-Seq experiment (With and without control). 
 
 
 Example::
@@ -244,11 +235,7 @@ Example::
 
 enrichment
 ---------
-Enrichment analysis can be applied on any type of -seq data, however it is NOT recommended to detect binding sites of a protein to DNA or RNA, as precision might be lost (use callpeaks or modFDR for that). Pyicos performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicos calculates Z-Scores for each region of interest. If no replicas are provided Pyicos creates technical replicas (see below).
-
-
-
-
+Enrichment analysis can be applied on any type of -seq data. Pyicos performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicos calculates Z-Scores for each region of interest. If no replicas are provided Pyicos creates technical replicas (see below).
 
 
 .. figure:: images/enrichment.png
@@ -257,10 +244,7 @@ Enrichment analysis can be applied on any type of -seq data, however it is NOT r
 If a region file is provided, Pyicos returns for each region a Z-Score (among others) which indicates the enrichment/depletion of condition A over condition B. If no region file is provided, Pyicos provides the options to take the union of reads from both conditions as a region and gives back Z-Scores for the generated regions. As regions with 0 reads in one condition might be especially interesting, Pyicos can use pseudocounts, in order to avoid a division by 0: Pyicos calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicos assumes that there is already 1 read in each region in each condition.
 
 
-
 .. figure:: images/region_definition.png
-
-
 
 
 To calculate the Z-Score, Pyicos compares the differences between condition A and condition B with the differences between A and A' (while A' is the biological replica of A). If no biological replica is available, Pyicos uses a sample swap as a reference. With sample swap we mean that reads from condition A and B are mixed randomly and divided in two sets (with size of those of A and B). In the two resulting sets we do not expect any significant differences, just like in replicas.  
@@ -284,13 +268,13 @@ name	start	end	name2	score	strand	signal_a	signal_b	signal_prime_1	signal_prime_
 
 6) strand                  =  region strand
 
-7) signal_a                =  number of reads / density in sample a overlapping the region
+7) signal_a                =  Counts in experiment A (normalized if used)
  
-8) signal_b                =  number of reads / density in sample b overlapping the region
+8) signal_b                =  Counts in experiment B (normalized if used)
 
-9) signal_prime_1          =  number of reads / density in one biological/technical replica overlapping the region
+9) signal_prime_1          =  Counts in experiment A (exactly the same as signal_a) or random background 1 (normalized if used) 
 
-10) signal_prime_2         =  number of reads / density in the other biological/technical replica overlapping the region
+10) signal_prime_2         =  Counts in experiment replica A or random background 2 (normalized if used) 
 
 11) A                      =  (log2(signal_a)+log2(signal_b))/2
 
@@ -330,17 +314,29 @@ name	start	end	name2	score	strand	signal_a	signal_b	signal_prime_1	signal_prime_
 Examples::
 
     # Calculations based on count data:    
-    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_Counts -f bed --region genes.bed --open-region --stranded --replica-a kidney2.bed --pseudocount --skip-header
+    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_Counts -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header
    
     # Calculations based on count data normalized by number of reads in sample:    
-    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_Counts -f bed --region genes.bed --open-region --stranded --replica-a kidney2.bed --pseudocount --skip-header --n-norm 
+    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_Counts -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm 
 
     # To use RPKM normalization    
-    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica-a kidney2.bed --pseudocount --skip-header --n-norm --len-norm
+    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm
 
     # To use TRPK normalization 
-    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica-a kidney2.bed --pseudocount --skip-header --n-norm --len-norm --tmm-norm
+    pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm --tmm-norm
 
 
+
+push
+----
+Push the reads in the corresponding strand. If a read doesn\'t have a strand, it will be pushed from left to right.
+
+This operation requires tag-like files (bed, eland, sam).
+
+
+
+Example::
+
+    pyicos push my_experiment.bed my_experiment_pushed100.bed 100 -f bed -F bed
 
 

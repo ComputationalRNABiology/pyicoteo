@@ -586,7 +586,7 @@ class PkWriter(Writer):
 
 class Cluster(AbstractCore):
     """
-    Represents one cluster of overlaping tags or a single Tag. This object can read and write in every format provided.
+    Represents one cluster of overlapping tags or a single Tag. This object can read and write in every format provided.
     It can be added, compared, subtracted to other cluster objects.
     """
     def __init__(self, name='', start=0, end=-1, strand='.', name2='noname', score=0, rounding = False,
@@ -618,7 +618,7 @@ class Cluster(AbstractCore):
 
 
     def _fast_init(self):
-        """stuff that all cluster instances should have. To generate and copy cluster objects faster"""
+        """Stuff that all cluster instances should have. To generate and copy cluster objects faster"""
         self._tag_cache = []
         self.extra_fields = []       
         self.read_count = 0
@@ -718,66 +718,66 @@ class Cluster(AbstractCore):
         return True
 
     def copy_cluster_data(self, other):
-            """Copies the info in the other cluster, keeping the readers. Faster that copy_cluster"""
+        """Copies the info in the other cluster, keeping the readers. Faster than copy_cluster"""
 
-            other.start = self.start
-            other.end = self.end
-            other.restart_levels()
-            other._tag_cache = []
-            if self._tag_cache: 
-                for tag in self._tag_cache:
-                    other._tag_cache.append(tag)
-            else:
-                for length, height in self:
-                    other.append_level(length, height)
+        other.start = self.start
+        other.end = self.end
+        other.restart_levels()
+        other._tag_cache = []
+        if self._tag_cache: 
+            for tag in self._tag_cache:
+                other._tag_cache.append(tag)
+        else:
+            for length, height in self:
+                other.append_level(length, height)
 
-            other.cached = self.cached
-            other.name = self.name 
-            other.score = self.score
-            other.name2 = self.name2
-            other.strand = self.strand
-            other.rounding = self.rounding
-            other.normalize_factor = self.normalize_factor
-            other.tag_length = self.tag_length
-            other.sequence = self.sequence
-            other.read_count = self.read_count
-            other.logger = self.logger
-            other.p_value = self.p_value
-            return other
+        other.cached = self.cached
+        other.name = self.name 
+        other.score = self.score
+        other.name2 = self.name2
+        other.strand = self.strand
+        other.rounding = self.rounding
+        other.normalize_factor = self.normalize_factor
+        other.tag_length = self.tag_length
+        other.sequence = self.sequence
+        other.read_count = self.read_count
+        other.logger = self.logger
+        other.p_value = self.p_value
+        return other
 
 
     def copy_cluster(self):
-            """Returns a copy of the self cluster. Faster than copy.deepcopy()"""
-            ret_cluster = Empty()
-            ret_cluster.__class__ = self.__class__
-            ret_cluster.start = self.start
-            ret_cluster.end = self.end
-            ret_cluster.restart_levels()
-            ret_cluster._fast_init()
+        """Returns a copy of the self cluster. Faster than copy.deepcopy()"""
+        ret_cluster = Empty()
+        ret_cluster.__class__ = self.__class__
+        ret_cluster.start = self.start
+        ret_cluster.end = self.end
+        ret_cluster.restart_levels()
+        ret_cluster._fast_init()
 
-            if self._tag_cache: 
-                for tag in self._tag_cache:
-                    ret_cluster._tag_cache.append(tag)
-            else:
-                for length, height in self:
-                    ret_cluster.append_level(length, height)
+        if self._tag_cache: 
+            for tag in self._tag_cache:
+                ret_cluster._tag_cache.append(tag)
+        else:
+            for length, height in self:
+                ret_cluster.append_level(length, height)
 
-            ret_cluster.cached = self.cached
-            ret_cluster.name = self.name
-            ret_cluster.read_as(self.reader.format, self.reader.half_open, self.cached)
-            ret_cluster.write_as(self.writer.format, self.writer.half_open, self.writer.span)
+        ret_cluster.cached = self.cached
+        ret_cluster.name = self.name
+        ret_cluster.read_as(self.reader.format, self.reader.half_open, self.cached)
+        ret_cluster.write_as(self.writer.format, self.writer.half_open, self.writer.span)
 
-            ret_cluster.score = self.score
-            ret_cluster.name2 = self.name2
-            ret_cluster.strand = self.strand
-            ret_cluster.rounding = self.rounding
-            ret_cluster.normalize_factor = self.normalize_factor
-            ret_cluster.tag_length = self.tag_length
-            ret_cluster.sequence = self.sequence
-            ret_cluster.read_count = self.read_count
-            ret_cluster.logger = self.logger
-            ret_cluster.p_value = self.p_value
-            return ret_cluster
+        ret_cluster.score = self.score
+        ret_cluster.name2 = self.name2
+        ret_cluster.strand = self.strand
+        ret_cluster.rounding = self.rounding
+        ret_cluster.normalize_factor = self.normalize_factor
+        ret_cluster.tag_length = self.tag_length
+        ret_cluster.sequence = self.sequence
+        ret_cluster.read_count = self.read_count
+        ret_cluster.logger = self.logger
+        ret_cluster.p_value = self.p_value
+        return ret_cluster
 
     #TODO raise 'there is no strand' error
     #TODO here I assume that the reads are shorter than the extension number.
@@ -786,7 +786,7 @@ class Cluster(AbstractCore):
             try:
                 self._flush_tag_cache()
                 if self.num_levels() > 1:
-                    self.logger.error('Complex wig or pk clusters extension are not supported . Convert your files to a "tag" format (bed or sam).')
+                    self.logger.error('Complex wig or pk clusters extension is not supported. Convert your files to a "tag" format (bed or sam).')
                     raise InvalidLine
 
                 self.sequence = None #deleting the sequence because the extension makes the sequence invalid (and incidentally screws up the counting of the length in the SAM format too)
@@ -864,7 +864,7 @@ class Cluster(AbstractCore):
 
         y_{j}\leq x_{min}(1-t)
 
-        Where t is a proportion threshold between 0 and 1. By default t=0.05. The cluster will divid at the local minimum. 
+        Where t is a proportion threshold between 0 and 1. By default t=0.05. The cluster will divide at the local minimum. 
         """
         prev_height = -sys.maxint
         prev_local_maxima = 0
@@ -876,23 +876,23 @@ class Cluster(AbstractCore):
         split_points = []
         going_up = True
         minimum_height = sys.maxint
-        #get the local maxima
+        # get the local maxima
         level_number = 1
         for length, height in self:
             if height < prev_height: # we are going down
-                if going_up: #if we were going up previously, we found a local maximum
+                if going_up: # if we were going up previously, we found a local maximum
                     if prev_local_maxima:
                         if absolute:
                             local_threshold = absolute
                         else:
                             local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
-                        if minimum_height < local_threshold: #split point found
+                        if minimum_height < local_threshold: # split point found
                             split_points.append(minimum_pos)               
 
                     prev_local_maxima = prev_height
                 going_up = False
             else:
-                if not going_up: #if we were going down previously, we reached a local minimum
+                if not going_up: # if we were going down previously, we reached a local minimum
                     minimum_height = prev_height
                     minimum_pos = level_number-1
                 going_up = True
@@ -901,12 +901,12 @@ class Cluster(AbstractCore):
             prev_length = length
             level_number+=1
     
-        if going_up: #if the cluster ended going up, it ended in a local maximum that was not detected previously
+        if going_up: # if the cluster ended going up, it ended in a local maximum that was not detected previously
             if absolute:
                 local_threshold = absolute
             else:
                 local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
-            if minimum_height < local_threshold: #split point found
+            if minimum_height < local_threshold: # split point found
                 split_points.append(minimum_pos)    
 
         nucleotides = self.start
@@ -916,7 +916,7 @@ class Cluster(AbstractCore):
                 if level_number in split_points:
                     right_len = length/2
                     left_len = right_len
-                    if length%2 == 0: #its even
+                    if length%2 == 0: # it's even
                         left_len-=1
                     if left_len:
                         new_cluster.append_level(left_len, height)
@@ -948,7 +948,7 @@ class Cluster(AbstractCore):
         """Returns the original cluster or several clusters if we find subclusters"""
         if threshold is None:
             threshold=float(self.max_height())*percentage
-            if threshold < 1: #or at least 1 nucleotide
+            if threshold < 1: # or at least 1 nucleotide
                 threshold = 1
 
         new_cluster = self.copy_cluster()
@@ -973,7 +973,7 @@ class Cluster(AbstractCore):
 
     def is_artifact(self, condition = 0.3):
         """Returns True if the cluster is considered an artifact.
-           It is considered an artifact if its shorter than 100 nucleotides,
+           It is considered an artifact if it's shorter than 100 nucleotides,
            or the maximum height length is more than 30% of the cluster (block cluster)"""
         self._flush_tag_cache()
         if len(self) < 100:
@@ -1006,8 +1006,8 @@ class Cluster(AbstractCore):
 
     def decompose(self):
         """Returns a list of Singletons that form the cluster given a tag length. If the tag length is not provided the cluster was formed by tags with
-        different lengths, its impossible to reconstruct the tags due to ambiguity (multiple different combination of tags can be used to obtain the same cluster)"""
-        if self.tag_length is not None:
+        different lengths, it's impossible to reconstruct the tags due to ambiguity (multiple different combination of tags can be used to obtain the same cluster)"""
+        if self.tag_length is not None and self.tag_length > 0:
             tags = []
             cluster_copy = self.copy_cluster()
             dummy_cluster = self.copy_cluster()
@@ -1044,19 +1044,19 @@ class Cluster(AbstractCore):
             self_slow_count = 0
             slow_start = result.start
             slow_end = result.start + result.get_level_length(0)
-            other_numlevels = other.num_levels() #for speed
+            other_numlevels = other.num_levels() # for speed
             while (other_numlevels > other_count):
                 other_level_start = other.start + other_acum_levels
-                other_acum_levels += other.get_level_length(other_count) #for speed
+                other_acum_levels += other.get_level_length(other_count) # for speed
                 other_level_end = other.start + other_acum_levels
-                other_height = other.get_level_height(other_count) #for speed
-                other_length = other.get_level_length(other_count) #for speed
+                other_height = other.get_level_height(other_count) # for speed
+                other_length = other.get_level_length(other_count) # for speed
                 while other_level_start > slow_end:
                     slow_start += result.get_level_length(self_slow_count)
                     self_slow_count += 1
                     try:
                         slow_end += result.get_level_length(self_slow_count)
-                    except IndexError: #this means we got to the end of the level list and that there is not more subtracting to do
+                    except IndexError: # this means we got to the end of the level list and that there is not more subtracting to do
                         break_up = True
                         break
                
@@ -1160,7 +1160,7 @@ class Cluster(AbstractCore):
         Adds the levels of 2 selfs, activating the + operator for this type of object results = self + self2
         """
         if other._tag_cache:
-            #for start, end, dup in other._tag_cache: 
+            # for start, end, dup in other._tag_cache: 
             self.add_tag_cached(other._tag_cache[0][0], other._tag_cache[0][1]) #TODO only works when other._tag_cache == 1. For performance. Change if needed.
             self.start = min(self.start, other.start)
             self.end = max(self.end, other.end)
@@ -1170,9 +1170,9 @@ class Cluster(AbstractCore):
         else: 
             result = self.copy_cluster()
             if result.read_count and other.read_count:
-                result.read_count += other.read_count #if both clusters have a read count, add it
+                result.read_count += other.read_count # if both clusters have a read count, add it
             other_acum_levels = 0
-            #add zeros so both selfs have equal length and every level is added
+            # add zeros so both selfs have equal length and every level is added
             if other.end > result.end:
                 result.append_level(other.end-result.end, 0)
 
@@ -1232,7 +1232,7 @@ class Cluster(AbstractCore):
     def _push_end(self, array_ends, end):
         found = False
         self._numends += 1
-        for i in range(0, len(array_ends)): #We go backwards because its a heapq. We will probably find the value in one of the last ones of the queue
+        for i in range(0, len(array_ends)): # We go backwards because it's a heapq. We will probably find the value in one of the last ones of the queue
             if end == array_ends[i][0]:
                 found = True
                 array_ends[i][1] += 1
@@ -1245,14 +1245,14 @@ class Cluster(AbstractCore):
         """
         Joins all reads in levels. Assumes that the tags were sorted 
         """
-        #TODO: Is there a FAST way of detecting if they are sorted, so we could sort them if neccesary?
+        #TODO: Is there a FAST way of detecting if they are sorted, so we could sort them if necessary?
         array_ends = []
-        self._numends = 0 #The number of ends is not equivalent to len(array_ends) since its compressed
+        self._numends = 0 # The number of ends is not equivalent to len(array_ends) since it's compressed
         previous_start = -1
         smallest_end = sys.maxint
 
         while self._tag_cache:
-            current_start, current_end, numduplicates = self._tag_cache.pop(0) #delete from tag cache while we transfer to _levels
+            current_start, current_end, numduplicates = self._tag_cache.pop(0) # delete from tag cache while we transfer to _levels
             for i in range(0, numduplicates):     
                 if self.logger: 
                     if len(self._tag_cache)>1000: 
@@ -1264,7 +1264,7 @@ class Cluster(AbstractCore):
                         while previous_start == self._get_smallest_end(array_ends):
                             previous_start = self._pop_smallest_end(array_ends)
                     except IndexError:
-                        pass #if array_ends is empty, go on
+                        pass # if array_ends is empty, go on
                     previous_start = previous_start + 1
                     if self._numends > 0:
                         smallest_end = self._get_smallest_end(array_ends)
@@ -1290,7 +1290,7 @@ class Cluster(AbstractCore):
         
 
     def get_heights(self):
-        """returns all the heights in an array"""
+        """Returns all the heights in an array"""
         ret = []
         for length, height in self:
             for i in xrange(0, length):
@@ -1353,7 +1353,7 @@ class Cluster(AbstractCore):
         return (self.overlap(other) > 0 or self.is_contiguous(other) or other.is_contiguous(self))
 
     def _recalculate_end(self):
-        """Recalculates the end value to avoid possible incosistency in the data"""
+        """Recalculates the end value to avoid possible inconsistency in the data"""
         self.end = self.start-1
         for length, height in self:
             self.end += length
@@ -1395,7 +1395,7 @@ class Region(AbstractCore):
         return (self.start is not 0 and self.end is not 0 and self.name is not None)
 
     def rpkm(self, total_reads, total_regions_analyzed=0, pseudocount=False):
-        #DEPRECATED Doesnt take into consideration BED12 starts
+        # DEPRECATED Doesn't take into consideration BED12 starts
         """Original definition: Reads per kilobase of exon model per million mapped reads. We generalize to: Reads per kilobase of region per million mapped reads. Added 1 pseudocount per region to avoid 0s"""
         if not pseudocount:
             total_regions_analyzed=0
@@ -1411,16 +1411,16 @@ class Region(AbstractCore):
         if pseudocount:
             counts += 1
         else:
-            regions_analyzed = 0 #because we add 1 pseudocount per region, so we have to increase N by num-regions. If pseudocounts not are used, there is no need for this count      
-        if region_norm: #read per kilobase in region
-            if self.exome_size:  #If an exome size is provided, use this to normalize the reads
+            regions_analyzed = 0 # because we add 1 pseudocount per region, so we have to increase N by num-regions. If pseudocounts are not used, there is no need for this count      
+        if region_norm: # read per kilobase in region
+            if self.exome_size:  # If an exome size is provided, use this to normalize the reads
                 length = self.exome_size
             else:
                 length = len(self)               
 
             counts = 1e3*(float(counts)/length)
 
-        if total_n_norm: #per million reads in the sample
+        if total_n_norm: # per million reads in the sample
             counts = 1e6*(counts/(regions_analyzed+total_reads))
     
         return counts*tmm_factor
@@ -1434,7 +1434,7 @@ class Region(AbstractCore):
             return len(self.tags)
 
 
-    def __sub_swap(self, region, swap1, swap2, ratio): #ratio of reads in file A per read in file B
+    def __sub_swap(self, region, swap1, swap2, ratio): # ratio of reads in file A per read in file B
         for tag in region.tags:
             if random.uniform(0,2)*ratio > 1:
                 swap1.add_tags(tag)
@@ -1443,7 +1443,7 @@ class Region(AbstractCore):
 
 
     def swap(self, region_b, ratio=1):
-        "Given 2 regions, return 2 new regions with the reads of both regions mixed aleatoriely"
+        """Given 2 regions, returns 2 new regions with the reads of both regions mixed randomly"""
         swap1 = Region(self.name, self.start, self.end)
         swap2 = Region(self.name, self.start, self.end)
         self.__sub_swap(self, swap1, swap2, ratio)
@@ -1467,7 +1467,7 @@ class Region(AbstractCore):
         return max(0, self.end-self.start+1)
 
     def copy(self):
-        """Copies a Region object into another"""
+        """Copies a Region object into another one"""
         new_region = Empty()
         new_region.__class__ = self.__class__
         new_region.start = self.start
@@ -1517,7 +1517,7 @@ class Region(AbstractCore):
 
     
     def join(self, other):
-        """Joins two regions. Works with a cluster object too (if flushed properly). If the regions dont overlap, the space in between will be included too."""
+        """Joins two regions. Works with a cluster object too (if flushed properly). If the regions don't overlap, the space in between will be included too."""
         self.start = min(self.start, other.start)
         self.end = max(self.end, other.end)
    
@@ -1525,20 +1525,20 @@ class Region(AbstractCore):
     def get_FDR_clusters(self, repeats=100, masker_tags=[]):
         if self.logger: self.logger.debug("get_FDR_clusters: Started. Getting max height...")
         max_height = int(self.max_height())
-        #Get the N values and the probabilities for the real and for the simulated random instances
+        # Get the N values and the probabilities for the real and for the simulated random instances
         if self.logger: self.logger.debug("get_FDR_clusters: Done with max height. Getting heights...")
         real_heights = self.get_heights()
         if self.logger: self.logger.debug("get_FDR_clusters: Done getting heights.")
-        #we do the same calculation but shuffling the tags randomly. We do it as many times as the variable repeats asks for
+        # we do the same calculation but shuffling the tags randomly. We do it as many times as the variable repeats asks for
         Pr_of_h = defaultdict(int)
         random_variances = defaultdict(int)
         random_region = Region(None, self.start, self.end, logger=self.logger, cached=self.cached)
         if self.logger: self.logger.debug("get_FDR_clusters: Adding tags to random...")
         random_region.add_tags(self.tags)
         if self.logger: self.logger.debug("get_FDR_clusters: Done adding")
-        #Get the repeat regions that overlap with the region
+        # Get the repeat regions that overlap with the region
         """
-        masker_tags = repeat_reader.get_overlaping_clusters(region, overlap=0.000001) #get all overlaping masker tags
+        masker_tags = repeat_reader.get_overlaping_clusters(region, overlap=0.000001) # get all overlapping masker tags
         masker_region = Region(None, region.start, region.end, region.name)
         masker_region.add_tags(masker_tags)
         """
@@ -1554,10 +1554,10 @@ class Region(AbstractCore):
                 Pr_of_h[h] += prob
                 random_variances[h].append(prob)
 
-        #Get the mean and the variance for the random iterations and calculate the FDR
+        # Get the mean and the variance for the random iterations and calculate the FDR
         found = False
         significant_height = sys.maxint
-        p_values_per_height = defaultdict(int) #if it doesnt have the values, will return a 0
+        p_values_per_height = defaultdict(int) # if it doesnt have the values, will return a 0
 
         """
         number_of_reads = len(self.tags)
@@ -1583,10 +1583,10 @@ class Region(AbstractCore):
                 random_variance += (random_variances[h][i]-random_mean)**2
             random_variance = math.sqrt(random_variance/repeats)
             p_value = random_mean+random_variance/h_prob
-            if p_value < 0.00000001: #A smaller p-value than 10e-8 is irrelevant. For speed.
+            if p_value < 0.00000001: # A smaller p-value than 10e-8 is irrelevant. For speed.
                 break
             p_values_per_height[h] = random_mean+random_variance/h_prob
-        #add the p_values to the clusters and return them
+        # add the p_values to the clusters and return them
         ret_clusters = self.get_clusters()
         for i in range(0 , len(ret_clusters)):
             ret_clusters[i].p_value = p_values_per_height[int(ret_clusters[i].max_height())]
@@ -1610,10 +1610,10 @@ class Region(AbstractCore):
             repeat_count = 0
             #length = self.end-self.start #self._recalculate_end() is too slow
             while (repeat):
-                #Try to find a random spot that doesnt fall inside a repeat region.
+                # Try to find a random spot that doesn't fall inside a repeat region.
                 # If a repeat region is hit more than 2000 times, surrender and leave the tag where it last was randomized
-                #(almost impossible with normal genomes, but it may be possible if a gene with more than
-                #99.9% of repeats regions is analyzed) 0.999**2000=0.13519992539749945  0.99**2000=1.8637566029922332e-09
+                # (almost impossible with normal genomes, but it may be possible if a gene with more than
+                # 99.9% of repeats regions is analyzed) 0.999**2000=0.13519992539749945  0.99**2000=1.8637566029922332e-09
                 repeat = False
                 tag.start = random.randint(self.start, self.end)
                 tag._recalculate_end()
@@ -1627,7 +1627,7 @@ class Region(AbstractCore):
                     print 'Couldnt find a suitable randomization spot after 2000 tries, surrendering'
                     break
 
-        #recreate the clusters
+        # recreate the clusters
         self.clusterize()
 
     def _sub_add_tag(self, tag):
@@ -1697,7 +1697,7 @@ class Region(AbstractCore):
   
 
     def get_metacluster(self):
-        """Returns a cluster object that contains the levels of all previous clusters combined, with gaps (zeros) between them"""
+        """Returns a Cluster object that contains the levels of all previous clusters combined, with gaps (zeros) between them"""
         if self.clusters:
             if self.logger: self.logger.debug("METACLUSTER: Get metacluster...")
             if self.clusters[0]._tag_cache:
@@ -1706,7 +1706,7 @@ class Region(AbstractCore):
             previous_end = metacluster.end
             for i in range(1, len(self.clusters)):
                 if self.logger and len(metacluster)>1000: self.logger.debug("METACLUSTER: Length %s"%(len(metacluster)))
-                self.clusters[i]._flush_tag_cache() #Need the end in its proper place
+                self.clusters[i]._flush_tag_cache() # Need the end in its proper place
                 if self.clusters[i].start > previous_end: # add zeros between levels
                     metacluster.append_level(self.clusters[i].start-previous_end-1, 0)
             
@@ -1744,13 +1744,13 @@ class Region(AbstractCore):
         prev_end = self.start # with this we get the 0s between the start of the region and the first cluster
         for cluster in self.clusters:
             cluster._flush_tag_cache()
-            #get the 0s between clusters
+            # get the 0s between clusters
             for i in range(prev_end, cluster.start):
                 ret.append(0)
             ret.extend(cluster.get_heights())
             prev_end = cluster.end+1
             
-        #the 0s after the last cluster
+        # the 0s after the last cluster
         for i in range(prev_end, self.end+1):
             ret.append(0)        
 

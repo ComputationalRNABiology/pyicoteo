@@ -39,8 +39,8 @@ To do this, use pyicos *extend* command.
 
 We will extend the bed reads to 100 and get the output as a bed file::
 
-    pyicos extend test_files/p300.bed test_files/p300_ext100.bed 100 --input-format bed --output-format bed --open-output --label p300_ext100
-    pyicos extend test_files/control.bed test_files/control_ext100.bed 100 --input-format bed --output-format bed --open-output --label control_ext100
+    pyicos extend test_files/p300.bed test_files/p300_ext100.bed 100 --input-format bed --output-format bed --open-output --wig-label p300_ext100
+    pyicos extend test_files/control.bed test_files/control_ext100.bed 100 --input-format bed --output-format bed --open-output --wig-label control_ext100
     
 In order to see the reads, we will "cluster" them, to better observe the enriched regions. To do this, convert the reads to half-open bed_wig with the *convert* command.
 We will also add the --open-output flag, since the "half-open" notation is required for UCSC visualization.
@@ -49,8 +49,8 @@ Cluster the reads
 -----------------------
 We will cluster the reads with the *convert* command::
 
-    pyicos convert test_files/p300_ext100.bed test_files/p300_ext100.wig --input-format bed --output-format bed_wig  --open-output --label 1.p300_ext100
-    pyicos convert test_files/control.bed test_files/control_ext100.wig --input-format bed --output-format bed_wig  --open-output --label 2.control_ext100
+    pyicos convert test_files/p300_ext100.bed test_files/p300_ext100.wig --input-format bed --output-format bed_wig  --open-output --wig-label 1.p300_ext100
+    pyicos convert test_files/control.bed test_files/control_ext100.wig --input-format bed --output-format bed_wig  --open-output --wig-label 2.control_ext100
 
 
 Upload the resulting files again in the genome browser. Go to chromosome 22::
@@ -63,7 +63,7 @@ Subtract the control
 Now we will subtract the control reads from the p300 ones. This operation will result in a single file that will not contain the reads duplicated in the control and the experiment file,
 removing reads that are not product of p300 interaction with the genome::
 
-    pyicos subtract test_files/p300_ext100.bed test_files/control.bed test_files/subtracted.wig --input-format bed --open-input --output-format bed_wig --open-output --label 3.subtracted
+    pyicos subtract test_files/p300_ext100.bed test_files/control.bed test_files/subtracted.wig --input-format bed --open-input --output-format bed_wig --open-output --wig-label 3.subtracted
 
 Upload the resulting file to the browser. Observe how the subtraction is performed with nucleotide precision, for example here::
 
@@ -74,7 +74,7 @@ Discard Artifacts
 
 Finally, we will discard artifacts. The discard artifact algorithm will consider as an artifact any cluster that has a "block" similar shape and singletons (clusters with only one read)::
 
-     pyicos discard test_files/subtracted.wig test_files/result.wig --input-format bed_wig --open-input --output-format bed_wig --open-output --label 4.extended_subtracted_noartifacts
+     pyicos discard test_files/subtracted.wig test_files/result.wig --input-format bed_wig --open-input --output-format bed_wig --open-output --wig-label 4.extended_subtracted_noartifacts
 
 Upload this files. Observe how some of the noise is gone. An interesting region would be, for example::
 
