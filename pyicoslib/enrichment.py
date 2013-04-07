@@ -1,6 +1,7 @@
 import sys, os
 import math
 import random
+from tempfile import gettempdir
 
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 from defaults import *
@@ -38,7 +39,7 @@ def calculate_region(self):
     Calculate a region file using the reads present in the both main files to analyze. 
     """
     self.logger.info('Generating regions...')
-    self.sorted_region_path = '%s/calcregion_%s.txt'%(self._output_dir(), os.path.basename(self.current_output_path))
+    self.sorted_region_path = '%s/calcregion_%s.bed'%(self._output_dir(), os.path.basename(self.current_output_path))
     region_file = open(self.sorted_region_path, 'wb')
     dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.logger) 
     if self.stranded_analysis:
@@ -425,6 +426,7 @@ def _calculate_total_lengths(self):
     self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2        
 
 
+
 def enrichment(self):
     file_a_reader = file_b_reader = replica_reader = None
     self.use_replica = (bool(self.replica_path) or (bool(self.counts_file) and self.use_replica_flag))
@@ -451,6 +453,7 @@ def enrichment(self):
     else:
         ma_path = self.sorted_region_path
 
+
     out_path = _calculate_MA(self, ma_path, bool(self.counts_file), 1, 1, file_a_reader, file_b_reader, replica_reader)
     self.already_norm = True
     self.logger.debug("Already normalized: %s"%self.already_norm)
@@ -469,6 +472,32 @@ def enrichment(self):
         old_output = '%s/notnormalized_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
         move(os.path.abspath(self.current_output_path), old_output)
         out_path = _calculate_MA(self, old_output, True, tmm_factor, replica_tmm_factor, True) #recalculate with the new factor, using the counts again
+
+    if self.quant_norm:
+        self.logger.info("Full quantile normalization...")
+
+        signal_a = []
+        signal_prime_1 = []
+        enrich = []
+        for line in open(out_path):
+            sline = line.split()
+            enrich_line = dict(zip(enrichment_keys, sline))
+            enrich.append(enrich_line)
+            signal_a.append(enrich_line['signal_a'])
+            signal_prime_1.append(enrich_line['signal_prime_1'])
+        
+        signal_a.sort()
+        enrich.sort(key=lambda x:x['signal_b']) 
+        quant_counts = open('%s/quantcounts_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w')
+        for i in range(len(enrich)):
+            enrich[i]['signal_b'] = signal_a[i] #full quantile normalization
+            enrich[i]['signal_prime_2'] = signal_prime_1[i] #full quantile normalization of the replica          
+            quant_counts.write("%s\n"%"\t".join(str(enrich[i][key]) for key in enrichment_keys[:20]))
+
+        quant_counts.flush()
+        out_path = _calculate_MA(self, quant_counts.name, True, 1, 1, True) #recalculate with the new factor, using the counts again
+
+
 
     self.logger.info("%s regions analyzed."%self.regions_analyzed_count)
     if not NOWRITE in self.operations:

@@ -18,7 +18,7 @@ import sys
 import os
 
 if sys.version_info < (2, 6):
-    print "Pyicos requires python 2.6 or greater (not Python 3 yet)"
+    print "Pyicos requires python 2.6 or greater (no Python 3 support yet, sorry)"
     sys.exit(1)
 
 from lib import argparse
@@ -26,7 +26,7 @@ import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from defaults import *
 
-VERSION = "1.2"
+VERSION = "1.3"
 __version__ = VERSION
 
 class PicosParser:
@@ -129,6 +129,10 @@ class PicosParser:
         control_format.add_argument('--control-format', default=CONTROL_FORMAT, help='The format the control file is written as. [default: The same as experiment format]')
         optional_control = self.new_subparser()
         optional_control.add_argument('--control', help='The control file or directory')
+
+        optional_control = self.new_subparser()
+        optional_control.add_argument('--control', help='The control file or directory')
+
         open_control = self.new_subparser()
         open_control.add_argument('--open-control', action='store_true', default=OPEN_CONTROL, help='Define if the region file is half-open or closed notation. [Default closed]')
         basic_parser = self.new_subparser()
@@ -146,8 +150,12 @@ class PicosParser:
         basic_parser.add_argument('--samtools', default=USESAMTOOLS, action='store_true', help="Use samtools for reading BAM files [Default: Pyicos uses its own library] (reading BAM works without samtools for convert, extend, and other operations, but not for enrichment yet)]")
         basic_parser.add_argument('--skip-header', action='store_true', default=SKIP_HEADER, help="Skip writing the header for the output file. [Default %(default)s]")
         #basic_parser.add_argument('--get-report', action='store_true', default=SKIP_HEADER, help=". [Default %(default)s]")
+       
         output = self.new_subparser()
         output.add_argument('output', help='The output file or directory')
+        optional_output = self.new_subparser()
+        optional_output.add_argument('--output', help='The output file or directory')
+
         output_flags = self.new_subparser()
         output_flags.add_argument('-O','--open-output', action='store_true', default=OPEN_OUTPUT, help='Define if the output is half-open or closed notation. [Default closed]')
         output_flags.add_argument('-F','--output-format',default=OUTPUT_FORMAT, help='Format desired for the output. You can choose between %s. WARNING, for some operations, some outputs are not valid. See operation help for more info. [default pk]'%write_formats)
@@ -178,6 +186,9 @@ class PicosParser:
         #enrichment_flags.add_argument('--sequential', default=SEQUENTIAL, action='store_true', help="Iterate through the files in sequential order, instead of random access (for BAM reading). This is faster than random if you are using a lot of regions that overlap with each other") #TODO This flag doesn't work because if we order chr1 chr2 every file, instead of alphabetical, the SortedClusterReader classes will fail when changing chromosome, since the ALGORITHM depends on a sorted file
         tmm_flag = self.new_subparser()
         tmm_flag.add_argument('--tmm-norm', action='store_true', default=TMM_NORM, help="Trimming the extreme A and M to correct the dataset for the differences in read density between samples. [Default %(default)s]")
+        quant_flag = self.new_subparser()
+        quant_flag.add_argument('--quant-norm', action='store_true', default=QUANT_NORM, help="Full quantile normalization of the counts. This normalization method could be considered the most conservative of them all. [Default %(default)s]")
+
         checkrep_flags = self.new_subparser()
         checkrep_flags.add_argument('--experiment-label', default=EXPERIMENT_LABEL, help='The label that will identify the experiment file in the "check replicas" plot')
         checkrep_flags.add_argument('--replica-label', default=REPLICA_LABEL, help='The label that will identify the experiment file in the "check replicas" plot')
@@ -321,7 +332,7 @@ class PicosParser:
         #rpkm operation
         #subparsers.add_parser('enrichcount', help='An enrichment test based on the MA plots using (normalized) counts', parents=[counts_file, basic_parser, output_flags, optional_replica, region_format, output, enrichment_flags, tmm_flag, total_reads_flags, zscore, use_replica])
         #enrichment operation
-        subparsers.add_parser('enrichment', help='An enrichment test based on the MA plots using mapped reads files. Pyicos output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[exp_or_count, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, region_format, output, enrichment_flags, tmm_flag, total_reads_flags, pseudocount, zscore])
+        subparsers.add_parser('enrichment', help='An enrichment test based on the MA plots using mapped reads files. Pyicos output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[exp_or_count, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, region_format, optional_output, enrichment_flags, tmm_flag, quant_flag, total_reads_flags, pseudocount, zscore])
         #check replicas operation TODO unfinished
         #subparsers.add_parser('checkrep', help='Check how good the replicas are.', parents=[experiment, experiment_flags, basic_parser, replica, region, region_format, checkrep_flags, output])
         #check replicas operation
@@ -351,7 +362,8 @@ class PicosParser:
                             counts_file=COUNTS_FILE, mintags=REGION_MINTAGS, binstep=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER,  
                             total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, 
                             use_replica=USE_REPLICA, tempdir=TEMPDIR, samtools=USESAMTOOLS, access_sequential=SEQUENTIAL, experiment_label = EXPERIMENT_LABEL, 
-                            replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT, push_distance=PUSH_DIST)
+                            replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT, 
+                            push_distance=PUSH_DIST, quant_norm=QUANT_NORM)
         args = parser.parse_args()
         #Add any parameters found in the config file. Override them with anything found in the args later
         if sys.argv[1] == 'protocol':
@@ -406,7 +418,7 @@ class PicosParser:
                             args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, 
                             args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim, 
                             args.use_replica, args.tempdir, args.samtools, args.access_sequential, args.experiment_label, args.replica_label, args.title_label, 
-                            args.count_filter, args.force_sort, args.push_distance)
+                            args.count_filter, args.force_sort, args.push_distance, args.quant_norm)
         if sys.argv[1] == 'protocol':
             operations = section['operations'].split(',')
             for operation in operations:
