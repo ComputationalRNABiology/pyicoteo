@@ -1,6 +1,6 @@
 import unittest
-from pyicoslib.core import Cluster, DifferentChromosome, InvalidLine, Region
-from pyicoslib.defaults import *
+from pyicoteolib.core import Cluster, DifferentChromosome, InvalidLine, Region
+from pyicoteolib.defaults import *
 
 class TestCoreObjects(unittest.TestCase):
     def setUp(self):

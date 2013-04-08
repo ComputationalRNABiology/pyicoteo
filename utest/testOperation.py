@@ -1,8 +1,8 @@
 import unittest
-from pyicoslib.core import Cluster, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG
-from pyicoslib.turbomix import Turbomix
-from pyicoslib.defaults import *
-import pyicoslib.utils as utils
+from pyicoteolib.core import Cluster, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG
+from pyicoteolib.turbomix import Turbomix
+from pyicoteolib.defaults import *
+import pyicoteolib.utils as utils
 
 import math
 

@@ -12,6 +12,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+VERSION = "2.0"
+
 #Formats
 ELAND = 'eland'
 ELAND_EXPORT = 'eland_export'
@@ -36,13 +38,16 @@ enrichment_keys  = ['name', 'start', 'end', 'name2', 'score', 'strand', 'signal_
                     'A','M','total_reads_a','total_reads_b','num_tags_a','num_tags_b','A_prime','M_prime',
                     'total_reads_a','total_reads_b','total_reads_background_1','total_reads_background_2', 'A_median', 'mean', 'sd', 'zscore']
 
-#Default values for parser
+#Default values for parsers
+PARSER_NAME = "pyicoteo"
+
+#Defaults for operations
 EXPERIMENT = OUTPUT = CONTROL = COUNTS_FILE = REGION = MASKER_FILE = '' #files
 EXPERIMENT_FORMAT=PK
 OPEN_EXPERIMENT=False
 DEBUG=False
 DISCARD=0
-LABEL = 'noname'
+LABEL = 'pyicoteo'
 OUTPUT_FORMAT=PK
 OPEN_OUTPUT=False
 ROUNDING=False

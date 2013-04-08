@@ -1,5 +1,5 @@
 """
-Pyicos is free software: you can redistribute it and/or modify
+Pyicoteo is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -18,7 +18,7 @@ import sys
 import os
 
 if sys.version_info < (2, 6):
-    print "Pyicos requires python 2.6 or greater (no Python 3 support yet, sorry)"
+    print "Pyicoteo requires python 2.6 or greater (no Python 3 support yet, sorry)"
     sys.exit(1)
 
 from lib import argparse
@@ -58,7 +58,7 @@ class PicosParser:
         if path:
             if not os.path.exists(path):
                 print
-                print "Pyicos couldn't find the following file or directory: %s"%path
+                print "Pyicoteo couldn't find the following file or directory: %s"%path
                 print
                 sys.exit(1)       
 
@@ -80,7 +80,7 @@ class PicosParser:
         self._isratio(args.binsize, "--binsize")
         self._isratio(args.binstep, "--binstep")
         if args.poisson_test not in POISSON_OPTIONS:
-            self._error_exit("%s is not a valid pyicos poisson test. Please use one of the following: %s"%(args.poisson_test, POISSON_OPTIONS))
+            self._error_exit("%s is not a valid Pyicoteo poisson test. Please use one of the following: %s"%(args.poisson_test, POISSON_OPTIONS))
 
         if args.output_format == WIG and args.open_output == False:
             self._big_warning('You chose as output format a WIG closed file. This will not be visible in the UCSC genome browser. Please consider adding the --open-output flag if you are intending to use the UCSC browser with it.')
@@ -102,7 +102,7 @@ class PicosParser:
     def create_parser(self):
         read_formats = str(READ_FORMATS)
         write_formats = str(WRITE_FORMATS)
-        parser = argparse.ArgumentParser(version=__version__, description="Pyicos is a collection of tools for mapped reads processing, peak calling and comparison (differential expression/splicing/whatever).")
+        parser = argparse.ArgumentParser(version=__version__, description="Pyicoteo is a collection of tools for mapped reads processing, peak calling and comparison (differential expression/splicing/whatever).")
         #parent parsers
         experiment = self.new_subparser()
         experiment.add_argument('experiment', help='The experiment file or directory')
@@ -115,7 +115,6 @@ class PicosParser:
         mutexc = exp_or_count.add_mutually_exclusive_group(required=True)
         mutexc.add_argument('-reads', nargs=2, dest='experiments', help='Compare two packages.', metavar=("experiment_a","experiment_b"))
         mutexc.add_argument('-counts', dest='counts_file', help='Verify Content of package.')
-
 
         experiment_b = self.new_subparser()
         experiment_b.add_argument('experiment_b',  help='The experiment file B')
@@ -146,8 +145,8 @@ class PicosParser:
         basic_parser.add_argument('--showplots', action='store_true', default=SHOWPLOTS, help='Show the plots as they are being calculated by matplotlib. Note that the execution will be stopped until you close the window pop up that will arise')
         basic_parser.add_argument('--label1', default=LABEL1, help="Manually define the first label of the graphs.")
         basic_parser.add_argument('--label2', default=LABEL2, help="Manually define the second label of the graphs.")
-        basic_parser.add_argument('--tempdir', default=TEMPDIR, help="Manually define the temporary directory where Pyicos will write. By default Pyicos will use the temporary directory the system provides (For example, /tmp in unix systems)")
-        basic_parser.add_argument('--samtools', default=USESAMTOOLS, action='store_true', help="Use samtools for reading BAM files [Default: Pyicos uses its own library] (reading BAM works without samtools for convert, extend, and other operations, but not for enrichment yet)]")
+        basic_parser.add_argument('--tempdir', default=TEMPDIR, help="Manually define the temporary directory where Pyicoteo will write. By default Pyicoteo will use the temporary directory the system provides (For example, /tmp in unix systems)")
+        basic_parser.add_argument('--samtools', default=USESAMTOOLS, action='store_true', help="Use samtools for reading BAM files [Default: Pyicoteo uses its own library] (reading BAM works without samtools for convert, extend, and other operations, but not for enrichment yet)]")
         basic_parser.add_argument('--skip-header', action='store_true', default=SKIP_HEADER, help="Skip writing the header for the output file. [Default %(default)s]")
         #basic_parser.add_argument('--get-report', action='store_true', default=SKIP_HEADER, help=". [Default %(default)s]")
        
@@ -177,7 +176,7 @@ class PicosParser:
         enrichment_flags.add_argument('--proximity', default=PROXIMITY, type=int, help="Determines if two regions calculated automatically are close enough to be clustered. Default %(default)s nt")
         enrichment_flags.add_argument('--binsize', type=float, default=BINSIZE, help="The size of the bins to calculate the local sd and mean for the background model, as a ratio of total number or regions. Regardless of the ratio selected, the minimum window size is 50 regions, since below that threshold the results will no longer be statistically meaningful. [Default %(default)s]")        
         enrichment_flags.add_argument('--sdfold', type=float, default=SDFOLD, help="The standard deviation fold used to generate the background model. [Default %(default)s]")  
-        enrichment_flags.add_argument('--recalculate', action='store_true', default=RECALCULATE, help="Recalculate the z-score when plotting. Useful for doing different plots with 'pyicos plot' [Default %(default)s]")    
+        enrichment_flags.add_argument('--recalculate', action='store_true', default=RECALCULATE, help="Recalculate the z-score when plotting. Useful for doing different plots with 'Pyicoteo plot' [Default %(default)s]")    
         enrichment_flags.add_argument('--mintags', type=float, default=REGION_MINTAGS, help="Number of tags (of the union of the experiment and experiment_b datasets) for a region to qualify to be analyzed. [Default %(default)s]") 
         enrichment_flags.add_argument('--binstep', type=float, default=WINDOW_STEP, help="Step of the sliding window for the calculation of the z-score, as a ratio of the window size selected. If you want max precision, in the zscore calculation. You can set this value to 0 in order to use a sliding window that slides only 1 region at a time, but if you have many regions the calculation can get very slow. [Default %(default)s]")  
         enrichment_flags.add_argument('--skip-plot', action='store_true', default=SKIP_PLOT, help="Skip the plotting step. [Default %(default)s]")
@@ -217,15 +216,15 @@ class PicosParser:
         tolerated_duplicates =self.new_subparser()
         tolerated_duplicates.add_argument('--duplicates',type=int, default=DUPLICATES, help='The number of duplicated reads accept will be counted. Any duplicated read after this threshold will be discarded. [Default %(default)s]')
         height = self.new_subparser()
-        height.add_argument('--k-limit',type=int, default=HEIGHT_LIMIT, help='The k limit Pyicos will analize to when performing a poisson test. Every cluster that goes over the threshold will have a p-value of 0, therefore considered significant. For performance purposes, raising it will give more precision when defining low p-values, but will take longer to execute. [Default %(default)s]')
+        height.add_argument('--k-limit',type=int, default=HEIGHT_LIMIT, help='The k limit Pyicoteo will analize to when performing a poisson test. Every cluster that goes over the threshold will have a p-value of 0, therefore considered significant. For performance purposes, raising it will give more precision when defining low p-values, but will take longer to execute. [Default %(default)s]')
         correction = self.new_subparser()
         correction.add_argument('--correction',type=float, default=CORRECTION, help='This value will correct the size of the genome you are analyzing. This way you can take into consideration the real mappable genome [Default %(default)s]')
         tag_length = self.new_subparser()
         tag_length.add_argument( '--tag-length',default=TAG_LENGTH, type=int, help='The tag length, or the extended one. Needed when converting from a Clustered format (wig, pk) to a non clustered format (bed, eland) [Default %(default)s]')
         frag_size = self.new_subparser()
-        frag_size.add_argument('frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by the extend operation to extend the tags, taking into consideration their strand, if provided. If the strand is not provided, Pyicos will assume positive strand.', type=int)
+        frag_size.add_argument('frag_size', help='The estimated inmmunoprecipitated fragment size. This is used by the extend operation to extend the tags, taking into consideration their strand, if provided. If the strand is not provided, Pyicoteo will assume positive strand.', type=int)
         optional_frag_size = self.new_subparser()
-        optional_frag_size.add_argument('-x', '--frag-size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicos to reconstruct the original signal in the original wet lab experiment.', type=int)
+        optional_frag_size.add_argument('-x', '--frag-size', help='The estimated inmmunoprecipitated fragment size. This is used by Pyicoteo to reconstruct the original signal in the original wet lab experiment.', type=int)
         push_distance = self.new_subparser()
         push_distance.add_argument('push_distance', help='', type=int)
         no_subtract = self.new_subparser()
@@ -328,24 +327,23 @@ class PicosParser:
         subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
                               parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
         #rpkm operation
-        subparsers.add_parser('enrichma', help='An enrichment test based on the MA plots using the pyicos count files with the MA information. It will ignore the counts information, and directly use whatever values found in the M and A columns and zscore information to plot the data. Useful to re-plot the data by adjusting the zscore for visualization purposes.', parents=[counts_file, basic_parser, output_flags, optional_replica, region_format, output, enrichment_flags, zscore])
+        subparsers.add_parser('enrichma', help='An enrichment test based on the MA plots using the Pyicoteo count files with the MA information. It will ignore the counts information, and directly use whatever values found in the M and A columns and zscore information to plot the data. Useful to re-plot the data by adjusting the zscore for visualization purposes.', parents=[counts_file, basic_parser, output_flags, optional_replica, region_format, output, enrichment_flags, zscore])
         #rpkm operation
         #subparsers.add_parser('enrichcount', help='An enrichment test based on the MA plots using (normalized) counts', parents=[counts_file, basic_parser, output_flags, optional_replica, region_format, output, enrichment_flags, tmm_flag, total_reads_flags, zscore, use_replica])
         #enrichment operation
-        subparsers.add_parser('enrichment', help='An enrichment test based on the MA plots using mapped reads files. Pyicos output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[exp_or_count, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, region_format, optional_output, enrichment_flags, tmm_flag, quant_flag, total_reads_flags, pseudocount, zscore])
+        subparsers.add_parser('enrichment', help='An enrichment test based on the MA plots using mapped reads files. Pyicoteo output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[exp_or_count, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, region_format, optional_output, enrichment_flags, tmm_flag, quant_flag, total_reads_flags, pseudocount, zscore])
         #check replicas operation TODO unfinished
         #subparsers.add_parser('checkrep', help='Check how good the replicas are.', parents=[experiment, experiment_flags, basic_parser, replica, region, region_format, checkrep_flags, output])
         #check replicas operation
-        subparsers.add_parser('checkrepcount', help='Check how good the replicas are (from a Pyicos count file)', parents=[counts_file, basic_parser, enrichment_flags, total_reads_flags, checkrep_flags, output])
+        subparsers.add_parser('checkrepcount', help='Check how good the replicas are (from a Pyicoteo count file)', parents=[counts_file, basic_parser, enrichment_flags, total_reads_flags, checkrep_flags, output])
         #protocol reading
-        subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicos', parents=[protocol_name])
+        subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicoteo', parents=[protocol_name])
 
-        subparsers.add_parser('plot', help="Plot a file with pyicos plotting utilities. Requires matplotlib >=0.9.7 installed.", parents=[basic_parser, plot_path, output, zscore])
+        subparsers.add_parser('plot', help="Plot a file with Pyicoteo plotting utilities. Requires matplotlib >=0.9.7 installed.", parents=[basic_parser, plot_path, output, zscore])
 
         #whole exposure
-        subparsers.add_parser('all', help='Exposes all pyicos functionality through a single command', parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
+        subparsers.add_parser('all', help='Exposes all Pyicoteo functionality through a single command', parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
         return parser
-
 
     def run_parser(self):
         parser = self.create_parser()
@@ -372,7 +370,7 @@ class PicosParser:
             try:
                 section = self.config_section_map("Pyicotrocol", config)
             except ConfigParser.NoSectionError:
-                print "\nERROR: %s is not a Pyicos Protocol file, is missing the [Pyicotrocol] header or it doesn't exists\n"%args.protocol_name
+                print "\nERROR: %s is not a Pyicoteo Protocol file, is missing the [Pyicotrocol] header or it doesn't exists\n"%args.protocol_name
                 sys.exit(0)
 
             for key, value in section.items(): #this works fine for all string values
@@ -392,7 +390,7 @@ class PicosParser:
                         print "\nWARNING: The keyword 'input' for the protocol files is deprecated, please use 'experiment' instead"
 
                     elif key != 'operations':
-                        print 'ERROR: There is an error in your protocol file.  "%s" is not a Pyicos parameter'%key
+                        print 'ERROR: There is an error in your protocol file.  "%s" is not a Pyicotrocol parameter'%key
                         sys.exit(0)
 
         self.validate(args)

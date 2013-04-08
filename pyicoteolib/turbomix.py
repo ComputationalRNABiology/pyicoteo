@@ -49,28 +49,6 @@ class Turbomix:
 
     #TODO Break this down. This became a blob anti-pattern. 
     """
-    
-    def set_logger(self, verbose, debug):
-        if not hasattr(self, 'logger'): #Make sure its not created twice
-            logging_format= "%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s"
-            logging.basicConfig(filename="pyicos.log", format=logging_format)
-            self.logger = logging.getLogger("pyicos.log")
-            if self.debug:
-                self.logger.setLevel(logging.DEBUG)
-            else:
-                self.logger.setLevel(logging.INFO)
-
-            ch = logging.StreamHandler()
-            if self.debug: 
-                ch.setLevel(logging.DEBUG)
-            elif self.verbose:
-                ch.setLevel(logging.INFO)
-            else:
-                ch.setLevel(logging.WARNING)
-
-            formatter = logging.Formatter("%(asctime)s (PID:%(process)s) - %(levelname)s - %(message)s")
-            ch.setFormatter(formatter)
-            self.logger.addHandler(ch)
 
     def __init__(self, experiment_path, output_path, experiment_format=BED, output_format=PK, label=LABEL, 
                  open_experiment=OPEN_EXPERIMENT, open_output=OPEN_OUTPUT, debug = DEBUG, rounding=ROUNDING, tag_length = TAG_LENGTH, discarded_names = REMLABELS,
@@ -85,15 +63,14 @@ class Turbomix:
                  region_mintags=REGION_MINTAGS, bin_step=WINDOW_STEP, tmm_norm=TMM_NORM, n_norm=N_NORM, skip_header=SKIP_HEADER, total_reads_a=TOTAL_READS_A, 
                  total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, use_replica_flag=USE_REPLICA, tempdir=TEMPDIR,
                  use_samtools=USESAMTOOLS, access_sequential = SEQUENTIAL, experiment_label = EXPERIMENT_LABEL, replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, 
-                 count_filter = COUNT_FILTER, force_sort=FORCE_SORT, push_distance=PUSH_DIST, quant_norm=QUANT_NORM):
+                 count_filter = COUNT_FILTER, force_sort=FORCE_SORT, push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name="pyicoteo.log"):
         self.__dict__.update(locals())
         if type(self.tempdir) is not list: #
             self.tempdir = [self.tempdir] 
 
-
         self.stranded_analysis = (output_format == SPK)
         self.normalize_factor = 1
-        self.set_logger(verbose, debug)
+        self.logger = utils.get_logger("%s.log"%parser_name, verbose, debug)
         self.is_sorted = False
         self.temp_experiment = False #Indicates if temp files where created for the experiment
         self.temp_control = False #Indicates if temporary files where created for the control
@@ -259,7 +236,8 @@ class Turbomix:
         self.use_MA = USE_MA in self.operations
         self.logger.info("")
         self.logger.info('***********************************************')
-        self.logger.info('Pyicos running... (PID: %s)'%os.getpid())
+        self.logger.info('Pyicoteo running... (PID: %s)'%(os.getpid()))
+        self.logger.info('This log will also be saved at: %s'%(os.path.abspath(self.logger.name)))
         if self.control_path:
             self.process_all_files_paired(self.experiment_path, self.control_path)
         elif self.experiment_b_path:
@@ -722,7 +700,7 @@ class Turbomix:
                 self.logger.info("Couldn't find %s length file, trying to download from UCSC..."%self.species)
                 getChromosomeDescription.retrieve_chrinfo(self.species, chrlenpath)
             except IOError:
-                self.logger.warning("Couldn't download lengths from UCSC for assembly %s. An approximation will be used. To download this file, run pyicos with admin privileges 'sudo pyicos...'"%(self.species))
+                self.logger.warning("Couldn't download lengths from UCSC for assembly %s. An approximation will be used. To download this file, run pyicoteo with admin privileges"%(self.species))
         
         self.logger.info('Correction factor: %s'%(self.correction_factor))
         self.reads_per_bp =  self.total_bp_with_reads / self.chr_length*self.correction_factor
@@ -818,7 +796,6 @@ class Turbomix:
             else:
                 self.extract_and_write(cluster, output)
 
-
     def extract_and_write(self, cluster, output):
         """The line will be written to the file if the last conditions are met"""
         if not cluster.is_empty() and cluster.start > -1:
@@ -844,11 +821,8 @@ class Turbomix:
             wig_header = 'track type=wiggle_0\tname="%s"\tvisibility=full\n'%self.label
             filtered_output.write(wig_header)
             unfiltered_output.write(wig_header)
-
    
         cut_cluster = Cluster(read=self.output_format, write=self.output_format, rounding=self.rounding, read_half_open = self.open_output, write_half_open = self.open_output, tag_length=self.tag_length, span = self.span, logger=self.logger)
-
-        print 
         self.logger.info('Writing filtered and unfiltered file...')
         for line in open(old_output):
             cut_cluster.clear()
@@ -898,8 +872,8 @@ class Turbomix:
                 
                 return Region(sline[0], int(sline[1]), int(sline[2]), name2=sline[3], strand=strand, exome_size=exome_size)
             except ValueError:
-                print "Error"
-                pass #discarding header
+                self.logger.info("Discarding _region_from_sline %s"'\t'.join(sline))
+
 
     def _save_figure(self, figure_name):
         if self.postscript:

@@ -1,5 +1,5 @@
 import unittest
-from pyicoslib.parser import PicosParser
+from pyicoteolib.parser import PicosParser
 
 '''
 Sometimes it may be useful to have an ArgumentParser parse args other than those of sys.argv. 

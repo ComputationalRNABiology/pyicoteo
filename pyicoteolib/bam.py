@@ -19,7 +19,7 @@ from math import ceil, floor
 import subprocess
 
 from defaults import *
-from pyicoslib.core import Cluster, InvalidLine
+from pyicoteolib.core import Cluster, InvalidLine
 
 
 

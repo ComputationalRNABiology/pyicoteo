@@ -1,5 +1,5 @@
-:mod:`picos.core`
-=================
+:mod:`pyicoteo.core`
+====================
 
 The Cluster object is the representation of a short read or a series of clustered short reads.
 You can perform common and basic arithmetic operations with this objects, simplifying the development
@@ -10,7 +10,7 @@ that this will still be
 
 This example ilustrates how to read some bed
 
-.. automodule:: pyicos.core
+.. automodule:: pyicoteo.core
    :members:
    :synopsis:
     .. autoclass:: Region

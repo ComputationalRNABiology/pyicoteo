@@ -21,7 +21,6 @@ from heapq import heappop, heappush
 from itertools import islice, cycle, chain
 import logging
 
-
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 
 from defaults import *

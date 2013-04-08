@@ -16,8 +16,6 @@ If you are interested in the usage of a particular command (for example, 'extend
     pyicos extend -h
 
 
-
-
 Here we explain briefly what each operation does and we give some examples::
 
 

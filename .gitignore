@@ -50,3 +50,8 @@ ehthumbs.db
 Icon?
 Thumbs.db
 desktop.ini
+
+
+*.log
+*borrame*
+web_documentation/_build/

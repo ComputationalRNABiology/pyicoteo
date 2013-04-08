@@ -38,7 +38,6 @@ Contents:
    Command-line optional arguments 2 <arguments2>
    Classes <classes>
    Protocol files for workflows <protocol_files>
-   Case study <studies>
    Answers to case study <answers>
 
 .. Indices and tables
