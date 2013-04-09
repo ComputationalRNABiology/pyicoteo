@@ -335,64 +335,13 @@ correlation_flags.add_argument('--max-correlations',type=int, default=MAX_CORREL
 counts_file = new_subparser()
 counts_file.add_argument('counts_file', help='The counts file. The format required is a bed file with fields "name", "start", "end", "name2", "score(ignored)", "strand", "count file a", "count file b", "count file a", "count replica a" where the counts can be RPKMs or simple counts')
 
-'''
-subparsers = parser.add_subparsers(help='The operation you want to perform. Note that some operations imply previous automatic operations.')
-#callpeaks operation
-subparsers.add_parser('callpeaks', help='The complete peak calling sequence proposed in the future publication. The region file is optional. The same goes for the control file, if not provided, there will not be a normalization or a subtraction.',
-                      parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_blacklist, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, species, tolerated_duplicates, poisson_test])
-#convert operation
-subparsers.add_parser('convert', help='Convert a file to another file type.',
-                      parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, label, tag_length, span, optional_frag_size, remlabels])
-
-subparsers.add_parser('subtract', help='Subtract two clustered files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[experiment,experiment_flags, basic_parser, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label, remlabels])
-#split operation
-subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, split_proportion, split_absolute, label, remlabels])
-#trim operation
-subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, trim_absolute, trim_proportion, label, remlabels, span])
-#discard operation
-subparsers.add_parser('discard', help='Discards artifacts from a file. Only accepts pk or wig as output.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, span, label, remlabels])
-#remove duplicates operation
-subparsers.add_parser('remduplicates', help='Removes the duplicated reads in a file. Only accepts tag-like files (bed, eland, sam)', parents=[experiment, experiment_flags, basic_parser, output, output_flags, tolerated_duplicates, round, span, label, remlabels])
-#normalize operation
-#subparsers.add_parser('normalize', help='Normalize a pk file respect of the control.', parents=[experiment, experiment_flags, basic_parser, control, control_format, output, output_flags, open_control, round, label, span, remlabels])
-#extend operation
-subparsers.add_parser('extend', help='Extends the reads of a file to the desired length. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags,  basic_parser,  output, output_flags, frag_size, round, label, span, remlabels])
-#push operation
-subparsers.add_parser('push', help='Push the reads in the corresponding strand. If a read doesn\'t have a strand, will be pushed from left to right. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags, basic_parser, output, output_flags, push_distance, round, label, span, remlabels])
-#poisson analysis
-subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.',
-                      parents=[experiment,experiment_flags,  basic_parser, output_flags, optional_frag_size, pvalue, height, correction, species, remlabels, poisson_test])
-#cut operations
-subparsers.add_parser('filter', help="""Analyze the significance of accumulated reads in the file using the poisson distribution and generate the resulting profiles, in wig or pk formats""",
-                      parents=[experiment,experiment_flags,  basic_parser, output, optional_frag_size, output_flags, round, pvalue, height, correction, threshold, species, remlabels, poisson_test])
-#modfdr analysis
-subparsers.add_parser('modfdr', help="""Use the modified FDR method to determine what clusters are significant in an specific region. Output in a clustered format only.""",
-                      parents=[experiment, experiment_flags, basic_parser, region, output, output_flags, round, pvalue, repeats, remlabels]) #, masker_file 
-#remove operation
-subparsers.add_parser('remregions', help='Removes regions that overlap with another the coordinates in the "black list" file.',
-                      parents=[experiment, experiment_flags, basic_parser, output_flags, blacklist, region_format, output, remlabels])
-#strcorr operation
-subparsers.add_parser('strcorr', help='A cross-correlation test between forward and reverse strand clusters in order to find the optimal extension length.',
-                      parents=[experiment, experiment_flags, basic_parser, output, output_flags, correlation_flags, remlabels])
-#rpkm operation
-subparsers.add_parser('enrichma', help='An enrichment test based on the MA plots using the Pyicoteo count files with the MA information. It will ignore the counts information, and directly use whatever values found in the M and A columns and zscore information to plot the data. Useful to re-plot the data by adjusting the zscore for visualization purposes.', parents=[counts_file, basic_parser, output_flags, optional_replica, region_format, output, enrichment_flags, zscore])
-#rpkm operation
-#subparsers.add_parser('enrichcount', help='An enrichment test based on the MA plots using (normalized) counts', parents=[counts_file, basic_parser, output_flags, optional_replica, region_format, output, enrichment_flags, tmm_flag, total_reads_flags, zscore, use_replica])
-#enrichment operation
-subparsers.add_parser('enrichment', help='An enrichment test based on the MA plots using mapped reads files. Pyicoteo output will consist in  a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), parents=[exp_or_count, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, region_format, optional_output, enrichment_flags, tmm_flag, quant_flag, total_reads_flags, pseudocount, zscore])
 #check replicas operation TODO unfinished
 #subparsers.add_parser('checkrep', help='Check how good the replicas are.', parents=[experiment, experiment_flags, basic_parser, replica, region, region_format, checkrep_flags, output])
 #check replicas operation
-subparsers.add_parser('checkrepcount', help='Check how good the replicas are (from a Pyicoteo count file)', parents=[counts_file, basic_parser, enrichment_flags, total_reads_flags, checkrep_flags, output])
-#protocol reading
-subparsers.add_parser('protocol', help='Import a protocol file to load in Pyicoteo', parents=[protocol_name])
+#subparsers.add_parser('checkrepcount', help='Check how good the replicas are (from a Pyicoteo count file)', parents=[counts_file, basic_parser, enrichment_flags, total_reads_flags, checkrep_flags, output])
+#
+#subparsers.add_parser('plot', help="Plot a file with Pyicoteo plotting utilities. Requires matplotlib >=0.9.7 installed.", parents=[basic_parser, plot_path, output, zscore])
 
-subparsers.add_parser('plot', help="Plot a file with Pyicoteo plotting utilities. Requires matplotlib >=0.9.7 installed.", parents=[basic_parser, plot_path, output, zscore])
-
-#whole exposure
-subparsers.add_parser('all', help='Exposes all Pyicoteo functionality through a single command', parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, optional_region, output, output_flags, optional_frag_size, round, label, span, no_subtract, remlabels, pvalue, height, correction, trim_proportion, trim_absolute, species, tolerated_duplicates, masker_file, correlation_flags, split_proportion, split_absolute, normalize, extend, subtract, filterop, poisson, modfdr, remduplicates, split, trim, strcorr, remregions, remartifacts])
-return parser
-'''
 
 
 
