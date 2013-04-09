@@ -24,7 +24,7 @@ Command-line based tools
 Protocol files
 --------------
 
-A cofiguration file based tool that exposes most functionality of the pyicoteo suite, making it tremendously useful when trying to combine tools.
+A cofiguration file based tool that exposes most functionality of the Pyicoteo suite, making it very useful when trying to combine different tools (for example, Pyicos and Pyicosenrich, functionality)
 
 
 Pyicoteolib

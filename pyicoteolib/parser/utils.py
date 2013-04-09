@@ -159,12 +159,6 @@ experiment_flags = new_subparser()
 experiment_flags.add_argument('-o','--open-experiment', action='store_true', dest='open_experiment', default=OPEN_EXPERIMENT, help='Defines if the experiment is half-open or closed notation. [Default %(default)s]')
 experiment_flags.add_argument( '-f','--experiment-format',default=EXPERIMENT_FORMAT,  dest='experiment_format', help="""The format the experiment file is written as.
                          The options are %s. [Default pk]"""%read_formats)
-
-exp_or_count = new_subparser()
-mutexc = exp_or_count.add_mutually_exclusive_group(required=True)
-mutexc.add_argument('-reads', nargs=2, dest='experiments', help='Compare two packages.', metavar=("experiment_a","experiment_b"))
-mutexc.add_argument('-counts', dest='counts_file', help='Verify Content of package.')
-
 experiment_b = new_subparser()
 experiment_b.add_argument('experiment_b',  help='The experiment file B')
 optional_replica = new_subparser()

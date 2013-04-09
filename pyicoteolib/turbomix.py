@@ -872,7 +872,7 @@ class Turbomix:
                 
                 return Region(sline[0], int(sline[1]), int(sline[2]), name2=sline[3], strand=strand, exome_size=exome_size)
             except ValueError:
-                self.logger.info("Discarding _region_from_sline %s"'\t'.join(sline))
+                self.logger.debug("Discarding _region_from_sline %s"%'\t'.join(sline))
 
 
     def _save_figure(self, figure_name):

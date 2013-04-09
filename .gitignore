@@ -55,3 +55,4 @@ desktop.ini
 *.log
 *borrame*
 web_documentation/_build/
+pyicoteo_docs/_build/

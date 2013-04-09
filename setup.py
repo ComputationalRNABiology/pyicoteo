@@ -30,7 +30,7 @@ setup(name='Pyicoteo',
               '*'
           ],
       },
-      scripts = ['pyicos', 'pyicotrocol', 'pyicoller', 'pyicoenrich'],
+      scripts = ['pyicos', 'pyicotrocol', 'pyicoller', 'pyicoenrich', 'pyicoclip'],
       py_modules = ['pyicoteolib.core', 'pyicoteolib.turbomix','pyicoteolib.utils',
                     'pyicoteolib.parser',
                     'pyicoteolib.defaults', 'pyicoteolib.bam', 

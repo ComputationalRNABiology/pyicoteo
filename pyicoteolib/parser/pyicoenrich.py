@@ -3,18 +3,22 @@ from utils import *
 import argparse
 
 def create_parser():
+    exp_or_count = new_subparser()
+    mutexc = exp_or_count.add_mutually_exclusive_group(required=True)
+    mutexc.add_argument('-reads', nargs=2, dest='experiments', help='Compare two packages.', metavar=("experiment_a","experiment_b"))
+    mutexc.add_argument('-counts', dest='counts_file', help='Verify Content of package.')
     parser = argparse.ArgumentParser(version=VERSION, 
                                      description='An enrichment test based on the MA plots using mapped reads files. Pyicoenrich output will consist in a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), 
                                      parents=[exp_or_count, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, 
                                               region_format, optional_output, enrichment_flags, tmm_flag, quant_flag, total_reads_flags, 
                                               pseudocount, zscore]
                                      )
+    #-output
     return parser
 
 def run_parser():
     parser = create_parser()
     args = parse_validate_args(parser)
-
     if args.counts_file: #the formats are overridden when using enrichment (only of cosmetic value, when printing the flags)   
         args.experiment_format = COUNTS
         args.experiment_b_format = COUNTS
