@@ -1,5 +1,5 @@
 """
-Pyicos is free software: you can redistribute it and/or modify
+Pyicoteo is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -24,7 +24,7 @@ from collections import defaultdict
 from datetime import datetime
 from tempfile import gettempdir
 
-#pyicos stuff
+#pyicoteo stuff
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 from defaults import *
 import utils
@@ -448,7 +448,7 @@ class Turbomix:
 
 
     def operate(self, experiment_path, control_path=None, output_path=None):
-        """Operate expects single paths, not directories. It's called from run() several times if the experiment for pyicos is a directory"""
+        """Operate expects single paths, not directories. It's called from run() several times if the experiment for pyicoteo is a directory"""
         #TODO This is where the combination of operations should be done. Operations should be executed in order of inclusion to the list while taking into consideration dependencies and co-runs
         try:
             self.i_cant_do()
@@ -993,7 +993,7 @@ class Turbomix:
             except ImportError:
                 if self.debug:
                     raise
-                self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library (version >1.0.1).')
+                self.logger.warning('Pyicoteo can not find an installation of matplotlib, so no plot will be drawn for the strand correlation. If you want to get a plot with the correlation values, install the matplotlib library (version >1.0.1).')
 
     def _correlate_clusters(self, positive_cluster, negative_cluster):
         distance = negative_cluster.end-positive_cluster.start

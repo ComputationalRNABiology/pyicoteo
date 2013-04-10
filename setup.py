@@ -32,7 +32,7 @@ setup(name='Pyicoteo',
       },
       scripts = ['pyicos', 'pyicotrocol', 'pyicoller', 'pyicoenrich', 'pyicoclip'],
       py_modules = ['pyicoteolib.core', 'pyicoteolib.turbomix','pyicoteolib.utils',
-                    'pyicoteolib.parser',
+                    'pyicoteolib.parser.utils', 'pyicoteolib.parser.pyicoclip', 'pyicoteolib.parser.pyicoenrich',
                     'pyicoteolib.defaults', 'pyicoteolib.bam', 
                     'pyicoteolib.enrichment']
      )
