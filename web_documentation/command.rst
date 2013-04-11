@@ -323,15 +323,11 @@ Examples::
     # To use TRPK normalization 
     pyicos enrichment kidney1.bed liver1.bed Pyicos_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm --tmm-norm
 
-
-
 push
 ----
 Push the reads in the corresponding strand. If a read doesn\'t have a strand, it will be pushed from left to right.
 
 This operation requires tag-like files (bed, eland, sam).
-
-
 
 Example::
 

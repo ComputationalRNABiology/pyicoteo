@@ -5,10 +5,20 @@ Pyicotrocol offers access to the whole functionality of Pyicoteo, allowing for c
 
 It also has the nice advantage in terms of experiment reproducibility and being an alternative to running a command. 
 
+Execution
+---------
+
 To run a protocol file type::
 
     pyicotrocol my_protocol.ini
- 
+
+Syntax
+------
+
+Pyicotrocols files are based on the `.ini format`_. 
+
+.. _.`ini format` http://en.wikipedia.org/wiki/INI_file
+
 Examples
 --------
  

@@ -1,8 +1,8 @@
 Pyicoteolib
 ===========
 
-Core
-----
+pyicoteolib.core
+----------------
 
 ReadCluster
 """""""""""
@@ -10,14 +10,16 @@ ReadCluster
 ReadRegion
 """"""""""
 
-Utils
------
+pyicoteolib.utils
+------------------
 
 SortedClusterblabla
 """""""""""""""""""
 
 BigSort
 """""""
+
+
 
 
 

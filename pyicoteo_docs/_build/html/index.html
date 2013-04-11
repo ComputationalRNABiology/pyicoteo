@@ -25,7 +25,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="pyicoteo 2.0.1 documentation" href="#" />
-    <link rel="next" title="pyicos command line operations" href="pyicos.html" />
+    <link rel="next" title="Pyicoteolib" href="pyicoteolib.html" />
 <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -42,7 +42,7 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="pyicos.html" title="pyicos command line operations"
+          <a href="pyicoteolib.html" title="Pyicoteolib"
              accesskey="N">next</a> |</li>
         <li><a href="#">pyicoteo 2.0.1 documentation</a> &raquo;</li> 
       </ul>
@@ -58,6 +58,64 @@
 <p>Pyicoteo* is a suite of tools for the analysis of high-throughput sequencing data. It works with genomic coordinates, it was mainly developed using Solexa/Illumina mapped reads, but it it&#8217;s core is platform-agnostic. There are currently 6 different tools (5 command-line based, one configuration file based) and a python library for scripting.</p>
 <p><cite>* Pronounced as in Spanish  &#8220;picoteo&#8221;_ /pɪkɒtɛɒ/: (n) Appetizer-type foods that accompany drinks before or instead of a meal)</cite></p>
 <p>If you have any problems or suggestions please join the <a class="reference external" href="http://groups.google.com/group/pyicos">Pyicoteo Google Group</a> and ask!</p>
+<div class="section" id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="download-install">
+<h3>Download &amp; Install<a class="headerlink" href="#download-install" title="Permalink to this headline">¶</a></h3>
+<p><strong>Download Pyicoteo</strong>  <a class="reference external" href="https://github.com/RegulatoryGenomicsUPF/pyicos">Latest version</a> from our Github repository.</p>
+<p>You can also download older versions (up to 1.1b) from our <a class="reference external" href="http://sourceforge.net/projects/pyicos/">Sourceforge repository</a>.</p>
+<p>The command line tools can be used directly without installation. However, installation is recommended, and neccesary if you intend to use the Pyicoteolib. To do so decompress the folder and run the setup.py script with administrator privileges:</p>
+<blockquote>
+<div>python setup.py install</div></blockquote>
+<p>In order to make it simple for the community, Pyicoteo basic functionality has no dependencies other than Python 2.6 or higher. However, there are 2 optional libraries you could install.</p>
+<p>For plotting capabilities, it is neccesary to install Matplotlib (&gt; 1.0).</p>
+<p>Also, for BAM reading, while we offer a native python implementation, you can ask Pyicoteo to read BAM using samtools with the flag &#8211;samtools.
+Pyicoteo is not compatible with Python 3.</p>
+</div>
+<div class="section" id="check-installation">
+<h3>Check installation<a class="headerlink" href="#check-installation" title="Permalink to this headline">¶</a></h3>
+<p>To test that the software was installed correctly, start a python console and try importing it by typing:</p>
+<div class="highlight-python"><pre>python
+&gt;&gt;&gt; import pyicoteolib
+&gt;&gt;&gt; import pyicoteolib.core</pre>
+</div>
+</div>
+<div class="section" id="the-bedpk-format">
+<h3>The bedpk format<a class="headerlink" href="#the-bedpk-format" title="Permalink to this headline">¶</a></h3>
+<p>Some Pyicoteo tools (Pyicos, Pyicaller and Pyicoclip) default experiment and output formats is a derivative of UCSC <a class="reference external" href="http://genome.ucsc.edu/FAQ/FAQformat.html#format1">Bed format</a> called bedpk. It follows the same starting fields &#8220;chromosome/tag start end&#8221; but it uses some of the original optional fields to include extra information. It is a cluster oriented format that aims to recollect information of a cluster of reads in a single comprehensive line.</p>
+<div class="figure align-left">
+<img alt="_images/bedpk_format.svg.png" src="_images/bedpk_format.svg.png" />
+</div>
+<div class="section" id="column-definition">
+<h4>Column definition<a class="headerlink" href="#column-definition" title="Permalink to this headline">¶</a></h4>
+<ol class="arabic simple">
+<li>Chromosome</li>
+<li>Start coordinate</li>
+<li>End coordinate</li>
+<li>Profile: This field summarizes the accumulation of reads per nucleotide of the cluster. The first number is the number of bases covered, while the second will be the number of reads in those bases. See the example above</li>
+<li>Height: The maximum height of the cluster. In this case, 3.</li>
+<li>Strand: if ALL clusters reads are positive strand &#8220;+&#8221;, if they are all negative &#8220;-&#8221;. Otherwise &#8221;.&#8221;</li>
+<li>Summit: The position where the maximum height is found. The binding site is expected to be close to the summit.</li>
+<li>Area: The area covered by the cluster.</li>
+<li>p-value: The significance of the cluster calculated by the poisson operation based on peak heights or numbers of reads.</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="section" id="pyicoteolib">
+<h2>Pyicoteolib<a class="headerlink" href="#pyicoteolib" title="Permalink to this headline">¶</a></h2>
+<p>A python library that is the building blocks of all the other tools and a useful tool for python scripting.</p>
+<p>Read more about it at:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pyicoteolib.html">     pyicoteolib</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicoteolib.html#core">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoteolib.html#utils">Utils</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
 <div class="section" id="command-line-based-tools">
 <h2>Command-line based tools<a class="headerlink" href="#command-line-based-tools" title="Permalink to this headline">¶</a></h2>
 <div class="toctree-wrapper compound">
@@ -73,6 +131,7 @@
 <li class="toctree-l2"><a class="reference internal" href="pyicos.html#discard">discard</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pyicos.html#poisson">poisson</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pyicos.html#filter">filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#push">push</a></li>
 <li class="toctree-l2"><a class="reference internal" href="pyicos.html#credit">Credit</a></li>
 </ul>
 </li>
@@ -98,17 +157,13 @@
 <p>Read more about it at:</p>
 <div class="toctree-wrapper compound">
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="pyicotrocol.html">     pyicotrocol</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pyicotrocol.html">     pyicotrocol</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicotrocol.html#execution">Execution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicotrocol.html#syntax">Syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicotrocol.html#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicotrocol.html#credit">Credit</a></li>
 </ul>
-</div>
-</div>
-<div class="section" id="pyicoteolib">
-<h2>Pyicoteolib<a class="headerlink" href="#pyicoteolib" title="Permalink to this headline">¶</a></h2>
-<p>A python library that is the building blocks of all the other tools and a useful tool for python scripting.</p>
-<p>Read more about it at:</p>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="pyicoteolib.html">     pyicoteolib</a></li>
+</li>
 </ul>
 </div>
 </div>
@@ -123,13 +178,22 @@
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Welcome to Pyicoteo</a><ul>
+<li><a class="reference internal" href="#getting-started">Getting Started</a><ul>
+<li><a class="reference internal" href="#download-install">Download &amp; Install</a></li>
+<li><a class="reference internal" href="#check-installation">Check installation</a></li>
+<li><a class="reference internal" href="#the-bedpk-format">The bedpk format</a><ul>
+<li><a class="reference internal" href="#column-definition">Column definition</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pyicoteolib">Pyicoteolib</a><ul>
+</ul>
+</li>
 <li><a class="reference internal" href="#command-line-based-tools">Command-line based tools</a><ul>
 </ul>
 </li>
 <li><a class="reference internal" href="#protocol-files">Protocol files</a><ul>
-</ul>
-</li>
-<li><a class="reference internal" href="#pyicoteolib">Pyicoteolib</a><ul>
 </ul>
 </li>
 </ul>
@@ -137,8 +201,8 @@
 </ul>
 
   <h4>Next topic</h4>
-  <p class="topless"><a href="pyicos.html"
-                        title="next chapter">pyicos command line operations</a></p>
+  <p class="topless"><a href="pyicoteolib.html"
+                        title="next chapter">Pyicoteolib</a></p>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
@@ -163,7 +227,7 @@
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="pyicos.html" title="pyicos command line operations"
+          <a href="pyicoteolib.html" title="Pyicoteolib"
              >next</a> |</li>
         <li><a href="#">pyicoteo 2.0.1 documentation</a> &raquo;</li> 
       </ul>

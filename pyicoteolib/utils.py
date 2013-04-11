@@ -160,10 +160,10 @@ def pearson(list_one, list_two):
 
 def list_available_formats():
     #TODO this is very bad, this function is a trap. Fix
-    print 'Formats Pyicos can read:'
+    print 'Formats Pyicoteo can read:'
     for format in READ_FORMATS:
         print format
-    print '\nFormats Pyicos can write:'
+    print '\nFormats Pyicoteo can write:'
     for format in WRITE_FORMATS:
         print format
     sys.exit(0)
@@ -183,7 +183,7 @@ class SafeReader:
             if self.invalid_count > self.invalid_limit:
 
                 if self.logger:
-                    self.logger.error('Limit of invalid lines: Check the experiment, control, and region file formats, probably the error is in there. Pyicos by default expects bedpk files, except for region files, which are bed files')
+                    self.logger.error('Limit of invalid lines: Check the experiment, control, and region file formats, probably the error is in there. Pyicoteo by default expects bedpk files, except for region files, which are bed files')
 
                 raise OperationFailed
             else:
@@ -330,7 +330,7 @@ class BigSort:
                 heappush(values,(key(value),index,value,iterator,chunk))
  
 class DualSortedReader:
-    """Given two sorted files of tags in a format supported by Pyicos, iterates through them returning them in order"""
+    """Given two sorted files of tags in a format supported by Pyicoteo, iterates through them returning them in order"""
     def __init__(self, file_a_path, file_b_path, format, read_half_open=False, logger=None):
         self.logger = logger
         self.file_a = open(file_a_path)

@@ -7,15 +7,16 @@ In the interactive help you can visualize the available commands list::
 
     pyicos -h
 
-If you are interested in the usage of a particular command (for example, 'extend') and the meaning of its flags type:
+If you are interested in the usage of a particular command (for example, 'extend') and the meaning of its flags type::
 
     pyicos extend -h
 
-Here we explain briefly what each command does and we give some examples::
+Here we explain briefly what each subcommand does and we give some examples::
 
 
 convert
 -------
+
 Converting a file from one format to another format. Currently supported format are: 
 
 experiment: Bed, Wiggle files (bed_wiggle), SAM, BAM, Eland, bedpk (Pyicos default compressed format), bedspk (Pyicos stranded compressed format)
@@ -149,8 +150,6 @@ Example::
 
     pyicos poisson peaks.bedpk
 
-
-
 filter
 ------
 Detect and select significant clusters in the file. There are two steps in this operation: Through the poisson operation the thresholds are determined. Next the peaks are filtered according to these thresholds.
@@ -165,8 +164,21 @@ Example::
     pyicos filter peaks.bedpk significant_peaks.bedpk 150 
 
 
+push
+----
+Push the reads in the corresponding strand. If a read doesn\'t have a strand, it will be pushed from left to right.
+
+This operation requires tag-like files (bed, eland, sam).
+
+Example::
+
+    pyicos push my_experiment.bed my_experiment_pushed100.bed 100 -f bed -F bed
+
+
+
+
 Credit
 ------
 
 * Developer: Juan González-Vallinas
-* Beta Testing: Sonja Althammer, Eneritz Agirre, Juan González-Vallinas
+* Beta Testing: Eneritz Agirre, Sonja Althammer, Juan González-Vallinas
