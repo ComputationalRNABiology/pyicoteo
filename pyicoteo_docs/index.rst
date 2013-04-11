@@ -8,7 +8,7 @@ Welcome to Pyicoteo
 
 Pyicoteo* is a suite of tools for the analysis of high-throughput sequencing data. It works with genomic coordinates, it was mainly developed using Solexa/Illumina mapped reads, but it it's core is platform-agnostic. There are currently 6 different tools (5 command-line based, one configuration file based) and a python library for scripting::
 
-	`* Pronounced as in Spanish  "picoteo"_ /pɪkɒtɛɒ/: (n) Appetizer-type foods that accompany drinks before or instead of a meal)`
+	* Pronounced as in Spanish  "picoteo"_ /pɪkɒtɛɒ/: (n) Appetizer-type foods that accompany drinks before or instead of a meal)
 
 If you have any problems or suggestions please join the `Pyicoteo Google Group`_ and ask! 
 
