@@ -108,7 +108,8 @@ def init_turbomix(args, parser_name=PARSER_NAME):
                         args.label2, args.binsize, args.zscore, args.blacklist, args.sdfold, args.recalculate, args.counts_file, args.mintags, args.binstep, 
                         args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim, 
                         args.use_replica, args.tempdir, args.samtools, args.access_sequential, args.experiment_label, args.replica_label, args.title_label, 
-                        args.count_filter, args.force_sort, args.push_distance, args.quant_norm, parser_name)
+                        args.count_filter, args.force_sort, args.push_distance, args.quant_norm, parser_name,
+                        args.region_magic, args.gff_file, args.interesting_regions, args.disable_significant_color)
 
     validate_operations(args, turbomix)
     return turbomix
@@ -132,7 +133,8 @@ def parse_validate_args(parser):
                         total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, 
                         use_replica=USE_REPLICA, tempdir=TEMPDIR, samtools=USESAMTOOLS, access_sequential=SEQUENTIAL, experiment_label = EXPERIMENT_LABEL, 
                         replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT, 
-                        push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name=PARSER_NAME)
+                        push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name=PARSER_NAME,
+                        region_magic=REGION_MAGIC, gff_file=GFF_FILE, interesting_regions=INTERESTING_REGIONS, disable_significant_color=DISABLE_SIGNIFICANT)
     args = parser.parse_args()
     validate(args)
     if args.counts_file: #the formats are overridden when using enrichment (only of cosmetic value, when printing the flags)   
@@ -226,6 +228,14 @@ enrichment_flags.add_argument('--skip-plot', action='store_true', default=SKIP_P
 enrichment_flags.add_argument('--n-norm', action='store_true', default=N_NORM, help="Divide the read counts by the total number of reads (units of million reads)")
 enrichment_flags.add_argument('--len-norm', action='store_true', default=LEN_NORM, help="Divide the read counts by region (gene, transcript...) length (reads per kilobase units)")
 #enrichment_flags.add_argument('--sequential', default=SEQUENTIAL, action='store_true', help="Iterate through the files in sequential order, instead of random access (for BAM reading). This is faster than random if you are using a lot of regions that overlap with each other") #TODO This flag doesn't work because if we order chr1 chr2 every file, instead of alphabetical, the SortedClusterReader classes will fail when changing chromosome, since the ALGORITHM depends on a sorted file
+
+
+enrichment_flags.add_argument('--region-magic', nargs='+', help="Region magic")
+enrichment_flags.add_argument('--gff-file', help="GFF file")
+enrichment_flags.add_argument('--interesting-regions', help="Path to file containing interesting regions (to be marked in the plot).")
+enrichment_flags.add_argument('--disable-significant-color', action='store_true', help="Do not plot significant regions in a different color")
+
+
 tmm_flag = new_subparser()
 tmm_flag.add_argument('--tmm-norm', action='store_true', default=TMM_NORM, help="Trimming the extreme A and M to correct the dataset for the differences in read density between samples. [Default %(default)s]")
 quant_flag = new_subparser()

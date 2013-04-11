@@ -151,4 +151,15 @@ CHECK_REPLICAS = 'checkrep'
 
 
 
+# Region-related constants
+REGION_EXONS = 'exons'
+REGION_INTRONS = 'introns'
+REGION_SLIDE = 'slide'
+REGION_SLIDE_INTER = 'inter'
+REGION_SLIDE_INTRA = 'intra'
+
+REGION_MAGIC = []
+GFF_FILE = ''
+INTERESTING_REGIONS = ''
+DISABLE_SIGNIFICANT = False
 

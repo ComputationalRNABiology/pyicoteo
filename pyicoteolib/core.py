@@ -584,7 +584,7 @@ class PkWriter(Writer):
 ######################################
 
 
-class Cluster(AbstractCore):
+class ReadCluster(AbstractCore):
     """
     Represents one cluster of overlapping tags or a single Tag. This object can read and write in every format provided.
     It can be added, compared, subtracted to other cluster objects.
@@ -1375,10 +1375,15 @@ class Cluster(AbstractCore):
         return "<Cluster object> name: %s start: %s end: %s name2: %s "%(self.name, self.start, self.end, self.name2)
 
 
+# For backwards compatibility, also export ReadCluster as Cluster
+Cluster = ReadCluster
+
+
+
 #######################
 #   REGION  OBJECT    #
 #######################
-class Region(AbstractCore):
+class ReadRegion(AbstractCore):
     def __init__(self, name='undefined', start=0, end=-1, name2='noname', strand=None, logger=None, cached=True, exome_size=0):
         self.start = int(start)
         self.end = int(end)
@@ -1757,4 +1762,6 @@ class Region(AbstractCore):
         return ret
 
 
+# For backwards compatibility, also export ReadRegion as Region
+Region = ReadRegion
 

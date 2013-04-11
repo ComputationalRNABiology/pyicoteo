@@ -8,6 +8,10 @@ from defaults import *
 import utils
 import bam
 
+from regions import AnnotationGene, AnnotationTranscript, AnnotationExon, RegionWriter, read_gtf_file, get_exons, get_introns, gene_slide
+
+
+
 try:
     from shutil import move
 except:
@@ -41,6 +45,13 @@ def calculate_region(self):
     self.logger.info('Generating regions...')
     self.sorted_region_path = '%s/calcregion_%s.bed'%(self._output_dir(), os.path.basename(self.current_output_path))
     region_file = open(self.sorted_region_path, 'wb')
+
+
+    if self.region_magic:
+        regwriter = RegionWriter(self.gff_file, region_file, self.region_magic, no_sort=self.no_sort, logger=self.logger)
+        regwriter.write_regions()
+
+
     dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.logger) 
     if self.stranded_analysis:
         calculate_region_stranded(self, dual_reader, region_file)    
@@ -132,6 +143,19 @@ def get_zscore(x, mean, sd):
         return 0 #This points are weird anyway 
     
 
+
+def read_interesting_regions(self, file_path):
+    regs = []
+    try:
+        regs_file = open(file_path, 'r')
+        for line in regs_file:
+            regs.append(line.strip())
+    except IOError as ioerror:
+        self.logger.warning("Interesting regions file not found")
+    return regs # memory inefficient if there's a large number of interesting regions
+
+
+
 def plot_enrichment(self, file_path):
     try:
         if self.postscript:
@@ -158,6 +182,17 @@ def plot_enrichment(self, file_path):
             else:
                 label_control = 'Background distribution'
 
+
+        #self.logger.info("Interesting regions path: %s" % (self.interesting_regions))
+        interesting_regs = []
+        if self.interesting_regions:
+            interesting_regs = read_interesting_regions(self, self.interesting_regions)
+        #self.logger.info("Interesting regions: %s" % (interesting_regs))
+        #self.logger.info("Plot path: %s" % (file_path))
+        interesting_A = []
+        interesting_M = []
+        #self.logger.info("disable_significant: %s" % (self.disable_significant_color))
+
         A = []
         A_prime = []
         M = []
@@ -177,6 +212,18 @@ def plot_enrichment(self, file_path):
             sline = line.split()
             try:
                 enrich = dict(zip(enrichment_keys, sline)) 
+
+                # WARNING: for slide inter and slide intra: name2 = 'start:end' (no gene_id, FIXME?)
+                name2 = enrich['name2'].split(':')
+                gene_id = name2[0]
+                if len(name2) >= 2:
+                    transcript_id = name2[1] # consider transcript_id? (exons)
+                else:
+                    transcript_id = None
+                if gene_id in interesting_regs or transcript_id in interesting_regs:
+                    interesting_M.append(float(enrich["M"]))
+                    interesting_A.append(float(enrich["A"]))
+
                 biggest_A = max(biggest_A, float(enrich["A"]))         
                 smallest_A = min(smallest_A, float(enrich["A"]))   
                 biggest_M = max(biggest_M, abs(float(enrich["M"])))          
@@ -191,10 +238,10 @@ def plot_enrichment(self, file_path):
                     M.append(float(enrich["M"]))
                     A.append(float(enrich["A"]))
                 else:
-                    M_significant.append(float(enrich["M"]))                
-                    A_significant.append(float(enrich["A"]))  
+                    M_significant.append(float(enrich["M"]))
+                    A_significant.append(float(enrich["A"]))
    
-                M_prime.append(float(enrich["M_prime"]))    
+                M_prime.append(float(enrich["M_prime"]))
                 A_prime.append(float(enrich["A_prime"]))
             except ValueError:
                 pass #to skip the header
@@ -224,9 +271,21 @@ def plot_enrichment(self, file_path):
             subplot(212)
             axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
             plot(A, M, 'k.', label=label_main)
-            plot(A_significant, M_significant, 'r.', label="%s (significant)"%label_main)
+
+
+            if self.disable_significant_color:
+                significant_marker = 'k.'
+            else:
+                significant_marker = 'r.'
+
+            plot(A_significant, M_significant, significant_marker, label="%s (significant)"%label_main)
+
             plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
             plot(A_medians, minus_points, 'r--')
+
+            if self.interesting_regions:
+                plot(interesting_A, interesting_M, 'H', label='Interesting regions', color='#00EE00') # plotting "interesting" regions
+
             axhline(0, linestyle='--', color="grey", alpha=0.75)
             xlabel('A')
             ylabel('M')
