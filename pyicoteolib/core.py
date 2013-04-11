@@ -1495,8 +1495,6 @@ class ReadRegion(AbstractCore):
 
         return new_region
 
-
-
     def max_height(self):
         max_height = 0
         for cluster in self.clusters:

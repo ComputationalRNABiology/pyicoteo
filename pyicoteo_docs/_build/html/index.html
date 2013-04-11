@@ -25,6 +25,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="pyicoteo 2.0.1 documentation" href="#" />
+    <link rel="next" title="pyicos command line operations" href="pyicos.html" />
 <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -40,6 +41,9 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="pyicos.html" title="pyicos command line operations"
+             accesskey="N">next</a> |</li>
         <li><a href="#">pyicoteo 2.0.1 documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -53,38 +57,61 @@
 <h1>Welcome to Pyicoteo<a class="headerlink" href="#welcome-to-pyicoteo" title="Permalink to this headline">¶</a></h1>
 <p>Pyicoteo* is a suite of tools for the analysis of high-throughput sequencing data. It works with genomic coordinates, it was mainly developed using Solexa/Illumina mapped reads, but it it&#8217;s core is platform-agnostic. There are currently 6 different tools (5 command-line based, one configuration file based) and a python library for scripting.</p>
 <p><cite>* Pronounced as in Spanish  &#8220;picoteo&#8221;_ /pɪkɒtɛɒ/: (n) Appetizer-type foods that accompany drinks before or instead of a meal)</cite></p>
-<p>If you have any problems or suggestions please join the <a href="#id1"><span class="problematic" id="id2">`Pyicoteo Google Group`_</span></a> and ask!</p>
+<p>If you have any problems or suggestions please join the <a class="reference external" href="http://groups.google.com/group/pyicos">Pyicoteo Google Group</a> and ask!</p>
 <div class="section" id="command-line-based-tools">
 <h2>Command-line based tools<a class="headerlink" href="#command-line-based-tools" title="Permalink to this headline">¶</a></h2>
-<ul class="simple">
-<li>pyicos</li>
-<li>pyicoller</li>
-<li>pyicoenrich</li>
-<li>pyicoclip</li>
-<li>pyicoregion</li>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pyicos.html">     pyicos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#convert">convert</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#remregions">remregions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#remduplicates">remduplicates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#strcorr-strand-correlation">strcorr (Strand Correlation)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#extend">extend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#subtract">subtract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#split">split</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#discard">discard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#poisson">poisson</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#filter">filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#credit">Credit</a></li>
 </ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyicoller.html">     pyicoller</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicoller.html#credit">Credit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyicoenrich.html">     pyicoenrich</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#counts-file-description">Counts file description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#credit">Credit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyicoclip.html">     pyicoclip</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicoclip.html#credit">Credit</a></li>
+</ul>
+</li>
+</ul>
+</div>
 </div>
 <div class="section" id="protocol-files">
 <h2>Protocol files<a class="headerlink" href="#protocol-files" title="Permalink to this headline">¶</a></h2>
-<p>A cofiguration file based tool that exposes most functionality of the Pyicoteo suite, making it very useful when trying to combine different tools (for example, Pyicos and Pyicosenrich, functionality)</p>
+<p>A configuration file based tool that exposes most functionality of the Pyicoteo suite, making it very useful when trying to combine different tools (for example, Pyicos and Pyicosenrich functionality)</p>
+<p>Read more about it at:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pyicotrocol.html">     pyicotrocol</a></li>
+</ul>
+</div>
 </div>
 <div class="section" id="pyicoteolib">
 <h2>Pyicoteolib<a class="headerlink" href="#pyicoteolib" title="Permalink to this headline">¶</a></h2>
 <p>A python library that is the building blocks of all the other tools and a useful tool for python scripting.</p>
-<p>Contents:</p>
+<p>Read more about it at:</p>
 <div class="toctree-wrapper compound">
-<ul class="simple">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pyicoteolib.html">     pyicoteolib</a></li>
 </ul>
 </div>
 </div>
-</div>
-<div class="section" id="indices-and-tables">
-<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
-<ul class="simple">
-<li><a class="reference internal" href="genindex.html"><em>Index</em></a></li>
-<li><a class="reference internal" href="py-modindex.html"><em>Module Index</em></a></li>
-<li><a class="reference internal" href="search.html"><em>Search Page</em></a></li>
-</ul>
 </div>
 
 
@@ -96,16 +123,22 @@
   <h3><a href="#">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Welcome to Pyicoteo</a><ul>
-<li><a class="reference internal" href="#command-line-based-tools">Command-line based tools</a></li>
-<li><a class="reference internal" href="#protocol-files">Protocol files</a></li>
+<li><a class="reference internal" href="#command-line-based-tools">Command-line based tools</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#protocol-files">Protocol files</a><ul>
+</ul>
+</li>
 <li><a class="reference internal" href="#pyicoteolib">Pyicoteolib</a><ul>
 </ul>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
 </ul>
 
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pyicos.html"
+                        title="next chapter">pyicos command line operations</a></p>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
@@ -129,6 +162,9 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="pyicos.html" title="pyicos command line operations"
+             >next</a> |</li>
         <li><a href="#">pyicoteo 2.0.1 documentation</a> &raquo;</li> 
       </ul>
     </div>

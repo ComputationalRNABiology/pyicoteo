@@ -12,41 +12,40 @@ Pyicoteo* is a suite of tools for the analysis of high-throughput sequencing dat
 
 If you have any problems or suggestions please join the `Pyicoteo Google Group`_ and ask! 
 
+.. _`Pyicoteo Google Group`: http://groups.google.com/group/pyicos
+
 Command-line based tools 
 ------------------------
+.. toctree::
+   :maxdepth: 2
 
-* pyicos
-* pyicoller
-* pyicoenrich
-* pyicoclip
-* pyicoregion
+	pyicos <pyicos>
+	pyicoller <pyicoller>
+	pyicoenrich <pyicoenrich>
+	pyicoclip <pyicoclip>
+	pyicoregion <pyicoregion>
 
 Protocol files
 --------------
 
-A cofiguration file based tool that exposes most functionality of the Pyicoteo suite, making it very useful when trying to combine different tools (for example, Pyicos and Pyicosenrich, functionality)
+A configuration file based tool that exposes most functionality of the Pyicoteo suite, making it very useful when trying to combine different tools (for example, Pyicos and Pyicosenrich functionality)
 
+Read more about it at:
+
+.. toctree::
+   :maxdepth: 1
+
+	pyicotrocol <pyicotrocol>
 
 Pyicoteolib
 ------------
 
 A python library that is the building blocks of all the other tools and a useful tool for python scripting. 
 
-
-Contents:
+Read more about it at:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
-
-
-
+	pyicoteolib <pyicoteolib>
 
