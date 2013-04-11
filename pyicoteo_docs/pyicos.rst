@@ -168,5 +168,5 @@ Example::
 Credit
 ------
 
-Developer: Juan González-Vallinas
-Beta Testing: Sonja Althammer, Eneritz Agirre, Juan González-Vallinas
+* Developer: Juan González-Vallinas
+* Beta Testing: Sonja Althammer, Eneritz Agirre, Juan González-Vallinas

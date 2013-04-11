@@ -72,7 +72,7 @@ Examples::
 Credit
 ------
 
-Developer: Juan González-Vallinas
-Beta Testing: Sonja Althammer, Eneritz Agirre, Nuria Conde Pueyo, Juan González-Vallinas
-Benchmarking against other methods: Sonja Althammer
-Performance benchmarking: Juan González-Vallinas
+* Developer: Juan González-Vallinas
+* Beta Testing: Sonja Althammer, Eneritz Agirre, Nuria Conde Pueyo, Juan González-Vallinas
+* Benchmarking against other methods: Sonja Althammer
+* Performance benchmarking: Juan González-Vallinas

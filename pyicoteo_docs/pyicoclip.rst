@@ -16,5 +16,5 @@ Example::
 Credit
 ------
 
-Developer: Juan González-Vallinas
-Beta Testing: Mireya Plass, Juan González-Vallinas
+* Developer: Juan González-Vallinas
+* Beta Testing: Mireya Plass, Juan González-Vallinas

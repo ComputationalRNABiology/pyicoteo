@@ -49,8 +49,8 @@ This example is equivalent of using pyicoller (To determine significant peaks; r
 Credit
 ------
 
-Developer: Juan González-Vallinas
-Testing: Sonja Althammer, Juan González-Vallinas
+* Developer: Juan González-Vallinas
+* Testing: Sonja Althammer, Juan González-Vallinas
 
 
 
