@@ -23,17 +23,17 @@ setup(name='Pyicoteo',
       description='Pyicoteo: HTS genomics coordintes analysis suite.',
       author=u'Juan Gonzalez_Vallinas',
       author_email='juanramon.gonzalezvallinas@upf.edu',
-      url='http://regulatorygenomics.upf.edu/pyicos',
+      url='http://regulatorygenomics.upf.edu/pyicoteo',
       packages = ['pyicoteolib.parser', 'pyicoteolib.chromlen'],
       package_data={
           'pyicoteolib.chromlen': [
               '*'
           ],
       },
-      scripts = ['pyicos', 'pyicotrocol', 'pyicoller', 'pyicoenrich', 'pyicoclip'],
+      scripts = ['pyicos', 'pyicotrocol', 'pyicoller', 'pyicoenrich', 'pyicoclip', 'pyicoregion'],
       py_modules = ['pyicoteolib.core', 'pyicoteolib.turbomix','pyicoteolib.utils',
                     'pyicoteolib.parser.utils', 'pyicoteolib.parser.pyicoclip', 'pyicoteolib.parser.pyicoenrich',
-                    'pyicoteolib.defaults', 'pyicoteolib.bam', 
-                    'pyicoteolib.enrichment']
+                    'pyicoteolib.parser.pyicoregion', 'pyicoteolib.defaults', 'pyicoteolib.bam', 
+                    'pyicoteolib.enrichment', 'pyicoteolib.region']
      )
 
