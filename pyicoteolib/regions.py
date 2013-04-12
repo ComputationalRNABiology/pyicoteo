@@ -121,7 +121,6 @@ GENE = 'gene'
 TRANSCRIPT = 'transcript'
 EXON = 'exon'
 
-MANDATORY_FIELDS = 8
 
 class LineWarning(Exception):
     pass
@@ -129,7 +128,7 @@ class LineWarning(Exception):
 # Fields: <seqname> <source> <feature> <start> <end> <score> <strand> <frame> [attributes] [comments]
 def parse_gtf_line(line):
     fields = line.rstrip().split('\t')
-    if len(fields) < MANDATORY_FIELDS:
+    if len(fields) < GFF_MANDATORY_FIELDS:
         raise InvalidLine('Missing some fields')
 
     (seqname, source, feature, start, end, score, strand, frame) = fields[0:8]
@@ -228,7 +227,7 @@ def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
             logger.error("Unexpected error. Line %s: %s" % (num, e))
             continue
 
-        if len(parsed_line) < MANDATORY_FIELDS + 1:
+        if len(parsed_line) < GFF_MANDATORY_FIELDS + 1:
             parsed_line.append("") # add fake "attributes" field if it doesn't exist
 
         (seqname, source, feature, start, end, score, strand, frame, attrs) = parsed_line

@@ -30,6 +30,7 @@ from defaults import *
 import utils
 import bam
 import enrichment
+from regions import RegionWriter
 
 try:
     from shutil import move
@@ -239,6 +240,13 @@ class Turbomix:
         self.logger.info('***********************************************')
         self.logger.info('Pyicoteo running... (PID: %s)'%(os.getpid()))
         self.logger.info('This log will also be saved at: %s'%(os.path.abspath(self.logger.name)))
+
+        if REGIONS in self.operations and self.region_magic: # FIXME: bad workaround?
+            outfile = open(self.output_path, 'w')
+            regwriter = RegionWriter(self.gff_file, outfile, self.region_magic, no_sort=self.no_sort, logger=self.logger)
+            regwriter.write_regions()
+            return
+
         if self.control_path:
             self.process_all_files_paired(self.experiment_path, self.control_path)
         elif self.experiment_b_path:
