@@ -1,6 +1,7 @@
 pyicoclip
 pyicoenrich
 pyicoller
+pyicoregion
 pyicos
 pyicotrocol
 setup.py
@@ -23,6 +24,7 @@ pyicoteolib/parser/argparse.py
 pyicoteolib/parser/pyicoclip.py
 pyicoteolib/parser/pyicoenrich.py
 pyicoteolib/parser/pyicoller.py
+pyicoteolib/parser/pyicoregion.py
 pyicoteolib/parser/pyicos.py
 pyicoteolib/parser/pyicotrocol.py
 pyicoteolib/parser/utils.py
