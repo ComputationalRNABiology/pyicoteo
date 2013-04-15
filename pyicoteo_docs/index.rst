@@ -86,7 +86,7 @@ Command-line based tools
 ========================
 .. toctree::
    :maxdepth: 2
-
+  Important considerations <important>
 	pyicos <pyicos>
 	pyicoller <pyicoller>
 	pyicoenrich <pyicoenrich>
