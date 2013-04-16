@@ -34,6 +34,6 @@ setup(name='Pyicoteo',
       py_modules = ['pyicoteolib.core', 'pyicoteolib.turbomix','pyicoteolib.utils',
                     'pyicoteolib.parser.utils', 'pyicoteolib.parser.pyicoclip', 'pyicoteolib.parser.pyicoenrich',
                     'pyicoteolib.parser.pyicoregion', 'pyicoteolib.defaults', 'pyicoteolib.bam', 
-                    'pyicoteolib.enrichment', 'pyicoteolib.region']
+                    'pyicoteolib.enrichment', 'pyicoteolib.regions']
      )
 

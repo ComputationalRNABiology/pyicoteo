@@ -10,6 +10,7 @@ pyicoteolib/bam.py
 pyicoteolib/core.py
 pyicoteolib/defaults.py
 pyicoteolib/enrichment.py
+pyicoteolib/regions.py
 pyicoteolib/turbomix.py
 pyicoteolib/utils.py
 pyicoteolib/chromlen/__init__.py

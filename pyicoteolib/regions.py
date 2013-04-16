@@ -189,7 +189,7 @@ def feature_cmp(s):
 
 
 # attr_filter parameter: ignore all the lines that contain any attribute matching any {"key": "value"} in the dictionary (default = {}: process all lines)
-def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None, attr_filter={}, no_sort=False):
+def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None, attr_filter={}, no_sort=False, do_filter=False):
     logger = get_logger('gffreader.log')
 
     if no_sort:
@@ -242,7 +242,7 @@ def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
                     break
 
         if "transcript_type" in parsed_attrs:
-            if parsed_attrs["transcript_type"] not in transcript_type:
+            if parsed_attrs["transcript_type"] not in transcript_type and do_filter:
                filter_line = True
 #        if attr_checks is not None:
 #            filter_line = attr_checks(parsed_attrs)
