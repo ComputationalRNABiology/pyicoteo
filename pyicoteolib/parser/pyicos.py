@@ -84,7 +84,7 @@ def run_parser():
     elif sys.argv[1] == 'remduplicates':
         turbomix.operations = [REMOVE_DUPLICATES]
     elif sys.argv[1] == 'remregions':
-        turbomix.operations = [REMOVE_REGION]      
+        turbomix.operations = [REMOVE_REGION]
 
     turbomix.run()
 
