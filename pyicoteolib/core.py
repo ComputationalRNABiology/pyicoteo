@@ -20,6 +20,7 @@ import math
 from collections import defaultdict
 from defaults import *
 import heapq
+import string
 
 
 debug = False
@@ -138,6 +139,10 @@ class ReaderFactory:
             return SamReader(format, half_open, cached)
         elif format == COUNTS:
             return None
+
+        elif format == CUSTOM_FORMAT:
+            return CustomReader(format, half_open, cached)
+
         else:
             raise ConversionNotSupported
 
@@ -174,6 +179,39 @@ class Reader:
     def quality_filter(self, line):
         """checks if the line passes the quality conditions"""
         return True
+
+
+class CustomReader(Reader):
+    def read_line(self, cluster, line):
+        line = re.split(CustomReader.custom_sep, line.strip())
+        try:
+            fields = [int(x) for x in CustomReader.fcustom]
+            seqname = line[fields[0]]
+            start = int(line[fields[1]])
+            end = int(line[fields[2]])
+            strand = '.'
+            if len(fields) > 3:
+                strand = line[fields[3]]
+        except ValueError:
+            return # TODO: handle exception (especially int(fields[]))
+
+        if cluster.is_empty():
+            cluster.add_tag_cached(start, end)
+            cluster.start = start
+            cluster.end = end
+            cluster.name2 = str(start) + ":" + str(end)
+            cluster.name = seqname
+            cluster.strand = strand
+            cluster.sequence = ''
+            cluster.tag_length = len(cluster)
+        else:
+            cluster.add_tag_cached(start, end)
+            cluster.start = min(cluster.start, start)
+            cluster.end = max(cluster.end, end)
+            cluster.name2 = str(cluster.start) + ":" + str(cluster.end)
+            cluster.sequence = ''
+            cluster.tag_length = len(cluster)
+
 
 class BedReader(Reader):
 
@@ -389,6 +427,10 @@ class WriterFactory:
             return SamWriter(format, half_open, span)
         elif format == COUNTS:
             None
+
+        elif format == CUSTOM_FORMAT:
+            return CustomWriter(format, half_open, span)
+
         else:
             raise ConversionNotSupported
 
@@ -404,6 +446,27 @@ class Writer:
 
     def write_line(self):
         raise NotImplementedError("You're using the abstract base class 'Writer', use a specific class instead")
+
+
+class CustomWriter(Writer):
+    def write_line(self, cluster): # TODO: test!
+        # ex. f-custom: 2 0 1 3 => chr1  start  end  strand
+        if cluster.is_empty():
+            return ''
+        else:
+            fields = [int(x) for x in CustomWriter.fcustom]
+
+            field_list = [str(cluster.name), str(cluster.start), str(cluster.end), str(cluster.strand)]
+            rseq = [None]*len(fields) # allocate array
+            for (num, pos) in enumerate(fields):
+                rseq[pos] = field_list[num]
+ 
+            if len(fields) > 3:
+                strand_pos = fields[3]
+            else:
+                strand_pos = len(fields)
+            return string.join(rseq, CustomWriter.custom_sep.decode("string-escape")) + '\n' # string-escape: for tabs and other "special" characters
+
 
 class ElandWriter(Writer):
     def write_line(self, cluster):

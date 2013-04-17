@@ -109,7 +109,7 @@ def init_turbomix(args, parser_name=PARSER_NAME):
                         args.tmm_norm, args.n_norm, args.skip_header, args.total_reads_a, args.total_reads_b, args.total_reads_replica, args.a_trim, args.m_trim, 
                         args.use_replica, args.tempdir, args.samtools, args.access_sequential, args.experiment_label, args.replica_label, args.title_label, 
                         args.count_filter, args.force_sort, args.push_distance, args.quant_norm, parser_name,
-                        args.region_magic, args.gff_file, args.interesting_regions, args.disable_significant_color)
+                        args.region_magic, args.gff_file, args.interesting_regions, args.disable_significant_color, args.f_custom, args.custom_sep)
 
     validate_operations(args, turbomix)
     return turbomix
@@ -134,7 +134,7 @@ def parse_validate_args(parser):
                         use_replica=USE_REPLICA, tempdir=TEMPDIR, samtools=USESAMTOOLS, access_sequential=SEQUENTIAL, experiment_label = EXPERIMENT_LABEL, 
                         replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT, 
                         push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name=PARSER_NAME,
-                        region_magic=REGION_MAGIC, gff_file=GFF_FILE, interesting_regions=INTERESTING_REGIONS, disable_significant_color=DISABLE_SIGNIFICANT)
+                        region_magic=REGION_MAGIC, gff_file=GFF_FILE, interesting_regions=INTERESTING_REGIONS, disable_significant_color=DISABLE_SIGNIFICANT, f_custom=F_CUSTOM, custom_sep=CUSTOM_SEP)
     args = parser.parse_args()
     validate(args)
     if args.counts_file: #the formats are overridden when using enrichment (only of cosmetic value, when printing the flags)   
@@ -150,6 +150,14 @@ def parse_validate_args(parser):
     #if args.experiments:
     #    args.experiment, args.experiment_b = args.experiments
 
+
+    if (args.experiment_format and args.experiment_format == CUSTOM_FORMAT) or (args.output_format and args.output_format == CUSTOM_FORMAT):
+        from ..core import CustomReader, CustomWriter # FIXME?
+        CustomReader.fcustom = args.f_custom
+        CustomReader.custom_sep = args.custom_sep
+        CustomWriter.fcustom = args.f_custom
+        CustomWriter.custom_sep = args.custom_sep
+
     return args
 
 
@@ -161,6 +169,10 @@ experiment_flags = new_subparser()
 experiment_flags.add_argument('-o','--open-experiment', action='store_true', dest='open_experiment', default=OPEN_EXPERIMENT, help='Defines if the experiment is half-open or closed notation. [Default %(default)s]')
 experiment_flags.add_argument( '-f','--experiment-format',default=EXPERIMENT_FORMAT,  dest='experiment_format', help="""The format the experiment file is written as.
                          The options are %s. [Default pk]"""%read_formats)
+
+experiment_flags.add_argument('--f-custom', nargs='+', help="Custom region file format (integers: columns containing, in order, 'seqname', 'start', 'end', 'strand')")
+experiment_flags.add_argument('--custom-sep', help="Custom region format separator")
+
 experiment_b = new_subparser()
 experiment_b.add_argument('experiment_b',  help='The experiment file B')
 optional_replica = new_subparser()

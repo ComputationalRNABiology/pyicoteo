@@ -27,9 +27,12 @@ SPK = 'bed_spk'
 SAM = 'sam'
 BAM = 'bam'
 COUNTS = 'counts'
+
+CUSTOM_FORMAT = 'custom'
+
 CLUSTER_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG, PK, SPK)
 WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
-READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM, BAM, COUNTS) #formats that we actually can read as
+READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM, BAM, COUNTS,  CUSTOM_FORMAT) #formats that we actually can read as
 WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
 
 REGION_FORMATS = (BED, BED12)
@@ -165,4 +168,7 @@ DISABLE_SIGNIFICANT = False
 GFF_MANDATORY_FIELDS = 8
 
 REGIONS = 'regions'
+
+F_CUSTOM = []
+CUSTOM_SEP = '\s+'
 
