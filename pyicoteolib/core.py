@@ -186,31 +186,38 @@ class CustomReader(Reader):
         line = re.split(CustomReader.custom_sep, line.strip())
         try:
             fields = [int(x) for x in CustomReader.fcustom]
+        except ValueError as err:
+            print "CustomReader error: all f-custom values must be integers!"
+            sys.exit(1) # FIXME: different action?
+        try:
             seqname = line[fields[0]]
             start = int(line[fields[1]])
             end = int(line[fields[2]])
-            strand = '.'
             if len(fields) > 3:
                 strand = line[fields[3]]
-        except ValueError:
-            return # TODO: handle exception (especially int(fields[]))
+            else:
+                strand = '.'
+        except ValueError as err:
+            if 'start' not in locals():
+                print "CustomReader error: incorrect field type: start"
+            elif 'end' not in locals():
+                print "CustomReader error: incorrect field type: end"
+            sys.exit(1) # FIXME: different action?
 
         if cluster.is_empty():
             cluster.add_tag_cached(start, end)
             cluster.start = start
             cluster.end = end
-            cluster.name2 = str(start) + ":" + str(end)
             cluster.name = seqname
+            cluster.name2 = str(start) + ":" + str(end)
             cluster.strand = strand
-            cluster.sequence = ''
-            cluster.tag_length = len(cluster)
         else:
             cluster.add_tag_cached(start, end)
             cluster.start = min(cluster.start, start)
             cluster.end = max(cluster.end, end)
             cluster.name2 = str(cluster.start) + ":" + str(cluster.end)
-            cluster.sequence = ''
-            cluster.tag_length = len(cluster)
+        cluster.sequence = ''
+        cluster.tag_length = len(cluster)
 
 
 class BedReader(Reader):
@@ -449,12 +456,15 @@ class Writer:
 
 
 class CustomWriter(Writer):
-    def write_line(self, cluster): # TODO: test!
+    def write_line(self, cluster):
         # ex. f-custom: 2 0 1 3 => chr1  start  end  strand
         if cluster.is_empty():
             return ''
         else:
-            fields = [int(x) for x in CustomWriter.fcustom]
+            try:
+                fields = [int(x) for x in CustomWriter.fcustom]
+            except ValueError:
+                print "CustomWriter error: all f-custom values must be integers!"
 
             field_list = [str(cluster.name), str(cluster.start), str(cluster.end), str(cluster.strand)]
             rseq = [None]*len(fields) # allocate array
@@ -486,7 +496,7 @@ class ElandWriter(Writer):
 class BedWriter(Writer):
     def write_line(self, cluster):
         bed_blueprint = '%s\t%s\t%s\t%s\t%s\t%s\n'
-            
+
         if cluster.is_empty():
             return ''
         else:
