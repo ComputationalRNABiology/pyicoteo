@@ -810,7 +810,7 @@ class ReadCluster(AbstractCore):
 
 
     def copy_cluster(self):
-        """Returns a copy of the self cluster. Faster than copy.deepcopy()"""
+        """Returns a copy of the self cluster. Faster than the standard python command copy.deepcopy()"""
         ret_cluster = Empty()
         ret_cluster.__class__ = self.__class__
         ret_cluster.start = self.start
@@ -1069,7 +1069,8 @@ class ReadCluster(AbstractCore):
 
     def decompose(self):
         """Returns a list of Singletons that form the cluster given a tag length. If the tag length is not provided the cluster was formed by tags with
-        different lengths, it's impossible to reconstruct the tags due to ambiguity (multiple different combination of tags can be used to obtain the same cluster)"""
+        different lengths, it's impossible to reconstruct the tags due to ambiguity (multiple different combination of tags can be used to obtain the same 
+        cluster)"""
         if self.tag_length is not None and self.tag_length > 0:
             tags = []
             cluster_copy = self.copy_cluster()

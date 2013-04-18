@@ -1,13 +1,22 @@
 Pyicoenrich
 ===========
 
+Introduction
+------------
+
 Enrichment analysis can be applied on any type of -seq data. Pyicoenrich performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicoenrich calculates Z-Scores for each region of interest. If no replicas are provided Pyicoenrich creates technical replicas (see below).
 
 
 .. figure:: images/enrichment.png
 
 
-If a region file is provided, Pyicoenrich returns for each region a Z-Score (among others) which indicates the enrichment/depletion of condition A over condition B. If no region file is provided, Pyicoenrich provides the options to take the union of reads from both conditions as a region and gives back Z-Scores for the generated regions. As regions with 0 reads in one condition might be especially interesting, Pyicoenrich can use pseudocounts, in order to avoid a division by 0: Pyicoenrich calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicoenrich assumes that there is already 1 read in each region in each condition.
+Region exploration
+--------------------
+
+Pyicoenrich uses the capabilities of Pyicoregion in order to explore region files. See
+
+
+If a region file is provided, Pyicoenrich returns for each region a Z-Score (See counts file description) which indicates the enrichment/depletion of condition A over condition B. If no region file is provided, Pyicoenrich provides the options to take the union of reads from both conditions as a region and gives back Z-Scores for the generated regions. As regions with 0 reads in one condition might be especially interesting, Pyicoenrich can use pseudocounts, in order to avoid a division by 0: Pyicoenrich calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicoenrich assumes that there is already 1 read in each region in each condition.
 
 
 .. figure:: images/region_definition.png
@@ -20,7 +29,6 @@ Counts file description
 -----------------------
 
 Column description of enrichment result where each line describes a region: 
-name	start	end	name2	score	strand	signal_a	signal_b	signal_prime_1	signal_prime_2	A	M	total_reads_a	total_reads_b	num_tags_a	num_tags_b	A_prime	M_prime	total_reads_a	total_reads_b	total_reads_background_1	total_reads_background_2	A_median	mean	sd	zscore
 
 1) name                    =  chromosome of region
 2) start                   =  region start
@@ -61,7 +69,7 @@ Examples::
     # To use RPKM normalization    
     pyicos enrichment kidney1.bed liver1.bed Pyicoenrich_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm
 
-    # To use TRPK normalization 
+
     pyicos enrichment kidney1.bed liver1.bed Pyicoenrich_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm --tmm-norm
 
     # To use Full quantile normalization 
@@ -74,5 +82,6 @@ Credit
 
 * Developer: Juan González-Vallinas
 * Beta Testing: Sonja Althammer, Eneritz Agirre, Nuria Conde Pueyo, Juan González-Vallinas
-* Benchmarking against other methods: Sonja Althammer
-* Performance benchmarking: Juan González-Vallinas
+* Benchmarking against other DE methods: Sonja Althammer
+* Speed and memory performance benchmarking: Juan González-Vallinas
+* Supervision: Eduardo Eyras

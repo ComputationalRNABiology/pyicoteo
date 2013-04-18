@@ -14,22 +14,23 @@ If you have any problems or suggestions please join the `Pyicoteo Google Group`_
 
 .. _`Pyicoteo Google Group`: http://groups.google.com/group/pyicos
 
+
 Getting Started
 ===============
 
 Download & Install
 ------------------
 
-**Download Pyicoteo**  `Latest version`_ from our Github repository.
+**Download Pyicoteo**  `Latest version`_ from our repository.
 
-.. _`Latest version`: https://github.com/RegulatoryGenomicsUPF/pyicos
+.. _`Latest version`: https://bitbucket.org/regulatorygenomicsupf/pyicoteo/downloads
 
 You can also download older versions (up to 1.1b) from our `Sourceforge repository`_.
 
 .. _`Sourceforge repository`: http://sourceforge.net/projects/pyicos/ 
 
 
-The command line tools can be used directly without installation. However, installation is recommended, and neccesary if you intend to use the Pyicoteolib. To do so decompress the folder and run the setup.py script with administrator privileges:
+The command line tools can be used directly without installation. However, installation is recommended, and necessary if you intend to use the Pyicoteolib. To do so decompress the folder and run the setup.py script with administrator privileges:
 
     python setup.py install
 

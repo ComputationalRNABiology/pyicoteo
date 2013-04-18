@@ -61,6 +61,6 @@ Credit
 
 * Developer: Juan González-Vallinas
 * Testing: Sonja Althammer, Juan González-Vallinas
-
+* Supervision: Eduardo Eyras
 
 

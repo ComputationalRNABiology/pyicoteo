@@ -11,10 +11,11 @@ A region of interest file is required for the method to be applied, in BED forma
 
 Example::
 
-    pyicoclip my_experiment.bed my_regions.bed output.pk -f bed 
+    pyicoclip my_experiment.bed my_regions.bed output.pk -f bed
 
 Credit
 ------
 
 * Developer: Juan González-Vallinas
 * Beta Testing: Mireya Plass, Juan González-Vallinas
+* Supervision: Eduardo Eyras

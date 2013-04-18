@@ -388,10 +388,6 @@ class TestCoreObjects(unittest.TestCase):
         cluster_satellite = Cluster(read=BED)
         cluster_satellite.read_line('chrX	61836270	61837703	Satellite')
         self.assertEqual(cluster_discard.overlap(cluster_satellite), 0.5)
-
-
-
-
         self.assertEqual(cluster1.overlap(cluster3), 0)
         self.assertEqual(cluster1.overlap(cluster1), 1)
         self.assertEqual(cluster1.overlap(cluster2), 0.5)
