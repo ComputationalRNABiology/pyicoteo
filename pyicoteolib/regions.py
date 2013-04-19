@@ -173,10 +173,6 @@ def parse_attributes(attributes):
     return attr_dict
 
 
-def process_gene(gene):
-    gene.print_region()
-
-
 def feature_cmp(s):
     if s == GENE:
         return 0
@@ -250,8 +246,6 @@ def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
         if filter_line:
             continue
 
-
-
         if feature == GENE:
             gene_id = parsed_attrs['gene_id']
             gene = AnnotationGene(gene_id, None, seqname, source, feature, start, end, score, strand, frame, parsed_attrs)
@@ -307,9 +301,10 @@ def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
 
     for gene in current_genes: # process last gene (repeated code, FIXME?)
         yield gene
-        #process_gene(gene)
 
-    # TODO: delete temporary (sorted) file
+    # delete temporary (sorted) file
+    #print "SORTED_FILE: " + sorted_file.name
+    os.remove(os.path.abspath(sorted_file.name))
 
 
 def _get_exons_from_gene_list(tmp_genes, remove_duplicates=True):
