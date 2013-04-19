@@ -328,7 +328,7 @@ def _get_exons_from_gene_list(tmp_genes, remove_duplicates=True):
         yield ex
 
 
-def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False):
+def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  position=None):
     tmp_genes = []
     #max_genes = 0
 
@@ -341,9 +341,18 @@ def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False):
     for gene in read_gtf_file(gtf_path, no_sort=no_sort):#, attr_checks=chk):
         if len(tmp_genes) > 0:
             if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
-                for ex in _get_exons_from_gene_list(tmp_genes, remove_duplicates):
-                    if ex.end - ex.start >= min_length: # check if it's longer than min_length
-                        yield ex
+                if position is None: # return all exons
+                    for ex in _get_exons_from_gene_list(tmp_genes, remove_duplicates):
+                        if ex.end - ex.start >= min_length: # check if it's longer than min_length
+                            yield ex
+                else:
+                    for gene in tmp_genes: # FIXME: strand?
+                        if position == "first":
+                            pos = 0
+                        else:
+                            pos = -1
+                        yield gene.get_children()[pos].get_children()[pos] # first/last exon of first/last transcript
+
                 tmp_genes = [] # empty list
         tmp_genes.append(gene)
         tmp_genes.sort(key = lambda gn: (int(gn.end)))
@@ -352,18 +361,22 @@ def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False):
             yield ex
 
 
-def get_introns(gtf_path, min_length=0, no_sort=False):
+def get_introns(gtf_path, min_length=0, no_sort=False,  position=None):
     tmp_genes = []
     for gene in read_gtf_file(gtf_path, no_sort=no_sort):
         if len(tmp_genes) > 0:
             if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
-                exons = [exon for exon in _get_exons_from_gene_list(tmp_genes, remove_duplicates=True)]
-                if len(exons) >= 2:
-                    last_exon = exons[0]
-                    for ex in exons[1:]:
-                        if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
-                            yield (ex.seqname, last_exon.end, ex.start, ex.region_id) # intron returned as tuple (seqname, start, end, id)
-                        last_exon = ex
+                if position is None: # return all introns
+                    exons = [exon for exon in _get_exons_from_gene_list(tmp_genes, remove_duplicates=True)]
+                    if len(exons) >= 2:
+                        last_exon = exons[0]
+                        for ex in exons[1:]:
+                            if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
+                                yield (ex.seqname, last_exon.end, ex.start, ex.region_id) # intron returned as tuple (seqname, start, end, id)
+                            last_exon = ex
+                else:
+                    pass # TODO: only first/last introns!
+
                 tmp_genes = [] # empty list
         tmp_genes.append(gene)
         tmp_genes.sort(key = lambda gn: (int(gn.end)))
@@ -452,11 +465,19 @@ class RegionWriter():
     def write_regions(self):
         try:
             if self.params[0] == REGION_EXONS:
-                for exon in get_exons(self.gff_path, remove_duplicates=True, no_sort=self.no_sort):
+                pos = None
+                if len(self.params) > 1:
+                    pos = self.params[1]
+
+                for exon in get_exons(self.gff_path, remove_duplicates=True, no_sort=self.no_sort,  position=pos):
                     cl = ReadCluster(name=exon.seqname, start=exon.start, end=exon.end, strand=exon.strand, name2=exon.region_id, write=self.write_as)
                     self.region_file.write(cl.write_line())
             elif self.params[0] == REGION_INTRONS:
-                for (seqname, start, end, region_id) in get_introns(self.gff_path, no_sort=self.no_sort):
+                pos = None
+                if len(self.params) > 1:
+                    pos = self.params[1]
+
+                for (seqname, start, end, region_id) in get_introns(self.gff_path, no_sort=self.no_sort,  position=pos):
                     cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as,    name2=region_id)
                     self.region_file.write(cl.write_line())
             elif self.params[0] == REGION_SLIDE:
