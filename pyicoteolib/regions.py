@@ -351,14 +351,26 @@ def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  po
                             pos = 0
                         else:
                             pos = -1
-                        yield gene.get_children()[pos].get_children()[pos] # first/last exon of first/last transcript
+                        exon = gene.get_children()[pos].get_children()[pos] # first/last exon of first/last transcript
+                        #exon.print_region()
+                        yield exon
 
                 tmp_genes = [] # empty list
         tmp_genes.append(gene)
         tmp_genes.sort(key = lambda gn: (int(gn.end)))
-    for ex in _get_exons_from_gene_list(tmp_genes, remove_duplicates): # remaining exons
-        if ex.end - ex.start >= min_length: # check if it's longer than min_length
-            yield ex
+    if position is None:
+        for ex in _get_exons_from_gene_list(tmp_genes, remove_duplicates): # remaining exons
+            if ex.end - ex.start >= min_length: # check if it's longer than min_length
+                yield ex
+    else:
+        for gene in tmp_genes: # FIXME: strand?
+            if position == "first":
+                pos = 0
+            else:
+                pos = -1
+            exon = gene.get_children()[pos].get_children()[pos] # first/last exon of first/last transcript
+            yield exon
+
 
 
 def get_introns(gtf_path, min_length=0, no_sort=False,  position=None):
