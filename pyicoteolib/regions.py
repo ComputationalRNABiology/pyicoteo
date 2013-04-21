@@ -367,7 +367,7 @@ def get_introns(gtf_path, min_length=0, no_sort=False):
                     last_exon = exons[0]
                     for ex in exons[1:]:
                         if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
-                            yield (ex.seqname, last_exon.end, ex.start, ex.region_id) # intron returned as tuple (seqname, start, end, id)
+                            yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand) # intron returned as tuple (seqname, start, end, id)
                         last_exon = ex
                 tmp_genes = [] # empty list
         tmp_genes.append(gene)
@@ -378,7 +378,7 @@ def get_introns(gtf_path, min_length=0, no_sort=False):
         last_exon = exons[0]
         for ex in exons[1:]:
             if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
-                yield (ex.seqname, last_exon.end, ex.start, ex.region_id)
+                yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand)
             last_exon = ex
 
 
@@ -461,8 +461,8 @@ class RegionWriter():
                     cl = ReadCluster(name=exon.seqname, start=exon.start, end=exon.end, strand=exon.strand, name2=exon.region_id, write=self.write_as)
                     self.region_file.write(cl.write_line())
             elif self.params[0] == REGION_INTRONS:
-                for (seqname, start, end, region_id) in get_introns(self.gff_path, no_sort=self.no_sort):
-                    cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as,    name2=region_id)
+                for (seqname, start, end, region_id, strand) in get_introns(self.gff_path, no_sort=self.no_sort):
+                    cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as, name2=region_id, strand= strand)
                     self.region_file.write(cl.write_line())
             elif self.params[0] == REGION_SLIDE:
                 win_size = int(self.params[1])
