@@ -346,13 +346,12 @@ def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  po
                         if ex.end - ex.start >= min_length: # check if it's longer than min_length
                             yield ex
                 else:
-                    for gene in tmp_genes: # FIXME: strand?
-                        if position == "first":
+                    for g in tmp_genes:
+                        if (position == 'first' and g.strand in ['+', '.']) or (position == 'last' and g.strand == '-'):
                             pos = 0
                         else:
                             pos = -1
-                        exon = gene.get_children()[pos].get_children()[pos] # first/last exon of first/last transcript
-                        #exon.print_region()
+                        exon = g.get_children()[pos].get_children()[pos] # first/last exon of first/last transcript
                         yield exon
 
                 tmp_genes = [] # empty list
@@ -363,12 +362,12 @@ def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  po
             if ex.end - ex.start >= min_length: # check if it's longer than min_length
                 yield ex
     else:
-        for gene in tmp_genes: # FIXME: strand?
-            if position == "first":
+        for g in tmp_genes:
+            if (position == 'first' and g.strand in ['+', '.']) or (position == 'last' and g.strand == '-'):
                 pos = 0
             else:
                 pos = -1
-            exon = gene.get_children()[pos].get_children()[pos] # first/last exon of first/last transcript
+            exon = g.get_children()[pos].get_children()[pos] # first/last exon of first/last transcript
             yield exon
 
 
@@ -385,17 +384,23 @@ def get_introns(gtf_path, min_length=0, no_sort=False,  position=None):
                         last_exon = exons[0]
                         for ex in exons[1:]:
                             if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
-                                yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand) # intron returned as tuple (seqname, start, end, id)
+                                yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand) # intron returned as tuple (seqname, start, end, id, strand)
                             last_exon = ex
                 else:
-                    pass # TODO: only first/last introns!
+                    for g in tmp_genes:
+                        g_exons  = [exon for exon in _get_exons_from_gene_list([g], remove_duplicates=True)]
+                        if (position == 'first' and g.strand in ['+', '.']) or (position == 'last' and g.strand == '-'):
+                            pos = 0
+                        else:
+                            pos = -1
+                        # TODO: only first/last introns! (finish)
 
                 tmp_genes = [] # empty list
         tmp_genes.append(gene)
         tmp_genes.sort(key = lambda gn: (int(gn.end)))
 
     exons = [exon for exon in _get_exons_from_gene_list(tmp_genes, remove_duplicates=True)]
-    if len(exons) >= 2:
+    if len(exons) >= 2: # some introns remaining
         last_exon = exons[0]
         for ex in exons[1:]:
             if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
