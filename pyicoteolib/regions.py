@@ -386,26 +386,41 @@ def get_introns(gtf_path, min_length=0, no_sort=False,  position=None):
                             if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
                                 yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand) # intron returned as tuple (seqname, start, end, id, strand)
                             last_exon = ex
-                else:
-                    for g in tmp_genes:
+                else: # TODO: test!
+                    for g in tmp_genes: # TODO: move to a dedicated function to avoid repeated code?
                         g_exons  = [exon for exon in _get_exons_from_gene_list([g], remove_duplicates=True)]
-                        if (position == 'first' and g.strand in ['+', '.']) or (position == 'last' and g.strand == '-'):
-                            pos = 0
-                        else:
-                            pos = -1
-                        # TODO: only first/last introns! (finish)
+                        if len(g_exons) >= 2:
+                            if (position == 'first' and g.strand in ['+', '.']) or (position == 'last' and g.strand == '-'):
+                                pos = slice(0, 2) # first and second exons
+                            else:
+                                pos = slice(len(g_exons) - 2, len(g_exons)) # second-to-last and last exons
+                            ex1 = g_exons[pos][0]
+                            ex2 = g_exons[pos][1]
+                            yield (ex1.seqname, ex1.end, ex2.start, ex1.region_id, ex1.strand)
 
                 tmp_genes = [] # empty list
         tmp_genes.append(gene)
         tmp_genes.sort(key = lambda gn: (int(gn.end)))
 
-    exons = [exon for exon in _get_exons_from_gene_list(tmp_genes, remove_duplicates=True)]
-    if len(exons) >= 2: # some introns remaining
-        last_exon = exons[0]
-        for ex in exons[1:]:
-            if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
-                yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand)
-            last_exon = ex
+    if position is None:
+        exons = [exon for exon in _get_exons_from_gene_list(tmp_genes, remove_duplicates=True)]
+        if len(exons) >= 2: # some introns remaining
+            last_exon = exons[0]
+            for ex in exons[1:]:
+                if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
+                    yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand)
+                last_exon = ex
+    else: # remaining introns with 'position'
+        for g in tmp_genes: # TODO: move to a dedicated function to avoid repeated code?
+            g_exons  = [exon for exon in _get_exons_from_gene_list([g], remove_duplicates=True)]
+            if len(g_exons) >= 2:
+                if (position == 'first' and g.strand in ['+', '.']) or (position == 'last' and g.strand == '-'):
+                    pos = slice(0, 2) # first and second exons
+                else:
+                    pos = slice(len(g_exons) - 2, len(g_exons)) # second-to-last and last exons
+                ex1 = g_exons[pos][0]
+                ex2 = g_exons[pos][1]
+                yield (ex1.seqname, ex1.end, ex2.start, ex1.region_id, ex1.strand)
 
 
 # generates all windows inside the interval [start, end]
@@ -496,7 +511,7 @@ class RegionWriter():
                 if len(self.params) > 1:
                     pos = self.params[1]
 
-                for (seqname, start, end, region_id, strand) in get_introns(self.gff_path, no_sort=self.no_sort):
+                for (seqname, start, end, region_id, strand) in get_introns(self.gff_path, no_sort=self.no_sort,  position=pos):
                     cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as, name2=region_id, strand= strand)
 
                     self.region_file.write(cl.write_line())
