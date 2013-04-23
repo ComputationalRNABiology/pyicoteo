@@ -423,6 +423,32 @@ def get_introns(gtf_path, min_length=0, no_sort=False,  position=None):
                 yield (ex1.seqname, ex1.end, ex2.start, ex1.region_id, ex1.strand)
 
 
+def get_tss(gtf_path, add_start=0, add_end=0, no_sort=False): # TODO: test!
+    tmp_genes = []
+    for gene in read_gtf_file(gtf_path, no_sort=no_sort, do_filter=True): # FIXME: do_filter not working?
+        if len(tmp_genes) > 0:
+            if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
+                tmp_tss = []
+                for g in tmp_genes:
+                    for tr in g.get_children():
+                        if tr.strand in ['+', '.']: # positive (or not specified) strand
+                            start = tr.start - add_start
+                            end = tr.start + add_end
+                        else: # negative strand
+                            start = tr.end - add_end # FIXME: add_end or add_start?
+                            end = tr.end + add_start # FIXME: add_start or add_end?
+
+                    tmp_tss.append((tr.seqname, start, end, tr.strand, tr.region_id)) # tss: tuple (seqname, start, end, strand, region_id)
+                tmp_tss.sort(key = lambda t: (int(t[1]))) # sort transcripts by start position
+                for tss in tmp_tss:
+                    yield tss
+
+                tmp_genes = [] # empty list
+        tmp_genes.append(gene)
+        tmp_genes.sort(key = lambda gn: (int(gn.end)))
+
+
+
 # generates all windows inside the interval [start, end]
 # TODO: consider cases where len(interval) < win_size ?
 def generate_windows(start, end, win_size, win_step, fit_last=True):
@@ -512,7 +538,7 @@ class RegionWriter():
                     pos = self.params[1]
 
                 for (seqname, start, end, region_id, strand) in get_introns(self.gff_path, no_sort=self.no_sort,  position=pos):
-                    cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as, name2=region_id, strand= strand)
+                    cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as, name2=region_id, strand=strand)
 
                     self.region_file.write(cl.write_line())
             elif self.params[0] == REGION_SLIDE:
@@ -531,8 +557,12 @@ class RegionWriter():
                 for (seqname, start, end, name2) in gene_slide(self.gff_path, win_size, win_step, win_type, chr_lengths=self.read_chromlen(chrlen_path), no_sort=self.no_sort):
                     cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as,    name2=name2)
                     self.region_file.write(cl.write_line())
-            elif self.params[0] == REGION_TSS:
-                pass # TODO
+            elif self.params[0] == REGION_TSS: # FIXME: check chromlen? (+ test!)
+                add_start = int(self.params[1])
+                add_end = int(self.params[2])
+                for (seqname, start, end, strand, name2) in get_tss(self.gff_path, add_start, add_end, no_sort=self.no_sort):
+                    cl = ReadCluster(name=seqname, start=start, end=end, strand=strand, write=self.write_as,    name2=name2)
+                    self.region_file.write(cl.write_line())
             else:
                 self.logger.error("Incorrect region-magic parameter: %s" % (self.params[0]))
                 sys.exit(1)
