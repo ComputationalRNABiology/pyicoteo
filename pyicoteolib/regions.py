@@ -320,7 +320,7 @@ def _get_exons_from_gene_list(tmp_genes, remove_duplicates=True):
         to_remove = []
         for num, ex in enumerate(exons[1:]): # we start with "[1:]" because we compare with the previous exon in the list
             if ex.start == exons[num].start and ex.end == exons[num].end and ex.strand == exons[num].strand:
-                to_remove.append(num+1)
+                to_remove.append(num+1) # TODO: join exon_ids?
         for n in reversed(to_remove):
             exons.pop(n)
 
@@ -425,27 +425,48 @@ def get_introns(gtf_path, min_length=0, no_sort=False,  position=None):
 
 def get_tss(gtf_path, add_start=0, add_end=0, no_sort=False): # TODO: test!
     tmp_genes = []
-    for gene in read_gtf_file(gtf_path, no_sort=no_sort, do_filter=True): # FIXME: do_filter not working?
+    for gene in read_gtf_file(gtf_path, no_sort=no_sort, do_filter=True):
         if len(tmp_genes) > 0:
-            if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
-                tmp_tss = []
-                for g in tmp_genes:
-                    for tr in g.get_children():
-                        if tr.strand in ['+', '.']: # positive (or not specified) strand
-                            start = tr.start - add_start
-                            end = tr.start + add_end
-                        else: # negative strand
-                            start = tr.end - add_end # FIXME: add_end or add_start?
-                            end = tr.end + add_start # FIXME: add_start or add_end?
-
-                    tmp_tss.append((tr.seqname, start, end, tr.strand, tr.region_id)) # tss: tuple (seqname, start, end, strand, region_id)
-                tmp_tss.sort(key = lambda t: (int(t[1]))) # sort transcripts by start position
-                for tss in tmp_tss:
+            if (gene.start - max(add_start, add_end) > tmp_genes[-1].end + max(add_start, add_end)) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
+            #if (gene.start > tmp_genes[-2].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
+                for tss in _get_tss_from_gene_list(tmp_genes, add_start, add_end):
                     yield tss
 
                 tmp_genes = [] # empty list
         tmp_genes.append(gene)
         tmp_genes.sort(key = lambda gn: (int(gn.end)))
+
+    for tss in _get_tss_from_gene_list(tmp_genes, add_start, add_end):
+        yield tss
+
+
+
+def _get_tss_from_gene_list(tmp_genes, add_start, add_end, remove_duplicates=True):
+    tmp_tss = []
+    for g in tmp_genes:
+        #g.children.sort(key = lambda t: (t.start))
+        for tr in g.get_children():
+            if tr.strand in ['+', '.']: # positive (or not specified) strand
+                start = tr.start - add_start
+                end = tr.start + add_end
+            else: # negative strand
+                start = tr.end - add_end
+                end = tr.end + add_start
+
+            tmp_tss.append((tr.seqname, start, end, tr.strand, tr.region_id)) # tss: tuple (seqname, start, end, strand, region_id)
+    tmp_tss.sort(key = lambda t: (int(t[1]))) # sort transcripts by start position
+
+    # adapted from _get_exons_from_gene_list
+    if remove_duplicates:
+        to_remove = []
+        for num, tss in enumerate(tmp_tss[1:]): # we start with "[1:]" because we compare with the previous tss in the list
+            if tss[1] == tmp_tss[num][1] and tss[2] == tmp_tss[num][2] and tss[3] == tmp_tss[num][3]: # comparing start, end, and strand
+                to_remove.append(num+1) # TODO: join transcript_ids?
+        for n in reversed(to_remove):
+            tmp_tss.pop(n)
+
+    for tss in tmp_tss:
+        yield tss
 
 
 
