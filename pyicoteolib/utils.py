@@ -68,6 +68,7 @@ def get_logger(logger_name, verbose=True, debug=False):
 def open_file(path, format=None, gzipped=False, logger=None):
     """To open files that are not binary format, like BAM and gzip files"""
     if format == BAM:
+        if logger: logger.debug("read_fetcher: Returning BAM reader")
         return BamReader(path, logger)
     elif gzipped:
         print "Open Gzipped! (not implemented)"
@@ -76,10 +77,11 @@ def open_file(path, format=None, gzipped=False, logger=None):
         return open(path, 'rb')
 
 def read_fetcher(file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None, use_samtools=False, access_sequential=True, only_counts=False):
-    if access_sequential and experiment_format == BAM:
-        return SortedFileClusterReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
-    elif use_samtools and experiment_format == BAM:
-        return BamFetcherSamtools(file_path, read_half_open, rounding, cached, logger)
+    if experiment_format == BAM: #access_sequential
+        if use_samtools:
+            return BamFetcherSamtools(file_path, read_half_open, rounding, cached, logger)
+        else:
+            return SortedFileClusterReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
     #elif experiment_format == BAM:
         #return BamFetcher(file_path, read_half_open, rounding, cached, logger) #doesnt work yet
     elif only_counts:
@@ -541,7 +543,6 @@ class SortedFileCountReader:
     def get_overlaping_counts(self, region, overlap=1):
         counts = 0
         # load last seek
-
         self.file_iterator.seek(self.slow_seek)
         self.current_tag = Cluster()
         # advance slow seek 
@@ -549,7 +550,6 @@ class SortedFileCountReader:
             self.slow_seek = self.file_iterator.tell()
             if self._read_next_tag():
                 return counts  
-            #print "Avanza", self.current_tag.name, region.name, region.start, self.current_tag.end
 
         # get intersections
         while self.current_tag.start <= region.end and self.current_tag.name == region.name:

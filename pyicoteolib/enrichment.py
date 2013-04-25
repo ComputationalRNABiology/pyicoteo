@@ -359,10 +359,18 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
 
             else:
                 self.logger.debug("Reading tags for %s ..."%region_of_interest)
-                tags_a = file_a_reader.get_overlaping_counts(region_of_interest, overlap=EPSILON)
-                tags_b = file_b_reader.get_overlaping_counts(region_of_interest, overlap=EPSILON)
+                if self.experiment_format == BAM:
+                    tags_a = len(file_a_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON))
+                    tags_b = len(file_b_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON))
+                else:
+                    tags_a = file_a_reader.get_overlaping_counts(region_of_interest, overlap=EPSILON)
+                    tags_b = file_b_reader.get_overlaping_counts(region_of_interest, overlap=EPSILON)
+
                 if self.use_replica:            
-                    replica_tags = replica_reader.get_overlaping_counts(region_of_interest, overlap=EPSILON)
+                    if self.experiment_format == BAM:
+                        replica_tags = len(replica_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON))
+                    else:
+                        replica_tags = replica_reader.get_overlaping_counts(region_of_interest, overlap=EPSILON)
 
                 self.logger.debug("... done. tags_a: %s tags_b: %s"%(tags_a, tags_b))
 

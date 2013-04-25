@@ -182,3 +182,4 @@ Credit
 
 * Developer: Juan González-Vallinas
 * Beta Testing: Eneritz Agirre, Sonja Althammer, Juan González-Vallinas
+* Supervision: Eduardo Eyras

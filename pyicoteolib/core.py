@@ -20,6 +20,7 @@ import math
 from collections import defaultdict
 from defaults import *
 import heapq
+import string
 
 
 debug = False
@@ -138,6 +139,10 @@ class ReaderFactory:
             return SamReader(format, half_open, cached)
         elif format == COUNTS:
             return None
+
+        elif format == CUSTOM_FORMAT:
+            return CustomReader(format, half_open, cached)
+
         else:
             raise ConversionNotSupported
 
@@ -174,6 +179,46 @@ class Reader:
     def quality_filter(self, line):
         """checks if the line passes the quality conditions"""
         return True
+
+
+class CustomReader(Reader):
+    def read_line(self, cluster, line):
+        line = re.split(CustomReader.custom_sep, line.strip())
+        try:
+            fields = [int(x) for x in CustomReader.fcustom]
+        except ValueError as err:
+            print "CustomReader error: all f-custom values must be integers!"
+            sys.exit(1) # FIXME: different action?
+        try:
+            seqname = line[fields[0]]
+            start = int(line[fields[1]])
+            end = int(line[fields[2]])
+            if len(fields) > 3:
+                strand = line[fields[3]]
+            else:
+                strand = '.'
+        except ValueError as err:
+            if 'start' not in locals():
+                print "CustomReader error: incorrect field type: start"
+            elif 'end' not in locals():
+                print "CustomReader error: incorrect field type: end"
+            sys.exit(1) # FIXME: different action?
+
+        if cluster.is_empty():
+            cluster.add_tag_cached(start, end)
+            cluster.start = start
+            cluster.end = end
+            cluster.name = seqname
+            cluster.name2 = str(start) + ":" + str(end)
+            cluster.strand = strand
+        else:
+            cluster.add_tag_cached(start, end)
+            cluster.start = min(cluster.start, start)
+            cluster.end = max(cluster.end, end)
+            cluster.name2 = str(cluster.start) + ":" + str(cluster.end)
+        cluster.sequence = ''
+        cluster.tag_length = len(cluster)
+
 
 class BedReader(Reader):
 
@@ -389,6 +434,10 @@ class WriterFactory:
             return SamWriter(format, half_open, span)
         elif format == COUNTS:
             None
+
+        elif format == CUSTOM_FORMAT:
+            return CustomWriter(format, half_open, span)
+
         else:
             raise ConversionNotSupported
 
@@ -404,6 +453,30 @@ class Writer:
 
     def write_line(self):
         raise NotImplementedError("You're using the abstract base class 'Writer', use a specific class instead")
+
+
+class CustomWriter(Writer):
+    def write_line(self, cluster):
+        # ex. f-custom: 2 0 1 3 => chr1  start  end  strand
+        if cluster.is_empty():
+            return ''
+        else:
+            try:
+                fields = [int(x) for x in CustomWriter.fcustom]
+            except ValueError:
+                print "CustomWriter error: all f-custom values must be integers!"
+
+            field_list = [str(cluster.name), str(cluster.start), str(cluster.end), str(cluster.strand)]
+            rseq = [None]*len(fields) # allocate array
+            for (num, pos) in enumerate(fields):
+                rseq[pos] = field_list[num]
+ 
+            if len(fields) > 3:
+                strand_pos = fields[3]
+            else:
+                strand_pos = len(fields)
+            return string.join(rseq, CustomWriter.custom_sep.decode("string-escape")) + '\n' # string-escape: for tabs and other "special" characters
+
 
 class ElandWriter(Writer):
     def write_line(self, cluster):
@@ -423,7 +496,7 @@ class ElandWriter(Writer):
 class BedWriter(Writer):
     def write_line(self, cluster):
         bed_blueprint = '%s\t%s\t%s\t%s\t%s\t%s\n'
-            
+
         if cluster.is_empty():
             return ''
         else:
@@ -747,7 +820,7 @@ class ReadCluster(AbstractCore):
 
 
     def copy_cluster(self):
-        """Returns a copy of the self cluster. Faster than copy.deepcopy()"""
+        """Returns a copy of the self cluster. Faster than the standard python command copy.deepcopy()"""
         ret_cluster = Empty()
         ret_cluster.__class__ = self.__class__
         ret_cluster.start = self.start
@@ -1006,7 +1079,8 @@ class ReadCluster(AbstractCore):
 
     def decompose(self):
         """Returns a list of Singletons that form the cluster given a tag length. If the tag length is not provided the cluster was formed by tags with
-        different lengths, it's impossible to reconstruct the tags due to ambiguity (multiple different combination of tags can be used to obtain the same cluster)"""
+        different lengths, it's impossible to reconstruct the tags due to ambiguity (multiple different combination of tags can be used to obtain the same 
+        cluster)"""
         if self.tag_length is not None and self.tag_length > 0:
             tags = []
             cluster_copy = self.copy_cluster()

@@ -12,7 +12,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-VERSION = "2.0"
+VERSION = "2.0.1"
 
 #Formats
 ELAND = 'eland'
@@ -27,9 +27,12 @@ SPK = 'bed_spk'
 SAM = 'sam'
 BAM = 'bam'
 COUNTS = 'counts'
+
+CUSTOM_FORMAT = 'custom'
+
 CLUSTER_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG, PK, SPK)
 WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
-READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM, BAM, COUNTS) #formats that we actually can read as
+READ_FORMATS = (ELAND, BED, WIG, PK, SPK, SAM, BAM, COUNTS,  CUSTOM_FORMAT) #formats that we actually can read as
 WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK, SPK) #formats we can actually write as
 
 REGION_FORMATS = (BED, BED12)
@@ -157,6 +160,7 @@ REGION_INTRONS = 'introns'
 REGION_SLIDE = 'slide'
 REGION_SLIDE_INTER = 'inter'
 REGION_SLIDE_INTRA = 'intra'
+REGION_TSS = 'tss'
 
 REGION_MAGIC = []
 GFF_FILE = ''
@@ -165,4 +169,7 @@ DISABLE_SIGNIFICANT = False
 GFF_MANDATORY_FIELDS = 8
 
 REGIONS = 'regions'
+
+F_CUSTOM = []
+CUSTOM_SEP = '\s+'
 
