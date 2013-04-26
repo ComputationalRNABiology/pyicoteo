@@ -1701,7 +1701,7 @@ class ReadRegion(AbstractCore):
                         break
 
                 if repeat_count > 2000:
-                    print 'Couldnt find a suitable randomization spot after 2000 tries, surrendering'
+                    if self.logger: self.logger.warning("Couldn't find a suitable randomization spot after 2000 tries, surrendering")
                     break
 
         # recreate the clusters

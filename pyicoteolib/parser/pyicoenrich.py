@@ -14,7 +14,7 @@ def create_parser():
                                      description='An enrichment test based on the MA plots using mapped reads files. Pyicoenrich output will consist in a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), 
                                      parents=[exp_or_count, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, 
                                               region_format, output, enrichment_flags, tmm_flag, quant_flag, total_reads_flags, 
-                                              pseudocount, zscore, optional_push]
+                                              pseudocount, zscore, optional_push, optional_frag_size]
                                      )
     #-output
     return parser
@@ -38,10 +38,12 @@ def run_parser():
 
     turbomix = init_turbomix(args, parser_name="pyicoenrich")
 
-
     turbomix.operations = [ENRICHMENT, CALCZSCORE]
     if args.push_distance:
         turbomix.operations.append(PUSH)
+
+    if args.frag_size:
+        turbomix.operations.append(EXTEND)
 
     if not args.skip_plot:
        turbomix.operations.append(PLOT)
