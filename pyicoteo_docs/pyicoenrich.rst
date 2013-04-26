@@ -1,11 +1,15 @@
 Pyicoenrich
 ===========
 
+Enrichment analysis can be applied on any type of -seq data. Pyicoenrich performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. 
+
 Introduction
 ------------
 
 Enrichment analysis can be applied on any type of -seq data. Pyicoenrich performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicoenrich calculates Z-Scores for each region of interest. If no replicas are provided Pyicoenrich creates technical replicas (see below).
+>>>>>>> e9562dc4f37908b969e31339ce3bcc24aebcc469
 
+For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicoenrich calculates Z-Scores for each region of interest. If no replicas are provided Pyicoenrich creates technical replicas (see below).
 
 .. figure:: images/enrichment.png
 
@@ -18,15 +22,38 @@ Pyicoenrich uses the capabilities of Pyicoregion in order to explore region file
 
 If a region file is provided, Pyicoenrich returns for each region a Z-Score (See counts file description) which indicates the enrichment/depletion of condition A over condition B. If no region file is provided, Pyicoenrich provides the options to take the union of reads from both conditions as a region and gives back Z-Scores for the generated regions. As regions with 0 reads in one condition might be especially interesting, Pyicoenrich can use pseudocounts, in order to avoid a division by 0: Pyicoenrich calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicoenrich assumes that there is already 1 read in each region in each condition.
 
+In order to decide what regions are to be explored, you have 3 main options:
+
+Provide a regions file
+""""""""""""""""""""""""
+
+If a region file is provided, Pyicoenrich returns for each region a z-Score (among others) which indicates the enrichment/depletion of condition A over condition B. The region file should be in BED format. Also, you may consider only discontinuous regions by using the BED12 format::
+
+        pyienrich -reads kidney1.bed liver1.bed -output Pyicoenrich_Kidney_Liver_result_Counts -f bed *--region genes.bed* 
+
+Generate a file with the --region-magic flag and GTF file
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+See Pyicoregion_. for examples on how to use region magic.
+
+Do nothing
+"""""""""""""
+
+Feeling lazy and don't really want to care about regions files? No worries. If no region file is provided, Pyicoenrich provides the options to take the union of reads from both conditions as a region and gives back Z-Scores for the generated regions. 
 
 .. figure:: images/region_definition.png
+
+--pseudocounts
+----------------
+
+As regions with 0 reads in one condition might be especially interesting, Pyicoenrich can use pseudocounts, in order to avoid a division by 0: Pyicoenrich calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicoenrich assumes that there is already 1 read in each region in each condition.
+
 
 To calculate the Z-Score, Pyicoenrich compares the differences between condition A and condition B with the differences between A and A' (while A' is the biological replica of A). If no biological replica is available, Pyicoenrich uses a sample swap as a reference. With sample swap we mean that reads from condition A and B are mixed randomly and divided in two sets (with size of those of A and B). In the two resulting sets we do not expect any significant differences, just like in replicas.  
 
 .. figure:: images/swap.png
 
-Counts file description
------------------------
+Description of the counts file
+-----------------------------------
 
 Column description of enrichment result where each line describes a region: 
 
@@ -57,6 +84,9 @@ Column description of enrichment result where each line describes a region:
 25) sd	                   =   standard deviation of M_prime values in window
 26) zscore                 =  score for the significance of the difference of enrichment between condition a and b compared to prime 1  and prime 2 
           
+
+Normalization methods
+------------------------
 
 Examples::
 

@@ -1713,7 +1713,7 @@ class ReadRegion(AbstractCore):
         
 
     def add_tags(self, tags, clusterize=False):
-        """This method reads a list of tags or a single tag (Cluster objects, not unprocessed lines). If strand is set, then only the tags with the selected strand are added"""
+        """This method reads a list of tags or a single tag (ReadCluster objects, not unprocessed lines). If strand is set, then only the tags with the selected strand are added"""
         if self.logger: self.logger.debug("ADDING: Starting...")
         if type(tags) == list:
             if self.logger: self.logger.debug("ADDING: Checking strand...")
