@@ -6,8 +6,7 @@ Enrichment analysis can be applied on any type of -seq data. Pyicoenrich perform
 Introduction
 ------------
 
-Enrichment analysis can be applied on any type of -seq data. Pyicoenrich performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicoenrich calculates Z-Scores for each region of interest. If no replicas are provided Pyicoenrich creates technical replicas (see below).
->>>>>>> e9562dc4f37908b969e31339ce3bcc24aebcc469
+Enrichment analysis can be applied on any type of -seq data. Pyicoenrich performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicoenrich calculates Z-Scores for each region of interest. If no replicas are provided Pyicoenrich creates technical replicas (see below)
 
 For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicoenrich calculates Z-Scores for each region of interest. If no replicas are provided Pyicoenrich creates technical replicas (see below).
 
