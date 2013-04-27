@@ -307,25 +307,7 @@ def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
     os.remove(os.path.abspath(sorted_file.name))
 
 
-def _get_exons_from_gene_list(tmp_genes, remove_duplicates=True):
-    exons = []
-    for g in tmp_genes:
-        for tr in g.get_children():
-            exons.extend(tr.get_children())
-    exons.sort(key = lambda ex: (int(ex.start), int(ex.end)))
 
-    # Remove duplicated exons (only checks e1.start == e2.start && e1.end == e2.end)
-    # (FIXME: Is there a better way to do it?)
-    if remove_duplicates:
-        to_remove = []
-        for num, ex in enumerate(exons[1:]): # we start with "[1:]" because we compare with the previous exon in the list
-            if ex.start == exons[num].start and ex.end == exons[num].end and ex.strand == exons[num].strand:
-                to_remove.append(num+1) # TODO: join exon_ids?
-        for n in reversed(to_remove):
-            exons.pop(n)
-
-    for ex in exons:
-        yield ex
 
 
 def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  position=None):
@@ -371,47 +353,54 @@ def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  po
             yield exon
 
 
+def _get_exons_from_gene_list(tmp_genes, remove_duplicates=True):
+    exons = []
+    for g in tmp_genes:
+        for tr in g.get_children():
+            exons.extend(tr.get_children())
+    exons.sort(key = lambda ex: (int(ex.start), int(ex.end)))
 
-def get_introns(gtf_path, min_length=0, no_sort=False,  position=None):
+    # Remove duplicated exons (only checks e1.start == e2.start && e1.end == e2.end)
+    # (FIXME: Is there a better way to do it?)
+    if remove_duplicates:
+        to_remove = []
+        for num, ex in enumerate(exons[1:]): # we start with "[1:]" because we compare with the previous exon in the list
+            if ex.start == exons[num].start and ex.end == exons[num].end and ex.strand == exons[num].strand:
+                to_remove.append(num+1) # TODO: join exon_ids?
+        for n in reversed(to_remove):
+            exons.pop(n)
+
+    for ex in exons:
+        yield ex
+
+
+
+def get_introns(gtf_path, min_length=0, no_sort=False, position=None):
     tmp_genes = []
     for gene in read_gtf_file(gtf_path, no_sort=no_sort):
         if len(tmp_genes) > 0:
             if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
-
-                if position is None: # return all introns
-                    exons = [exon for exon in _get_exons_from_gene_list(tmp_genes, remove_duplicates=True)]
-                    if len(exons) >= 2:
-                        last_exon = exons[0]
-                        for ex in exons[1:]:
-                            if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
-                                yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand) # intron returned as tuple (seqname, start, end, id, strand)
-                            last_exon = ex
-                else: # TODO: test!
-                    for g in tmp_genes: # TODO: move to a dedicated function to avoid repeated code?
-                        g_exons  = [exon for exon in _get_exons_from_gene_list([g], remove_duplicates=True)]
-                        if len(g_exons) >= 2:
-                            if (position == 'first' and g.strand in ['+', '.']) or (position == 'last' and g.strand == '-'):
-                                pos = slice(0, 2) # first and second exons
-                            else:
-                                pos = slice(len(g_exons) - 2, len(g_exons)) # second-to-last and last exons
-                            ex1 = g_exons[pos][0]
-                            ex2 = g_exons[pos][1]
-                            yield (ex1.seqname, ex1.end, ex2.start, ex1.region_id, ex1.strand)
-
+                for intron in _get_introns_from_gene_list(tmp_genes, min_length, position):
+                    yield intron
                 tmp_genes = [] # empty list
         tmp_genes.append(gene)
         tmp_genes.sort(key = lambda gn: (int(gn.end)))
 
-    if position is None:
+    for intron in _get_introns_from_gene_list(tmp_genes, min_length, position):
+        yield intron
+
+
+def _get_introns_from_gene_list(tmp_genes, min_length, position=None):
+    if position is None: # return all introns
         exons = [exon for exon in _get_exons_from_gene_list(tmp_genes, remove_duplicates=True)]
-        if len(exons) >= 2: # some introns remaining
+        if len(exons) >= 2:
             last_exon = exons[0]
             for ex in exons[1:]:
                 if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
-                    yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand)
+                    yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand) # intron returned as tuple (seqname, start, end, id, strand)
                 last_exon = ex
-    else: # remaining introns with 'position'
-        for g in tmp_genes: # TODO: move to a dedicated function to avoid repeated code?
+    else: # TODO: test!
+        for g in tmp_genes:
             g_exons  = [exon for exon in _get_exons_from_gene_list([g], remove_duplicates=True)]
             if len(g_exons) >= 2:
                 if (position == 'first' and g.strand in ['+', '.']) or (position == 'last' and g.strand == '-'):
@@ -423,10 +412,15 @@ def get_introns(gtf_path, min_length=0, no_sort=False,  position=None):
                 yield (ex1.seqname, ex1.end, ex2.start, ex1.region_id, ex1.strand)
 
 
+
 def get_tss(gtf_path, add_start=0, add_end=0, no_sort=False): # TODO: test!
     tmp_genes = []
     for gene in read_gtf_file(gtf_path, no_sort=no_sort, do_filter=True):
         if len(tmp_genes) > 0:
+            # Had some order problems in cases like:
+            #       X-->|>------------X
+            #   X------------<|<--X
+            # (hopefully solved now)
             if (gene.start - max(add_start, add_end) > tmp_genes[-1].end + max(add_start, add_end)) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
             #if (gene.start > tmp_genes[-2].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
                 for tss in _get_tss_from_gene_list(tmp_genes, add_start, add_end):
@@ -482,7 +476,7 @@ def generate_windows(start, end, win_size, win_step, fit_last=True):
             win_end += win_step
         if fit_last and win_end > end:
             yield (end - win_size, end)
-        
+
 
 
 # sliding windows
