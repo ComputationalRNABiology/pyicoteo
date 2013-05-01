@@ -412,7 +412,7 @@ def _get_introns_from_gene_list(tmp_genes, min_length, position=None):
                 yield (ex1.seqname, ex1.end, ex2.start, ex1.region_id, ex1.strand)
 
 
-
+# FIXME: check chromlen (if last position > chromlen...)? (+ test!)
 def get_tss(gtf_path, add_start=0, add_end=0, no_sort=False): # TODO: test!
     tmp_genes = []
     for gene in read_gtf_file(gtf_path, no_sort=no_sort, do_filter=True):
@@ -572,7 +572,7 @@ class RegionWriter():
                 for (seqname, start, end, name2) in gene_slide(self.gff_path, win_size, win_step, win_type, chr_lengths=self.read_chromlen(chrlen_path), no_sort=self.no_sort):
                     cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as,    name2=name2)
                     self.region_file.write(cl.write_line())
-            elif self.params[0] == REGION_TSS: # FIXME: check chromlen? (+ test!)
+            elif self.params[0] == REGION_TSS:
                 add_start = int(self.params[1])
                 add_end = int(self.params[2])
                 for (seqname, start, end, strand, name2) in get_tss(self.gff_path, add_start, add_end, no_sort=self.no_sort):
