@@ -16,7 +16,7 @@ For example, you might expect significant differences between different conditio
 Region exploration
 --------------------
 
-Pyicoenrich uses the capabilities of Pyicoregion in order to explore region files. See
+Pyicoenrich uses the capabilities of Pyicoregion in order to explore region files. See pyicoregion <pyicoregion> for details
 
 
 If a region file is provided, Pyicoenrich returns for each region a Z-Score (See counts file description) which indicates the enrichment/depletion of condition A over condition B. If no region file is provided, Pyicoenrich provides the options to take the union of reads from both conditions as a region and gives back Z-Scores for the generated regions. As regions with 0 reads in one condition might be especially interesting, Pyicoenrich can use pseudocounts, in order to avoid a division by 0: Pyicoenrich calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicoenrich assumes that there is already 1 read in each region in each condition.
@@ -28,7 +28,7 @@ Provide a regions file
 
 If a region file is provided, Pyicoenrich returns for each region a z-Score (among others) which indicates the enrichment/depletion of condition A over condition B. The region file should be in BED format. Also, you may consider only discontinuous regions by using the BED12 format::
 
-        pyienrich -reads kidney1.bed liver1.bed -output Pyicoenrich_Kidney_Liver_result_Counts -f bed *--region genes.bed* 
+        pyienrich -reads kidney1.bed liver1.bed -output Pyicoenrich_Kidney_Liver_result_Counts -f bed --region genes.bed
 
 Generate a file with the --region-magic flag and GTF file
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -37,9 +37,14 @@ See Pyicoregion_. for examples on how to use region magic.
 Do nothing
 """""""""""""
 
-Feeling lazy and don't really want to care about regions files? No worries. If no region file is provided, Pyicoenrich provides the options to take the union of reads from both conditions as a region and gives back Z-Scores for the generated regions. 
+Don't really know where you want to look yet? If no region file is provided, Pyicoenrich will automatically generate one with taking he union of reads from both conditions as a region and gives back Z-Scores for the generated regions. 
+
+The flag *--proximity* controls the distance with which the regions are considered "joined". Default is 50nt::
+
+        pyienrich -reads kidney1.bed liver1.bed -output Pyicoenrich_Kidney_Liver_result -f bed --proximity 50nt
 
 .. figure:: images/region_definition.png
+
 
 --pseudocounts
 ----------------
@@ -98,7 +103,6 @@ Examples::
     # To use RPKM normalization    
     pyicos enrichment kidney1.bed liver1.bed Pyicoenrich_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm
 
-
     pyicos enrichment kidney1.bed liver1.bed Pyicoenrich_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm --tmm-norm
 
     # To use Full quantile normalization 
@@ -109,7 +113,7 @@ Examples::
 Credit
 ------
 
-* Developer: Juan González-Vallinas
+* Developers: Juan González-Vallinas, Ferran Lloret
 * Beta Testing: Sonja Althammer, Eneritz Agirre, Nuria Conde Pueyo, Juan González-Vallinas
 * Benchmarking against other DE methods: Sonja Althammer
 * Speed and memory performance benchmarking: Juan González-Vallinas

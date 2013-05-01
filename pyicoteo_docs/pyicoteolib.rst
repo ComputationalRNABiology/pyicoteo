@@ -96,23 +96,26 @@ Read some .bed lines, cluster them, output a wiggle file
     cluster.write_line()
 
 
-
-
-
 ReadRegion
 """"""""""
 
 A ReadRegion object holds a genomic region that may contain ReadClusters
 
-
 pyicoteolib.utils
 ------------------
 
-SortedClusterblabla
+SortedClusterReader
+"""""""""""""""""""
+
+SortedCountsReader
 """""""""""""""""""
 
 BigSort
 """""""
+
+
+BAM reader
+------------
 
 
 Credit

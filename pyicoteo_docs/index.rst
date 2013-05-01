@@ -30,13 +30,13 @@ You can also download older versions (up to 1.1b) from our `Sourceforge reposito
 .. _`Sourceforge repository`: http://sourceforge.net/projects/pyicos/ 
 
 
-The command line tools can be used directly without installation. However, installation is recommended, and necessary if you intend to use the Pyicoteolib. To do so decompress the folder and run the setup.py script with administrator privileges:
+The command line tools can be used directly without installation. However, installation is recommended, and necessary if you intend to use the Pyicoteolib. To do so decompress the folder and run the setup.py script with administrator privileges::
 
     python setup.py install
 
 In order to make it simple for the community, Pyicoteo basic functionality has no dependencies other than Python 2.6 or higher. However, there are 2 optional libraries you could install. 
 
-For plotting capabilities, it is neccesary to install Matplotlib (> 1.0). 
+ **(Optional) For plotting capabilities, it is neccesary to install Matplotlib (> 1.0). **  
 
 Also, for BAM reading, while we offer a native python implementation, you can ask Pyicoteo to read BAM using samtools with the flag --samtools. 
 Pyicoteo is not compatible with Python 3.
@@ -82,6 +82,9 @@ Read more about it at:
    :maxdepth: 2
 
 	pyicoteolib <pyicoteolib>
+
+
+
 
 Command-line based tools 
 ========================
