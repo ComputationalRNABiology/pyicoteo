@@ -15,9 +15,10 @@ To run a protocol file type::
 Syntax
 ------
 
-Pyicotrocols files are based on the `.ini format`_. 
 
-.. _.`ini format` http://en.wikipedia.org/wiki/INI_file
+Pyicotrocols files are based on the `.ini format`_
+
+.. _`.ini format`: http://en.wikipedia.org/wiki/INI_file
 
 Examples
 --------

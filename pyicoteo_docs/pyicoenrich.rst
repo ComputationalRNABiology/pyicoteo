@@ -1,14 +1,10 @@
 Pyicoenrich
 ===========
 
-Enrichment analysis can be applied on any type of -seq data. Pyicoenrich performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. 
-
 Introduction
 ------------
 
-Enrichment analysis can be applied on any type of -seq data. Pyicoenrich performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicoenrich calculates Z-Scores for each region of interest. If no replicas are provided Pyicoenrich creates technical replicas (see below)
-
-For example, you might expect significant differences between different conditions, while you would not expect significant differences between biological replicas. Based on this assumption Pyicoenrich calculates Z-Scores for each region of interest. If no replicas are provided Pyicoenrich creates technical replicas (see below).
+Enrichment analysis can be applied on any type of -seq data. Pyicoenrich performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest. 
 
 .. figure:: images/enrichment.png
 
@@ -16,50 +12,69 @@ For example, you might expect significant differences between different conditio
 Region exploration
 --------------------
 
-Pyicoenrich uses the capabilities of Pyicoregion in order to explore region files. See pyicoregion <pyicoregion> for details
-
-
-If a region file is provided, Pyicoenrich returns for each region a Z-Score (See counts file description) which indicates the enrichment/depletion of condition A over condition B. If no region file is provided, Pyicoenrich provides the options to take the union of reads from both conditions as a region and gives back Z-Scores for the generated regions. As regions with 0 reads in one condition might be especially interesting, Pyicoenrich can use pseudocounts, in order to avoid a division by 0: Pyicoenrich calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicoenrich assumes that there is already 1 read in each region in each condition.
+If a region file is provided, Pyicoenrich returns for each region a Z-Score (See counts file description) which indicates the enrichment/depletion of condition A over condition B. If no region file is provided, Pyicoenrich provides the options to take the union of reads from both conditions as a region and gives back Z-Scores for the generated regions. As regions with 0 reads in one condition might be especially interesting. 
 
 In order to decide what regions are to be explored, you have 3 main options:
+
+Generate a file with the --region-magic flag and GTF file
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+See :ref:`pyicoregiondocs` for examples on how to use ``--region-magic`` flag to automatically explore exons, introns and the whole genome using sliding windows automatically from GTF files. 
 
 Provide a regions file
 """"""""""""""""""""""""
 
 If a region file is provided, Pyicoenrich returns for each region a z-Score (among others) which indicates the enrichment/depletion of condition A over condition B. The region file should be in BED format. Also, you may consider only discontinuous regions by using the BED12 format::
 
-        pyienrich -reads kidney1.bed liver1.bed -output Pyicoenrich_Kidney_Liver_result_Counts -f bed --region genes.bed
-
-Generate a file with the --region-magic flag and GTF file
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-See Pyicoregion_. for examples on how to use region magic.
+        pyicoenrich -reads kidney1.bed liver1.bed -output Pyicoenrich_Kidney_Liver_result_Counts -f bed --region genes.bed
 
 Do nothing
 """""""""""""
 
 Don't really know where you want to look yet? If no region file is provided, Pyicoenrich will automatically generate one with taking he union of reads from both conditions as a region and gives back Z-Scores for the generated regions. 
 
-The flag *--proximity* controls the distance with which the regions are considered "joined". Default is 50nt::
+The flag ``--proximity`` controls the distance with which the regions are considered "joined". Default is 50nt::
 
-        pyienrich -reads kidney1.bed liver1.bed -output Pyicoenrich_Kidney_Liver_result -f bed --proximity 50nt
+        pyicoenrich -reads kidney1.bed liver1.bed -output Pyicoenrich_Kidney_Liver_result -f bed --proximity 50nt
 
 .. figure:: images/region_definition.png
 
 
 --pseudocounts
-----------------
+--------------
 
 As regions with 0 reads in one condition might be especially interesting, Pyicoenrich can use pseudocounts, in order to avoid a division by 0: Pyicoenrich calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicoenrich assumes that there is already 1 read in each region in each condition.
 
+--stranded
+------------
+
+
+Replica or technical control (swap)
+---------------------------------------
 
 To calculate the Z-Score, Pyicoenrich compares the differences between condition A and condition B with the differences between A and A' (while A' is the biological replica of A). If no biological replica is available, Pyicoenrich uses a sample swap as a reference. With sample swap we mean that reads from condition A and B are mixed randomly and divided in two sets (with size of those of A and B). In the two resulting sets we do not expect any significant differences, just like in replicas.  
 
 .. figure:: images/swap.png
 
-Description of the counts file
------------------------------------
+    Technical replica (swap) illustration
 
-Column description of enrichment result where each line describes a region: 
+Examples
+""""""""""
+
+With replica::
+
+    pyicoenrich -reads kidney1.bed liver1.bed -output n_norm.enrich -f bed --region genes.bed --replica kidney2.bed
+
+Using a swap::
+
+    pyicoenrich -reads kidney1.bed liver1.bed -output n_norm.enrich -f bed --region genes.bed 
+
+
+Description of the pyicoenrich counts file
+-----------------------------------------------
+
+Column description of enrichment result where each line describes a region::
+
+    TIP: If you want to provide pyicoenrich with your own counts file, you only need to provide up to column 6)
 
 1) name                    =  chromosome of region
 2) start                   =  region start
@@ -92,21 +107,112 @@ Column description of enrichment result where each line describes a region:
 Normalization methods
 ------------------------
 
-Examples::
+Pyicoenrich included several popular normalization methods for the counts.
 
-    # Calculations based on count data:    
-    pyienrich -reads kidney1.bed liver1.bed -output Pyicoenrich_Kidney_Liver_result_Counts -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header
-   
-    # Calculations based on count data normalized by number of reads in sample:    
-    pyicos enrichment kidney1.bed liver1.bed Pyicoenrich_Kidney_Liver_result_Counts -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm 
+    **PUBLIC SERVICE ANNOUNCEMENT:** When dealing with normalization methods, one has to be very careful. 
+    There is no silver bullet, you need to understand your data and then apply the method that is appropriate for it. 
+    If you are in doubt, please consult your local statistician.
 
-    # To use RPKM normalization    
-    pyicos enrichment kidney1.bed liver1.bed Pyicoenrich_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm
+Total reads normalization (``--n-norm``)
+"""""""""""""""""""""""""""""""""""""""""""
 
-    pyicos enrichment kidney1.bed liver1.bed Pyicoenrich_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --n-norm --len-norm --tmm-norm
+This normalization will calculate the *number of reads per million reads* in each region and sample. This is a *very simple* normalization that tries to correct the bias of comparing different samples by total number of reads. You can activate it with the ``--n-norm`` flag.
 
-    # To use Full quantile normalization 
-    pyicos enrichment kidney1.bed liver1.bed Pyicoenrich_Kidney_Liver_result_RPKM -f bed --region genes.bed --open-region --stranded --replica kidney2.bed --pseudocount --skip-header --quant-norm
+Example. Using 2 reads files, calculate the enrichment normalizing by N ::
+
+    pyicoenrich -reads kidney1.bed liver1.bed -output n_norm.enrich -f bed --region genes.bed --n-norm
+
+If you want to skip the total reads calculation step, you can provide the total number of reads with the following flags.
+
+.. option:: --total-reads-a
+                        
+.. option:: --total-reads-b 
+
+.. option:: --total-reads-replica 
+
+Example:: 
+
+    pyicoenrich -reads kidney1.bed liver1.bed -output n_norm.enrich -f bed --region genes.bed --n-norm --total-reads-a 120000 --total-reads-b 110000
+
+
+Region length normalization (``--len-norm``)
+""""""""""""""""""""""""""""""""""""""""""""""
+
+Calculates the number of reads per **region** kilobase. It aims to correct for regions with different lengths. 
+
+NOTE: If possible, try not to mix regions with different lengths. 
+
+pyicoenrich -reads kidney1.bed liver1.bed -output n_norm.enrich -f bed --region genes.bed --n-norm
+
+
+RPKM (``--len-norm`` and ``--n-norm``)
+"""""""""""""""""""""""""""""""""""""""""""
+
+The popular RPKM normalization is the combination of both ``--n-norm`` and ``--len-norm``::
+
+    pyicoenrich -reads kidney1.bed liver1.bed -output rpkm_norm.enrich -f bed --region genes.bed --n-norm --len-norm
+
+
+Trimmed Means of M values normalization (``--tmm-norm``)
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+As proposed by EdgeR_. 
+
+.. _EdgeR: http://genomebiology.com/2010/11/3/R25
+
+This calculates the weighted trimmed mean of the log expression ratios (trimmed mean of M values (TMM)). It is based on the hypothesis that most of your regions do not change, and calculates a normalization factor by excluding the total amount of data. 
+
+Important flags.
+
+.. option:: --a-trim    
+
+    Proportion of A values to be discarded when doing the
+    
+    TMM normalization. [Default 0.05]
+
+.. option:: --m-trim   
+
+    Proportion of M values to be discarded when doing the
+
+    TMM normalization. [Default 0.25]
+
+Example: TMM normalization calculated discarding the 20% smaller A (less read coverage) and 5% of the regions with the biggest differences (up and down)::
+
+    pyicoenrich -reads kidney1.bed liver1.bed -output rpkm_norm.enrich -f bed --region genes.bed --tmm-norm --a-trim 0.2 --m-trim 0.05
+
+Full quantile normalization (``--quant-norm``)
+""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+This method is suitable when your samples have too much variability. As elocuently put by Simplystatistics_
+
+.. _Simplystatistics: http://simplystatistics.org/2013/04/26/mindlessly-normalizing-genomics-data-is-bad-but-ignoring-unwanted-variability-can-be-worse/
+
+
+``--interesting-regions``
+----------------------------
+
+Providing a list of interesting regions matching a the 4th column of the region or count file will highlight them in the MA plot. 
+
+(FALTA figura)
+
+
+Example::
+    
+    """
+    Region file (regions.bed)
+    chr1 1 100     region1 0 .
+    chr1 1000 1100 region2 0 .
+    chr2 1 100     region3 0 .    
+    ...
+    chrN x y       regionN 0 . 
+
+    Interesting regions file (interreg.txt)
+    region4
+    region10
+    ...
+    regionZ
+    """
+    pyicoenrich -reads kidney1.bed liver1.bed -output rpkm_norm.enrich -f bed --region genes.bed --tinteresting-regions interreg.txt
 
 
 

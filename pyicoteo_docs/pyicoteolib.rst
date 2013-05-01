@@ -18,7 +18,7 @@ All the following standard operators are supported::
 Adding
 """"""""
 
-Adding combines the signal of 2 different ReadClusters, with nucleotide precision.
+Adding combines the signal of 2 different ReadClusters, with nucleotide precision::
 
         cluster1 = ReadCluster(read=PK)
         cluster2 = ReadCluster(read=PK)
@@ -34,7 +34,7 @@ Adding combines the signal of 2 different ReadClusters, with nucleotide precisio
 Subtracting
 """"""""""""""
 
-Substracts the signal of 2 different ReadClusters, with nucleotide precision. 
+Substracts the signal of 2 different ReadClusters, with nucleotide precision::
 
         cluster1 = ReadCluster(read=SAM)
         cluster2 = ReadCluster(read=PK)
@@ -73,7 +73,8 @@ This indicates which read cluster is before another in a chromosome::
 Lets see some usage examples.
 
 Read a .bed file, print the chromosome and the length of each read
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+::
 
 	from pyicoteolib.core import ReadCluster, BED
 

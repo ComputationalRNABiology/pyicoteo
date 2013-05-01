@@ -34,12 +34,7 @@ The command line tools can be used directly without installation. However, insta
 
     python setup.py install
 
-In order to make it simple for the community, Pyicoteo basic functionality has no dependencies other than Python 2.6 or higher. However, there are 2 optional libraries you could install. 
 
- **(Optional) For plotting capabilities, it is neccesary to install Matplotlib (> 1.0). **  
-
-Also, for BAM reading, while we offer a native python implementation, you can ask Pyicoteo to read BAM using samtools with the flag --samtools. 
-Pyicoteo is not compatible with Python 3.
 
 Check installation
 ------------------
@@ -50,23 +45,52 @@ To test that the software was installed correctly, start a python console and tr
     >>> import pyicoteolib
     >>> import pyicoteolib.core
 
+Also, you should find the tools in your command line. 
+
+*Tip: If you are in a GNU/Linux system, type "pyico" in the command line and tap TAB twice. You should see something like this*::
+
+  pyicoclip        pyicoller        pyicos                    
+  pyicoenrich      pyicoregion      pyicotrocol
+
+Dependencies
+----------------
+
+In order to make it simple for the community, Pyicoteo basic functionality has no dependencies other than Python 2.6 or higher. However, there are 2 optional libraries you could install. 
+
+Matplotlib
+^^^^^^^^^^
+
+For plotting capabilities, it is neccesary to install Matplotlib (> 1.0). 
+
+Samtools
+^^^^^^^^^
+
+Also, for BAM reading, while we offer a native python implementation, you can ask Pyicoteo to read BAM using samtools with the flag --samtools. 
+Pyicoteo is not compatible with Python 3.
+
+
 The bedpk format
 ----------------
 
 Some Pyicoteo tools (Pyicos, Pyicaller and Pyicoclip) default experiment and output formats is a derivative of UCSC `Bed format <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>`_ called bedpk. It follows the same starting fields "chromosome/tag start end" but it uses some of the original optional fields to include extra information. It is a cluster oriented format that aims to recollect information of a cluster of reads in a single comprehensive line. 
 
+
 .. figure:: images/bedpk_format.svg.png 
+        :width: 70em
         :align: left
 
-Column definition
-""""""""""""""""""""
+        The bedpk format specification. It is exactly like a BED6 format, but using the 4th column to store extra information. 
+
+
+bedpk Column definition
+"""""""""""""""""""""""""
 
 1) Chromosome
 2) Start coordinate
 3) End coordinate
 4) Profile: This field summarizes the accumulation of reads per nucleotide of the cluster. The first number is the number of bases covered, while the second will be the number of reads in those bases. See the example above
 5) Height: The maximum height of the cluster. In this case, 3.
-6) Strand: if ALL clusters reads are positive strand "+", if they are all negative "-". Otherwise "."
+6) Strand: if ALL reads that  are positive strand ``+``, if they are all negative ``-``. Otherwise ``.``
 7) Summit: The position where the maximum height is found. The binding site is expected to be close to the summit.
 8) Area: The area covered by the cluster.
 9) p-value: The significance of the cluster calculated by the poisson operation based on peak heights or numbers of reads.
@@ -82,8 +106,6 @@ Read more about it at:
    :maxdepth: 2
 
 	pyicoteolib <pyicoteolib>
-
-
 
 
 Command-line based tools 
