@@ -17,7 +17,7 @@ Here we explain briefly what each subcommand does and we give some examples::
 convert
 -------
 
-Converting a file from one format to another format. Currently supported format are: 
+Converting a file from one format to another format. Currently supported formats are: 
 
 experiment: Bed, Wiggle files (bed_wiggle), SAM, BAM, Eland, bedpk (Pyicos default compressed format), bedspk (Pyicos stranded compressed format)
 

@@ -16,7 +16,7 @@ If a region file is provided, Pyicoenrich returns for each region a Z-Score (See
 
 In order to decide what regions are to be explored, you have 3 main options:
 
-Generate a file with the --region-magic flag and GTF file
+Generate a file with the ``--region-magic`` flag and GTF file
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 See :ref:`pyicoregiondocs` for examples on how to use ``--region-magic`` flag to automatically explore exons, introns and the whole genome using sliding windows automatically from GTF files. 
 
@@ -183,7 +183,7 @@ Example: TMM normalization calculated discarding the 20% smaller A (less read co
 Full quantile normalization (``--quant-norm``)
 """"""""""""""""""""""""""""""""""""""""""""""""""""
 
-This method is suitable when your samples have too much variability. As elocuently put by Simplystatistics_
+This method is suitable when your samples have too much variability. As eloquently put by Simplystatistics_
 
 .. _Simplystatistics: http://simplystatistics.org/2013/04/26/mindlessly-normalizing-genomics-data-is-bad-but-ignoring-unwanted-variability-can-be-worse/
 
@@ -191,9 +191,14 @@ This method is suitable when your samples have too much variability. As elocuent
 ``--interesting-regions``
 ----------------------------
 
-Providing a list of interesting regions matching a the 4th column of the region or count file will highlight them in the MA plot. 
+Providing a list of interesting regions matching the 4th column of the region or count file will highlight them in the MA plot. 
 
-(FALTA figura)
+
+
+.. figure:: images/Enrich_Interesting.png
+
+    Example of an enrichment output plot using ``--interesting-regions``.
+
 
 
 Example::
@@ -212,7 +217,7 @@ Example::
     ...
     regionZ
     """
-    pyicoenrich -reads kidney1.bed liver1.bed -output rpkm_norm.enrich -f bed --region genes.bed --tinteresting-regions interreg.txt
+    pyicoenrich -reads kidney1.bed liver1.bed -output rpkm_norm.enrich -f bed --region genes.bed --interesting-regions interreg.txt
 
 
 
