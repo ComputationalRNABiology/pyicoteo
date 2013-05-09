@@ -14,5 +14,8 @@ Credit
 
 * Developer: Juan González-Vallinas
 * Beta testing: Sonja Althammer, Eneritz Agirre, Nuria Conde Pueyo
+* Optimization of the pipeline: Sonja Althammer
 * Benchmarking against other peak callers: Sonja Althammer
 * Performance benchmarking: Juan González-Vallinas
+
+

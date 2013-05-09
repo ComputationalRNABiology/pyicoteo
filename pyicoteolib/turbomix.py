@@ -903,7 +903,7 @@ class Turbomix:
         
 
     def modfdr(self):
-        self.logger.info("Running modfdr filter with %s p-value threshold and %s repeats..."%(self.p_value, self.repeats))
+        if self.logger: self.logger.info("Running modfdr filter with %s p-value threshold and %s repeats..."%(self.p_value, self.repeats))
         old_output = '%s/before_modfdr_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
         move(os.path.abspath(self.current_output_path), old_output)
         cluster_reader = utils.read_fetcher(old_output, self.output_format, cached=self.cached, logger=self.logger)
@@ -911,6 +911,7 @@ class Turbomix:
         unfiltered_output = open('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
         for region_line in open(self.sorted_region_path):
             region = self._region_from_sline(region_line.split())
+            region.logger = self.logger
             region.add_tags(cluster_reader.get_overlaping_clusters(region, overlap=EPSILON), True)
             classified_clusters = region.get_FDR_clusters(self.repeats)
             for cluster in classified_clusters:

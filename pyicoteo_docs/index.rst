@@ -8,7 +8,8 @@ Welcome to Pyicoteo
 
 Pyicoteo* is a suite of tools for the analysis of high-throughput sequencing data. It works with genomic coordinates, it was mainly developed using Solexa/Illumina mapped reads, but it it's core is platform-agnostic. There are currently 6 different tools (5 command-line based, one configuration file based) and a python library for scripting::
 
-	* Pronounced as in Spanish  "picoteo"_ /pɪkɒtɛɒ/: (n) Appetizer-type foods that accompany drinks before or instead of a meal)
+	* Pronounced as in Spanish  "picoteo"_ /pɪkɒtɛɒ/: 
+          (n) Appetizer-type foods that accompany drinks before or instead of a meal.
 
 If you have any problems or suggestions please join the `Pyicoteo Google Group`_ and ask! 
 
@@ -65,7 +66,7 @@ For plotting capabilities, it is neccesary to install Matplotlib (> 1.0).
 Samtools
 ^^^^^^^^^
 
-Also, for BAM reading, while we offer a native python implementation, you can ask Pyicoteo to read BAM using samtools with the flag --samtools. 
+Also, for BAM reading, while we offer a native python implementation, you can ask Pyicoteo to read BAM using samtools with the flag ``--samtools``. 
 Pyicoteo is not compatible with Python 3.
 
 
@@ -76,14 +77,14 @@ Some Pyicoteo tools (Pyicos, Pyicaller and Pyicoclip) default experiment and out
 
 
 .. figure:: images/bedpk_format.svg.png 
-        :width: 70em
-        :align: left
+        :width: 50em
+        :align: center
 
-        The bedpk format specification. It is exactly like a BED6 format, but using the 4th column to store extra information. 
+        The bedpk format specification. It is exactly like a BED6 format, but using the 4th column to store extra information about how the cluster was built. 
 
 
 bedpk Column definition
-"""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1) Chromosome
 2) Start coordinate
@@ -110,6 +111,7 @@ Read more about it at:
 
 Command-line based tools 
 ========================
+
 .. toctree::
    :maxdepth: 2
   Important considerations <important>
@@ -124,12 +126,7 @@ Protocol files
 
 A configuration file based tool that exposes most functionality of the Pyicoteo suite, making it very useful when trying to combine different tools (for example, Pyicos and Pyicosenrich functionality)
 
-Read more about it at:
-
-.. toctree::
-   :maxdepth: 2
-
-	pyicotrocol <pyicotrocol>
+Read more about it at :ref:`protocoldocs`
 
 
 

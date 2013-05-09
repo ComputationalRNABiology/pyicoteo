@@ -447,8 +447,10 @@ class SortedFileClusterReader:
         self.__dict__.update(locals())
         self.file_iterator = open_file(file_path, format=experiment_format, logger=logger)
         if logger: self.logger.debug('Fetcher used for %s: Sequential Sorted Cluster Reader'%file_path)
+        if logger: self.logger.debug('Cached: %s'%self.cached)
+
         self.__initvalues()
-        self.safe_reader = SafeReader()
+        self.safe_reader = SafeReader(self.logger)
     
     def __initvalues(self):
         self.slow_cursor = 1

@@ -9,6 +9,16 @@ Enrichment analysis can be applied on any type of -seq data. Pyicoenrich perform
 .. figure:: images/enrichment.png
 
 
+MA Plot
+---------
+
+Pyicoenrich is based on the MA-Plot_. 
+
+.. _MA-Plot: http://en.wikipedia.org/wiki/MA_plot
+
+(Figura)
+
+
 Region exploration
 --------------------
 
@@ -39,13 +49,13 @@ The flag ``--proximity`` controls the distance with which the regions are consid
 .. figure:: images/region_definition.png
 
 
---pseudocounts
---------------
+``--pseudocounts`` flag
+---------------------------
 
 As regions with 0 reads in one condition might be especially interesting, Pyicoenrich can use pseudocounts, in order to avoid a division by 0: Pyicoenrich calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicoenrich assumes that there is already 1 read in each region in each condition.
 
---stranded
-------------
+``--stranded`` flag
+-----------------------
 
 
 Replica or technical control (swap)
@@ -183,7 +193,7 @@ Example: TMM normalization calculated discarding the 20% smaller A (less read co
 Full quantile normalization (``--quant-norm``)
 """"""""""""""""""""""""""""""""""""""""""""""""""""
 
-This method is suitable when your samples have too much variability. As elocuently put by Simplystatistics_
+This method is suitable when your samples have too much variability. As eloquently put by Simplystatistics_
 
 .. _Simplystatistics: http://simplystatistics.org/2013/04/26/mindlessly-normalizing-genomics-data-is-bad-but-ignoring-unwanted-variability-can-be-worse/
 
@@ -193,7 +203,7 @@ This method is suitable when your samples have too much variability. As elocuent
 
 Providing a list of interesting regions matching a the 4th column of the region or count file will highlight them in the MA plot. 
 
-(FALTA figura)
+(Falta figura)
 
 
 Example::

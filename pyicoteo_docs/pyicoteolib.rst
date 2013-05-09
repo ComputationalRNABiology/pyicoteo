@@ -1,3 +1,5 @@
+.. _libdocs:
+
 Pyicoteolib.core
 ================
 
