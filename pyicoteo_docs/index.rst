@@ -61,19 +61,20 @@ In order to make it simple for the community, Pyicoteo basic functionality has n
 Matplotlib
 ^^^^^^^^^^
 
-For plotting capabilities, it is neccesary to install Matplotlib (> 1.0). 
+For plotting capabilities, it is necessary to install Matplotlib (> 1.0). 
 
 Samtools
 ^^^^^^^^^
 
 Also, for BAM reading, while we offer a native python implementation, you can ask Pyicoteo to read BAM using samtools with the flag ``--samtools``. 
+
 Pyicoteo is not compatible with Python 3.
 
 
 The bedpk format
 ----------------
 
-Some Pyicoteo tools (Pyicos, Pyicaller and Pyicoclip) default experiment and output formats is a derivative of UCSC `Bed format <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>`_ called bedpk. It follows the same starting fields "chromosome/tag start end" but it uses some of the original optional fields to include extra information. It is a cluster oriented format that aims to recollect information of a cluster of reads in a single comprehensive line. 
+Some Pyicoteo tools (Pyicos, Pyicoller and Pyicoclip) default experiment and output formats is a derivative of UCSC `Bed format <http://genome.ucsc.edu/FAQ/FAQformat.html#format1>`_ called bedpk. It follows the same starting fields "chromosome/tag start end" but it uses some of the original optional fields to include extra information. It is a cluster oriented format that aims to recollect information of a cluster of reads in a single comprehensive line. 
 
 
 .. figure:: images/bedpk_format.svg.png 
@@ -124,7 +125,7 @@ Command-line based tools
 Protocol files
 ==============
 
-A configuration file based tool that exposes most functionality of the Pyicoteo suite, making it very useful when trying to combine different tools (for example, Pyicos and Pyicosenrich functionality)
+A configuration file based tool that exposes most functionality of the Pyicoteo suite, making it very useful when trying to combine different tools (for example, Pyicos and Pyicoenrich functionality)
 
 Read more about it at :ref:`protocoldocs`
 

@@ -17,21 +17,21 @@ Pyicoregion arguments
 
         Returns all the exons in the region file.
 
-        If the optional argument ``[position]`` is specified (possible values: *first*, *last*), it will only return the first or last exon of every gene.
+        If the optional argument ``[position]`` is specified (possible values: ``first``, ``last``), it will only return the first or last exon of every gene.
 
 
     .. describe:: introns [position]
 
         Returns all the introns in the region file.
 
-        If the optional argument ``[position]`` is specified (possible values: *first*, *last*), it will only return the first or last intron of every gene.
+        If the optional argument ``[position]`` is specified (possible values: ``first``, ``last``), it will only return the first or last intron of every gene.
 
 
     .. describe:: slide <window_size> <window_step> <region_type> [chromlen_file_path]
 
         Searches for intergenic and intragenic regions using sliding windows.
 
-        Mandatory arguments are ``<window_size>`` (the size of the sliding window), ``<window_step>`` (the distance between the start position of every consecutive window. It must be lower than or equal to the window size) and ``<region_type>`` (must be *inter*, for intergenic, or *intra*, for intragenic regions).
+        Mandatory arguments are ``<window_size>`` (the size of the sliding window), ``<window_step>`` (the distance between the start position of every consecutive window. It must be lower than or equal to the window size) and ``<region_type>`` (must be ``inter``, for intergenic, or ``intra``, for intragenic regions).
 
         The optional argument ``[chromlen_file_path]`` is used to specify the path to the file containing the chromosome lengths (Pyicoteo's own chromlen files can be found in pyicoteolib/chromlen/). If it is not specified for intergenic regions, the results for the last regions of the chromosomes might be wrong.
 
@@ -44,7 +44,7 @@ Pyicoregion arguments
 
         Returns the TSS for every transcript in the region file.
 
-        Due to a TSS being a single point, the arguments *add_start* and *add_end* specify the values added to the start and end of every TSS (taking into consideration the strand). For pyicoregion to work correctly, they must be non-negative integers.
+        Due to a TSS being a single point, the arguments ``<add_start>`` and ``<add_end>`` specify the values added to the start and end of every TSS (taking into consideration the strand). For pyicoregion to work correctly, they must be non-negative integers. Also, if the strand is not specified, the regions will be treated as if they were positive.
 
 
 

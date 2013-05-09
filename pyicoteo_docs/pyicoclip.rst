@@ -13,7 +13,7 @@ Theoretically, it could be used for any other kind of experiment that involves s
 Region file
 -------------
 
-You can provide your own region file, or otherwise you can provide a --region-magic description with a GTF file.
+You can provide your own region file, or otherwise you can provide a ``--region-magic`` description with a GTF file.
 
 
 
