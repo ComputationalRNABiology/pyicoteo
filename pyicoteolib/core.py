@@ -183,11 +183,11 @@ class Reader:
 
 class CustomReader(Reader):
     def read_line(self, cluster, line):
-        line = re.split(CustomReader.custom_sep, line.strip())
+        line = re.split(CustomReader.custom_in_sep, line.strip())
         try:
-            fields = [int(x) for x in CustomReader.fcustom]
+            fields = [int(x) for x in CustomReader.f_custom_in]
         except ValueError as err:
-            print "CustomReader error: all f-custom values must be integers!"
+            print "CustomReader error: all f-custom-in values must be integers!"
             sys.exit(1) # FIXME: different action?
         try:
             seqname = line[fields[0]]
@@ -462,20 +462,20 @@ class CustomWriter(Writer):
             return ''
         else:
             try:
-                fields = [int(x) for x in CustomWriter.fcustom]
+                fields = [int(x) for x in CustomWriter.f_custom_out]
             except ValueError:
-                print "CustomWriter error: all f-custom values must be integers!"
+                print "CustomWriter error: all f-custom-out values must be integers!"
 
             field_list = [str(cluster.name), str(cluster.start), str(cluster.end), str(cluster.strand)]
             rseq = [None]*len(fields) # allocate array
             for (num, pos) in enumerate(fields):
-                rseq[pos] = field_list[num]
+                rseq[num] = field_list[pos]
  
-            if len(fields) > 3:
-                strand_pos = fields[3]
-            else:
-                strand_pos = len(fields)
-            return string.join(rseq, CustomWriter.custom_sep.decode("string-escape")) + '\n' # string-escape: for tabs and other "special" characters
+            #if len(fields) > 3:
+            #    strand_pos = fields[3]
+            #else:
+            #    strand_pos = len(fields)
+            return string.join(rseq, CustomWriter.custom_out_sep.decode("string-escape")) + '\n' # string-escape: for tabs and other "special" characters
 
 
 class ElandWriter(Writer):
