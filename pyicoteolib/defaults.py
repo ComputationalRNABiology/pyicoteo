@@ -173,3 +173,4 @@ REGIONS = 'regions'
 F_CUSTOM = []
 CUSTOM_SEP = '\s+'
 
+GALAXY_WORKAROUNDS = False

@@ -66,7 +66,7 @@ class Turbomix:
                  use_samtools=USESAMTOOLS, access_sequential = SEQUENTIAL, experiment_label = EXPERIMENT_LABEL, replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, 
                  count_filter = COUNT_FILTER, force_sort=FORCE_SORT, push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name="pyicoteo.log",
                  region_magic=REGION_MAGIC, gff_file=GFF_FILE, interesting_regions=INTERESTING_REGIONS, disable_significant_color=DISABLE_SIGNIFICANT,
-                 f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP):
+                 f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP, galaxy_workarounds=GALAXY_WORKAROUNDS):
         self.__dict__.update(locals())
         if type(self.tempdir) is not list: #
             self.tempdir = [self.tempdir] 
@@ -74,10 +74,15 @@ class Turbomix:
         self.stranded_analysis = (output_format == SPK)
         self.normalize_factor = 1
         self.logger = utils.get_logger("%s.log"%parser_name, verbose, debug)
+
+
+        self.logger.info("ARGV: %s", ' '.join(sys.argv)) # TODO: DELETE
+
+
         self.is_sorted = False
-        self.temp_experiment = False #Indicates if temp files where created for the experiment
-        self.temp_control = False #Indicates if temporary files where created for the control
-        self.temp_replica = False 
+        self.temp_experiment = False # Indicates if temp files were created for the experiment
+        self.temp_control = False # Indicates if temporary files were created for the control
+        self.temp_replica = False
         self.operations = []
         self.previous_chr = None
         self.open_region = False

@@ -110,7 +110,7 @@ def init_turbomix(args, parser_name=PARSER_NAME):
                         args.use_replica, args.tempdir, args.samtools, args.access_sequential, args.experiment_label, args.replica_label, args.title_label, 
                         args.count_filter, args.force_sort, args.push_distance, args.quant_norm, parser_name,
                         args.region_magic, args.gff_file, args.interesting_regions, args.disable_significant_color, 
-                        args.f_custom_in, args.custom_in_sep, args.f_custom_out, args.custom_out_sep)
+                        args.f_custom_in, args.custom_in_sep, args.f_custom_out, args.custom_out_sep, args.galaxy_workarounds)
 
     validate_operations(args, turbomix)
     return turbomix
@@ -136,7 +136,7 @@ def parse_validate_args(parser):
                         replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT, 
                         push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name=PARSER_NAME,
                         region_magic=REGION_MAGIC, gff_file=GFF_FILE, interesting_regions=INTERESTING_REGIONS, disable_significant_color=DISABLE_SIGNIFICANT,
-                        f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP)
+                        f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP, galaxy_workarounds=GALAXY_WORKAROUNDS)
     args = parser.parse_args()
     validate(args)
     if args.counts_file: #the formats are overridden when using enrichment (only of cosmetic value, when printing the flags)   
@@ -159,6 +159,26 @@ def parse_validate_args(parser):
         CustomReader.custom_in_sep = args.custom_in_sep
         CustomWriter.f_custom_out = args.f_custom_out
         CustomWriter.custom_out_sep = args.custom_out_sep
+
+        if args.galaxy_workarounds:
+            # Workaround for galaxy parameter passing
+            mapped_chars = { '>' :'__gt__', 
+                     '<' :'__lt__', 
+                     "'" :'__sq__',
+                     '"' :'__dq__',
+                     '[' :'__ob__',
+                     ']' :'__cb__',
+                     '{' :'__oc__',
+                     '}' :'__cc__',
+                     '@' : '__at__',
+                     '\n' : '__cn__',
+                     '\r' : '__cr__',
+                     '\t' : '__tc__',
+                     '#' : '__pd__'
+                     }
+            for key, value in mapped_chars.items():
+                CustomReader.custom_in_sep = CustomReader.custom_in_sep.replace(value, key)
+                CustomWriter.custom_out_sep = CustomWriter.custom_out_sep.replace(value, key)
 
     return args
 
@@ -210,6 +230,8 @@ basic_parser.add_argument('--tempdir', default=TEMPDIR, help="Manually define th
 basic_parser.add_argument('--samtools', default=USESAMTOOLS, action='store_true', help="Use samtools for reading BAM files [Default: Pyicoteo uses its own library] (reading BAM works without samtools for convert, extend, and other operations, but not for enrichment yet)]")
 basic_parser.add_argument('--skip-header', action='store_true', default=SKIP_HEADER, help="Skip writing the header for the output file. [Default %(default)s]")
 #basic_parser.add_argument('--get-report', action='store_true', default=SKIP_HEADER, help=". [Default %(default)s]")
+
+basic_parser.add_argument('--galaxy-workarounds', default=GALAXY_WORKAROUNDS, action='store_true', help='Enables workarounds for compatibility with the Galaxy Project [Default %(default)s]')
 
 output = new_subparser()
 output.add_argument('output', help='The output file or directory')
