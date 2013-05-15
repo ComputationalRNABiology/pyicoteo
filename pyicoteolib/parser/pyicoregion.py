@@ -13,7 +13,7 @@ def create_parser():
 
     parser = argparse.ArgumentParser(version=VERSION, 
                                      description='Standalone region operations', 
-                                     parents=[region_parser, output]
+                                     parents=[region_parser, output, output_flags, basic_parser]
                                      )
     return parser
 
