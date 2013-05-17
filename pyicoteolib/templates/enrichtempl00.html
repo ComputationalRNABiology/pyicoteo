@@ -1,0 +1,25 @@
+<html>
+<!--  <head>
+    <title>{{ page_title }}</title>
+  </head>-->
+
+  <body>
+    <script language="javascript">
+        function toggleHidden(text) {
+            var div = document.getElementById(text);
+            var a = document.getElementById(text + "_a");
+            if (div.style.display == "none") {
+                div.style.display = "block";
+                a.innerHTML = "Hide";
+            } else {
+                div.style.display = "none";
+                a.innerHTML = "Show";
+            }
+        }
+    </script>
+    <a href="javascript:void(0);" onclick="javascript:toggleHidden('output_contents')" id="output_contents_a">Show</a>
+    <div id="output_contents"><pre>{{ results_output }}</pre></div>
+  </body>
+
+</html>
+

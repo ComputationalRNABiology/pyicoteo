@@ -110,7 +110,7 @@ def init_turbomix(args, parser_name=PARSER_NAME):
                         args.use_replica, args.tempdir, args.samtools, args.access_sequential, args.experiment_label, args.replica_label, args.title_label, 
                         args.count_filter, args.force_sort, args.push_distance, args.quant_norm, parser_name,
                         args.region_magic, args.gff_file, args.interesting_regions, args.disable_significant_color, 
-                        args.f_custom_in, args.custom_in_sep, args.f_custom_out, args.custom_out_sep, args.galaxy_workarounds)
+                        args.f_custom_in, args.custom_in_sep, args.f_custom_out, args.custom_out_sep, args.galaxy_workarounds, args.html_output)
 
     validate_operations(args, turbomix)
     return turbomix
@@ -136,7 +136,7 @@ def parse_validate_args(parser):
                         replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT, 
                         push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name=PARSER_NAME,
                         region_magic=REGION_MAGIC, gff_file=GFF_FILE, interesting_regions=INTERESTING_REGIONS, disable_significant_color=DISABLE_SIGNIFICANT,
-                        f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP, galaxy_workarounds=GALAXY_WORKAROUNDS)
+                        f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP, galaxy_workarounds=GALAXY_WORKAROUNDS, html_output=HTML_OUTPUT)
     args = parser.parse_args()
     validate(args)
     if args.counts_file: #the formats are overridden when using enrichment (only of cosmetic value, when printing the flags)   
@@ -272,6 +272,7 @@ enrichment_flags.add_argument('--region-magic', nargs='+', help="Region magic")
 enrichment_flags.add_argument('--gff-file', help="GFF file")
 enrichment_flags.add_argument('--interesting-regions', help="Path to file containing interesting regions (to be marked in the plot).")
 enrichment_flags.add_argument('--disable-significant-color', action='store_true', help="Do not plot significant regions in a different color")
+enrichment_flags.add_argument('--html-output', help="Output the enrichment results as HTML (requires the jinja2 library)")
 
 
 tmm_flag = new_subparser()

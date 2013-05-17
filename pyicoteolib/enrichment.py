@@ -453,6 +453,33 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
     else:
         out_file.flush()
         out_file.close()
+
+        # Outputting to HTML (if specified)
+        if self.html_output is not None:
+            self.logger.info("Generating HTML")
+            try:
+                from jinja2 import Environment, PackageLoader, Markup
+            except:
+                self.logger.error("Could not find the jinja2 library")
+                return out_file.name
+
+            loadr = PackageLoader('pyicoteolib', 'templates')
+            env = Environment(loader=loadr)
+            template = env.get_template('enrichtempl00.html')
+
+            def jinja_read_file(filename):
+                f = open(filename, 'r')
+                for line in f:
+                    print line
+                f.close()
+            env.globals['jinja_read_file'] = jinja_read_file
+
+            html_file = open(self.html_output, 'w')
+            html_file.write(template.render({'page_title': 'Enrichment results', 'results_output': jinja_read_file(out_file.name)}))
+            html_file.flush()
+            html_file.close()
+            
+
         return out_file.name
 
 

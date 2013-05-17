@@ -26,6 +26,10 @@
                 #end if
           #end if
 
+          #if $html_output
+              --html-output $html_file
+          #end if
+
   </command>
   <inputs>
     <!--<param format="tabular" name="experiment" type="data" label="Experiment file" />-->
@@ -112,11 +116,14 @@
     <param name="pseudocounts" type="boolean" label="Use pseudocounts to include in the analysis regions with 0 reads in one of the samples" truevalue="--pseudocount" falsevalue="" />
     <param name="z_threshold" type="float" label="z-score threshold for calling significant regions" value="2.0" />
 
+    <param name="html_output" type="boolean" label="HTML output" />
 
   </inputs>
   <outputs>
     <data format="tabular" name="output" />
-    <!--<data format="png" name="pngoutput" label="enrichment_MA_${output}.png" />-->
+    <data format="html" name="html_file">
+      <filter>html_output</filter>
+    </data>
   </outputs>
   <stdio>
     <exit_code range="1:" level="error" />
