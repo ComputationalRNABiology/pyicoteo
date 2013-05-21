@@ -3,12 +3,32 @@
   <description>Pyicoteo enrichment operations.</description>
   <command interpreter="python">
           pyicoenrich -reads $experiment_a $experiment_b
-                -output $output
                 -f $experiment_format_cond.experiment_format
                 $is_experiment_open
                 $is_output_open
                 --galaxy-workarounds
+
+                --proximity $proximity
+                $length_norm
+                $number_reg_norm
+                --binsize $bin_size
+                $pseudocounts
+                --zscore $z_threshold
          
+          #if $replica_file
+                --replica $replica_file
+          #end if
+
+          #if $tmm_values.tmm_norm
+                $tmm_values.tmm_norm
+                --a-trim $tmm_values.tmm_trim_a
+                --b-trim $tmm_values.tmm_trim_b
+          #end if
+
+          #if $interesting_regions
+                --interesting-regions $interesting_regions
+          #end if
+
           #if $experiment_format_cond.experiment_format == "custom"
                 --f-custom-in $experiment_format_cond.f_custom_in
                 --custom-in-sep $experiment_format_cond.custom_in_sep
@@ -27,7 +47,10 @@
           #end if
 
           #if $html_output
+              -output $html_file.files_path/enrich_output
               --html-output $html_file
+          #else
+              -output $output
           #end if
 
   </command>
@@ -98,7 +121,6 @@
     </conditional>
 
 
-    <!-- TODO: add to command arguments -->
     <param name="replica_file" type="data" label="Experiment A replica file" optional="true" />
     <param name="proximity" type="integer" label="Proximity" size="6" value="50" />
     <param name="length_norm" type="boolean" label="Region length normalization" truevalue="--len-norm" falsevalue="" />
@@ -116,11 +138,15 @@
     <param name="pseudocounts" type="boolean" label="Use pseudocounts to include in the analysis regions with 0 reads in one of the samples" truevalue="--pseudocount" falsevalue="" />
     <param name="z_threshold" type="float" label="z-score threshold for calling significant regions" value="2.0" />
 
+    <param name="interesting_regions" type="data" label="Interesting regions file" optional="true" />
+
     <param name="html_output" type="boolean" label="HTML output" />
 
   </inputs>
   <outputs>
-    <data format="tabular" name="output" />
+    <data format="tabular" name="output">
+      <filter>not html_output</filter>
+    </data>
     <data format="html" name="html_file">
       <filter>html_output</filter>
     </data>

@@ -63,7 +63,7 @@ def calculate_region(self):
 
 
     if self.region_magic:
-        regwriter = RegionWriter(self.gff_file, region_file, self.region_magic, no_sort=self.no_sort, logger=self.logger, write_as=self.output_format)
+        regwriter = RegionWriter(self.gff_file, region_file, self.region_magic, no_sort=self.no_sort, logger=self.logger, write_as=BED)
         regwriter.write_regions()
 
 
@@ -469,13 +469,21 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
 
             def jinja_read_file(filename):
                 f = open(filename, 'r')
-                for line in f:
-                    print line
+                #for line in f:
+                #    print line
+                txt = ''.join(f.readlines())
                 f.close()
+                return txt
             env.globals['jinja_read_file'] = jinja_read_file
 
+            if self.galaxy_workarounds:
+                img_parent = "./"
+            else:
+                img_parent = os.sep.join(out_file.name.split(os.sep)[0:-1]) + "/"
+            img_path = img_parent + "enrichment_MA_" + out_file.name.split(os.sep)[-1] + ".png"
+
             html_file = open(self.html_output, 'w')
-            html_file.write(template.render({'page_title': 'Enrichment results', 'results_output': jinja_read_file(out_file.name)}))
+            html_file.write(template.render({'page_title': 'Enrichment results', 'results_output': jinja_read_file(out_file.name), 'img_path': img_path}))
             html_file.flush()
             html_file.close()
             

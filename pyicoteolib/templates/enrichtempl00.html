@@ -10,15 +10,22 @@
             var a = document.getElementById(text + "_a");
             if (div.style.display == "none") {
                 div.style.display = "block";
-                a.innerHTML = "Hide";
+                a.innerHTML = "Hide text";
             } else {
                 div.style.display = "none";
-                a.innerHTML = "Show";
+                a.innerHTML = "Show text";
             }
         }
     </script>
-    <a href="javascript:void(0);" onclick="javascript:toggleHidden('output_contents')" id="output_contents_a">Show</a>
-    <div id="output_contents"><pre>{{ results_output }}</pre></div>
+    <div id="img_div">
+      <h3>Enrichment plot</h3>
+      <img src="{{ img_path }}" />
+    </div>
+    <!--<a href="javascript:void(0);" onclick="javascript:toggleHidden('output_contents')" id="output_contents_a">Show text</a>-->
+    <div id="output_contents" style="display: none;">
+      <h3>Results</h3>
+      <pre>{{ results_output }}</pre>
+    </div>
   </body>
 
 </html>
