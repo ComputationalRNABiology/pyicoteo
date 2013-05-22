@@ -19,11 +19,11 @@
     </script>
     <div id="img_div">
       <h3>Enrichment plot</h3>
-      <img src="{{ img_path }}" />
+      <img src="{{ plot_path }}" />
     </div>
     <!--<a href="javascript:void(0);" onclick="javascript:toggleHidden('output_contents')" id="output_contents_a">Show text</a>-->
     <div id="output_contents" style="display: none;">
-      <h3>Results</h3>
+      <h3><a href="{{ bed_path }}">Download Results (BED)</a></h3>
       <pre>{{ results_output }}</pre>
     </div>
   </body>

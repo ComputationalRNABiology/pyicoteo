@@ -47,7 +47,7 @@
           #end if
 
           #if $html_output
-              -output $html_file.files_path/enrich_output
+              -output $html_file.files_path/enrich_output.bed
               --html-output $html_file
           #else
               -output $output
@@ -55,6 +55,9 @@
 
   </command>
   <inputs>
+
+    <param name="html_output" type="boolean" label="HTML output" help="Output the results as HTML (with plot). WARNING: if enabled, the resulting output can not be used as input to another tool (the BED file must be downloaded from 'View data' and uploaded again)" />
+
     <!--<param format="tabular" name="experiment" type="data" label="Experiment file" />-->
     <param name="experiment_a" type="data" label="Experiment A file" />
     <param name="experiment_b" type="data" label="Experiment B file" />
@@ -139,8 +142,6 @@
     <param name="z_threshold" type="float" label="z-score threshold for calling significant regions" value="2.0" />
 
     <param name="interesting_regions" type="data" label="Interesting regions file" optional="true" />
-
-    <param name="html_output" type="boolean" label="HTML output" />
 
   </inputs>
   <outputs>

@@ -476,17 +476,17 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
                 return txt
             env.globals['jinja_read_file'] = jinja_read_file
 
-            if self.galaxy_workarounds:
-                img_parent = "./"
+            if self.galaxy_workarounds: # Galaxy changes the working directory when outputting multiple files
+                parent_dir = "./"
             else:
-                img_parent = os.sep.join(out_file.name.split(os.sep)[0:-1]) + "/"
-            img_path = img_parent + "enrichment_MA_" + out_file.name.split(os.sep)[-1] + ".png"
+                parent_dir = os.sep.join(out_file.name.split(os.sep)[0:-1]) + "/"
+            plot_path = parent_dir + "enrichment_MA_" + out_file.name.split(os.sep)[-1] + ".png"
+            bed_path = parent_dir + out_file.name.split(os.sep)[-1]
 
             html_file = open(self.html_output, 'w')
-            html_file.write(template.render({'page_title': 'Enrichment results', 'results_output': jinja_read_file(out_file.name), 'img_path': img_path}))
+            html_file.write(template.render({'page_title': 'Enrichment results', 'results_output': jinja_read_file(out_file.name), 'plot_path': plot_path, 'bed_path': bed_path}))
             html_file.flush()
             html_file.close()
-            
 
         return out_file.name
 
