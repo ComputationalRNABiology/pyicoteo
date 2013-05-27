@@ -43,6 +43,8 @@
                 --region-magic $region_file_cond.region_magic_cond.region_magic
                 #if $region_file_cond.region_magic_cond.region_magic == "slide"
                     $region_file_cond.region_magic_cond.window_size $region_file_cond.region_magic_cond.window_step $region_file_cond.region_magic_cond.slide_type
+                #elif $region_file_cond.region_magic_cond.region_magic == "tss"
+                    $region_file_cond.region_magic_cond.tss_add_start $region_file_cond.region_magic_cond.tss_add_end
                 #end if
           #end if
 
@@ -110,6 +112,7 @@
               <option value="exons">Exons</option>
               <option value="introns">Introns</option>
               <option value="slide">Sliding window</option>
+              <option value="tss">TSS</option>
             </param>
             <when value="slide">
               <param name="slide_type" type="select" label="Sliding window type">
@@ -118,6 +121,10 @@
               </param>
               <param name="window_size" type="integer" label="Window size" size="6" value="" />
               <param name="window_step" type="integer" label="Window step" size="6" value="" />
+            </when>
+            <when value="tss">
+              <param name="tss_add_start" type="integer" label="Add to start" size="6" value="0" />
+              <param name="tss_add_end" type="integer" label="Add to end" size="6" value="0" />
             </when>
           </conditional>
       </when>
