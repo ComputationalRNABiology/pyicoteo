@@ -42,7 +42,10 @@
                 --gff-file $region_file_cond.gff_file
                 --region-magic $region_file_cond.region_magic_cond.region_magic
                 #if $region_file_cond.region_magic_cond.region_magic == "slide"
-                    $region_file_cond.region_magic_cond.window_size $region_file_cond.region_magic_cond.window_step $region_file_cond.region_magic_cond.slide_type
+                    $region_file_cond.region_magic_cond.window_size $region_file_cond.region_magic_cond.window_step $region_file_cond.region_magic_cond.region_slide_cond.slide_type
+                    #if $region_file_cond.region_magic_cond.region_slide_cond.slide_type == "inter" and $region_file_cond.region_magic_cond.region_slide_cond.chromlen_file
+                        $region_file_cond.region_magic_cond.region_slide_cond.chromlen_file
+                    #end if
                 #elif $region_file_cond.region_magic_cond.region_magic == "tss"
                     $region_file_cond.region_magic_cond.tss_add_start $region_file_cond.region_magic_cond.tss_add_end
                 #end if
@@ -114,14 +117,21 @@
               <option value="slide">Sliding window</option>
               <option value="tss">TSS</option>
             </param>
+
             <when value="slide">
-              <param name="slide_type" type="select" label="Sliding window type">
-                <option value="inter">Intergenic</option>
-                <option value="intra">Intragenic</option>
-              </param>
               <param name="window_size" type="integer" label="Window size" size="6" value="" />
               <param name="window_step" type="integer" label="Window step" size="6" value="" />
+              <conditional name="region_slide_cond">
+                <param name="slide_type" type="select" label="Sliding window type">
+                  <option value="inter">Intergenic</option>
+                  <option value="intra">Intragenic</option>
+                </param>
+                <when value="inter">
+                  <param name="chromlen_file" type="data" label="Chromlen file" optional="true" help="If not specified, hg19 chromlen will be used by default." />
+                </when>
+              </conditional>
             </when>
+
             <when value="tss">
               <param name="tss_add_start" type="integer" label="Add to start" size="6" value="0" />
               <param name="tss_add_end" type="integer" label="Add to end" size="6" value="0" />

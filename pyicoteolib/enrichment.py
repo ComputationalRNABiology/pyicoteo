@@ -63,7 +63,7 @@ def calculate_region(self):
 
 
     if self.region_magic:
-        regwriter = RegionWriter(self.gff_file, region_file, self.region_magic, no_sort=self.no_sort, logger=self.logger, write_as=BED)
+        regwriter = RegionWriter(self.gff_file, region_file, self.region_magic, no_sort=self.no_sort, logger=self.logger, write_as=BED, galaxy_workarounds=self.galaxy_workarounds)
         regwriter.write_regions()
 
 

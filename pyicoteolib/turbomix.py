@@ -249,7 +249,7 @@ class Turbomix:
 
         if REGIONS in self.operations and self.region_magic: # FIXME: bad workaround?
             outfile = open(self.output_path, 'w')
-            regwriter = RegionWriter(self.gff_file, outfile, self.region_magic, no_sort=self.no_sort, logger=self.logger, write_as=self.output_format)
+            regwriter = RegionWriter(self.gff_file, outfile, self.region_magic, no_sort=self.no_sort, logger=self.logger, write_as=self.output_format, galaxy_workarounds=self.galaxy_workarounds)
             regwriter.write_regions()
             return
 

@@ -185,14 +185,12 @@ def feature_cmp(s):
 
 
 # attr_filter parameter: ignore all the lines that contain any attribute matching any {"key": "value"} in the dictionary (default = {}: process all lines)
-def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None, attr_filter={}, no_sort=False, do_filter=False):
-    logger = get_logger('gffreader.log')
-
+def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None, attr_filter={}, no_sort=False, do_filter=False, logger=None):
     if no_sort:
-        logger.warning('GTF file sort skipped. Results might be wrong.')
+        if logger: logger.warning('GTF file sort skipped. Results might be wrong.')
         sorted_file = open(gtf_path, 'r')
     else:
-        logger.info('Sorting file...')
+        if logger: logger.info('Sorting file...')
         output_path = None
         sorter = BigSort(file_format=None, id='mergeexonid', logger=False, filter_chunks=False)
         sorted_file = sorter.sort(gtf_path,
@@ -200,7 +198,7 @@ def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
                                   lambda x:(x.split()[0], int(x.split()[3]), -int(x.split()[4]), feature_cmp(x.split()[2])),
                                   tempdirs=['/tmp']) 
         # sorted by seqname, start, -end, feature
-        logger.info('File sorted')
+        if logger: logger.info('File sorted')
 
     current_genes = []
     #current_genes = deque() # use queue instead of list?
@@ -209,18 +207,18 @@ def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
             continue
 
         if num % 100000 == 0:
-            logger.info('Lines read: ' + str(num))
+            if logger: logger.info('Lines read: ' + str(num))
             
         try:
             parsed_line = parse_gtf_line(line)
         except LineWarning as e:
-            #logger.info("Warning. Line %s: %s" % (num, e))
+            #if logger: logger.info("Warning. Line %s: %s" % (num, e))
             continue
         except InvalidLine as e:
-            logger.error("Invalid line %s: %s" % (num, e))
+            if logger: logger.error("Invalid line %s: %s" % (num, e))
             continue
         except Exception as e:
-            logger.error("Unexpected error. Line %s: %s" % (num, e))
+            if logger: logger.error("Unexpected error. Line %s: %s" % (num, e))
             continue
 
         if len(parsed_line) < GFF_MANDATORY_FIELDS + 1:
@@ -270,7 +268,7 @@ def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
             transcript = AnnotationTranscript(transcript_id, gene_id, seqname, source, feature, start, end, score, strand, frame, parsed_attrs)
             parent = AnnotationRegion.find_region_in_list(transcript.parent_id, current_genes, transcript.strand)
             if parent is None:
-                logger.warning(str(num) + ': Gene not found, skipping transcript')
+                if logger: logger.warning(str(num) + ': Gene not found, skipping transcript')
                 continue
             else:
                 transcript.set_parent(parent)
@@ -286,16 +284,16 @@ def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
                 #sys.stderr.write(exon_id + '\n')
                 gene = AnnotationRegion.find_region_in_list(exon.attrs['gene_id'], current_genes, exon.strand)
                 if gene is None:
-                    logger.warning(str(num) + ': Gene ' + gene_id + ' not found, skipping exon')
+                    if logger: logger.warning(str(num) + ': Gene ' + gene_id + ' not found, skipping exon')
                     continue
                 parent = AnnotationRegion.find_region_in_list(exon.parent_id, gene.get_children(), exon.strand)
                 if parent is None:
-                    logger.warning(str(num) + ': Transcript ' + transcript_id + ' not found, skipping exon')
+                    if logger: logger.warning(str(num) + ': Transcript ' + transcript_id + ' not found, skipping exon')
                     continue
                 #if parent.attrs['gene_id'] != exon.attrs['gene_id']:
                 #    raise Exception('Bad parent id: ' + parent.attrs['gene_id'] + '\t' + exon.attrs['gene_id'])
             except Exception as ex:
-                logger.warning(str(num) + ": EXCEPTION: " + str(ex))
+                if logger: logger.warning(str(num) + ": EXCEPTION: " + str(ex))
             exon.set_parent(parent)
             parent.append_child(exon)
 
@@ -310,7 +308,7 @@ def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
 
 
 
-def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  position=None):
+def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  position=None, logger=None):
     tmp_genes = []
     #max_genes = 0
 
@@ -320,7 +318,7 @@ def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  po
     #            return True
     #    return False
 
-    for gene in read_gtf_file(gtf_path, no_sort=no_sort):#, attr_checks=chk):
+    for gene in read_gtf_file(gtf_path, no_sort=no_sort, logger=logger):#, attr_checks=chk):
         if len(tmp_genes) > 0:
             if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
                 if position is None: # return all exons
@@ -375,9 +373,9 @@ def _get_exons_from_gene_list(tmp_genes, remove_duplicates=True):
 
 
 
-def get_introns(gtf_path, min_length=0, no_sort=False, position=None):
+def get_introns(gtf_path, min_length=0, no_sort=False, position=None, logger=None):
     tmp_genes = []
-    for gene in read_gtf_file(gtf_path, no_sort=no_sort):
+    for gene in read_gtf_file(gtf_path, no_sort=no_sort, logger=logger):
         if len(tmp_genes) > 0:
             if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
                 for intron in _get_introns_from_gene_list(tmp_genes, min_length, position):
@@ -413,9 +411,9 @@ def _get_introns_from_gene_list(tmp_genes, min_length, position=None):
 
 
 # FIXME: check chromlen (if last position > chromlen...)? (+ test!)
-def get_tss(gtf_path, add_start=0, add_end=0, no_sort=False): # TODO: test!
+def get_tss(gtf_path, add_start=0, add_end=0, no_sort=False, logger=None): # TODO: test!
     tmp_genes = []
-    for gene in read_gtf_file(gtf_path, no_sort=no_sort, do_filter=True):
+    for gene in read_gtf_file(gtf_path, no_sort=no_sort, do_filter=True, logger=logger):
         if len(tmp_genes) > 0:
             # Had some order problems in cases like:
             #       X-->|>------------X
@@ -481,10 +479,10 @@ def generate_windows(start, end, win_size, win_step, fit_last=True):
 
 # sliding windows
 # parameter chr_length must be a dictionary with seqname as keys and integers as values (lengths) (implemented in pyicoenrich, with "chromlen" files)
-def gene_slide(gtf_path, win_size, win_step, win_type, chr_lengths={}, no_sort=False):
+def gene_slide(gtf_path, win_size, win_step, win_type, chr_lengths={}, no_sort=False, logger=None):
     tmp_genes = [] # for temporarily storing overlapping genes
 
-    for gene in read_gtf_file(gtf_path, no_sort=no_sort):
+    for gene in read_gtf_file(gtf_path, no_sort=no_sort, logger=logger):
         if len(tmp_genes) > 0:
 
             if (tmp_genes[-1].seqname != gene.seqname): # new sequence, return last zone in tmp_genes
@@ -526,13 +524,14 @@ def gene_slide(gtf_path, win_size, win_step, win_type, chr_lengths={}, no_sort=F
 
 
 class RegionWriter():
-    def __init__(self, gff_path, region_file, params, write_as=BED, no_sort=False, logger=None):
+    def __init__(self, gff_path, region_file, params, write_as=BED, no_sort=False, logger=None, galaxy_workarounds=False):
         self.gff_path = gff_path
         self.region_file = region_file
         self.params = params
         self.write_as = write_as
         self.no_sort = no_sort
         self.logger = logger
+        self.galaxy_workarounds = galaxy_workarounds
         #self.write_regions()
 
     # (writes output to self.region_file)
@@ -543,7 +542,7 @@ class RegionWriter():
                 if len(self.params) > 1:
                     pos = self.params[1]
 
-                for exon in get_exons(self.gff_path, remove_duplicates=True, no_sort=self.no_sort,  position=pos):
+                for exon in get_exons(self.gff_path, remove_duplicates=True, no_sort=self.no_sort, position=pos, logger=self.logger):
                     cl = ReadCluster(name=exon.seqname, start=exon.start, end=exon.end, strand=exon.strand, name2=exon.region_id, write=self.write_as)
                     self.region_file.write(cl.write_line())
             elif self.params[0] == REGION_INTRONS:
@@ -552,7 +551,7 @@ class RegionWriter():
                 if len(self.params) > 1:
                     pos = self.params[1]
 
-                for (seqname, start, end, region_id, strand) in get_introns(self.gff_path, no_sort=self.no_sort,  position=pos):
+                for (seqname, start, end, region_id, strand) in get_introns(self.gff_path, no_sort=self.no_sort, position=pos, logger=self.logger):
                     cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as, name2=region_id, strand=strand)
 
                     self.region_file.write(cl.write_line())
@@ -569,13 +568,13 @@ class RegionWriter():
                     chrlen_path = None
                     if win_type == REGION_SLIDE_INTER:
                         self.logger.warning("Chromlen file not specified")
-                for (seqname, start, end, name2) in gene_slide(self.gff_path, win_size, win_step, win_type, chr_lengths=self.read_chromlen(chrlen_path), no_sort=self.no_sort):
+                for (seqname, start, end, name2) in gene_slide(self.gff_path, win_size, win_step, win_type, chr_lengths=self.read_chromlen(chrlen_path), no_sort=self.no_sort, logger=self.logger):
                     cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as,    name2=name2)
                     self.region_file.write(cl.write_line())
             elif self.params[0] == REGION_TSS:
                 add_start = int(self.params[1])
                 add_end = int(self.params[2])
-                for (seqname, start, end, strand, name2) in get_tss(self.gff_path, add_start, add_end, no_sort=self.no_sort):
+                for (seqname, start, end, strand, name2) in get_tss(self.gff_path, add_start, add_end, no_sort=self.no_sort, logger=self.logger):
                     cl = ReadCluster(name=seqname, start=start, end=end, strand=strand, write=self.write_as,    name2=name2)
                     self.region_file.write(cl.write_line())
             else:
@@ -591,7 +590,12 @@ class RegionWriter():
     def read_chromlen(self, path=None):
         length_dict = {}
         if path is None:
-            return length_dict
+            if self.galaxy_workarounds:
+                self.logger.info("Using default chromlen file (hg19)")
+                chrlenpath = "%s/chromlen/"%os.path.dirname(os.path.abspath(__file__))
+                path = chrlenpath + "/hg19"
+            else:
+                return length_dict
         if not os.path.isfile(path):
             self.logger.warning("Chromlen file not found")
             return length_dict
