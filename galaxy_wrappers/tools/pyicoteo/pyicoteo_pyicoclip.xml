@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<tool id="pyicoteo_pyicoclip" name="Pyicoclip" version="2.xx">
+<tool id="pyicoteo_pyicoclip" name="Pyicoclip" version="2.0">
   <description>Peak caller for CLIP-Seq data.</description>
   <command interpreter="python">
           pyicoclip $experiment $region $output

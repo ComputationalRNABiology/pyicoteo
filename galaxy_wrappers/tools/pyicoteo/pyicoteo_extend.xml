@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<tool id="pyicoteo_extend" name="Extend" version="2.xx">
+<tool id="pyicoteo_extend" name="Extend" version="2.0">
   <description>Extends tags to the desired length. Takes into consideration the sense and the antisense strand.</description>
   <command interpreter="python">
           pyicos extend $experiment $output $extension

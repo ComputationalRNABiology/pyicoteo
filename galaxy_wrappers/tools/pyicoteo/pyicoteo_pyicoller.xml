@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<tool id="pyicoteo_pyicoller" name="Pyicoller" version="2.xx">
+<tool id="pyicoteo_pyicoller" name="Pyicoller" version="2.0">
   <description>Pyicoteo peak caller.</description>
   <command interpreter="python">
           pyicoller $experiment $output
