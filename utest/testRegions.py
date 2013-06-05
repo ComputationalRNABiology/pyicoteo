@@ -116,7 +116,7 @@ chr2	9000
         self.assertEqual(slideinter_text, expected_result)
 
 
-    def test_get_windows_intra(self):
+    def test_generate_windows_intra(self):
         expected_result = """chr1	1000	2000	1000:2000	0	.
 chr1	1500	2500	1500:2500	0	.
 chr1	2000	3000	2000:3000	0	.

@@ -299,7 +299,8 @@ def plot_enrichment(self, file_path):
             plot(A_medians, minus_points, 'r--')
 
             if self.interesting_regions:
-                plot(interesting_A, interesting_M, 'H', label='Interesting regions', color='#00EE00') # plotting "interesting" regions
+                interesting_label = self.interesting_regions.split(os.path.sep)[-1] + ' (interesting regions)'
+                plot(interesting_A, interesting_M, 'H', label=interesting_label, color='#00EE00') # plotting "interesting" regions
 
             axhline(0, linestyle='--', color="grey", alpha=0.75)
             xlabel('A')
