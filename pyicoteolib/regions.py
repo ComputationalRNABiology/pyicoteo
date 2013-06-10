@@ -185,7 +185,7 @@ def feature_cmp(s):
 
 
 # attr_filter parameter: ignore all the lines that contain any attribute matching any {"key": "value"} in the dictionary (default = {}: process all lines)
-def read_gtf_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None, attr_filter={}, no_sort=False, do_filter=False, logger=None):
+def read_gff_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None, attr_filter={}, no_sort=False, do_filter=False, logger=None):
     if no_sort:
         if logger: logger.warning('GTF file sort skipped. Results might be wrong.')
         sorted_file = open(gtf_path, 'r')
@@ -318,7 +318,7 @@ def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  po
     #            return True
     #    return False
 
-    for gene in read_gtf_file(gtf_path, no_sort=no_sort, logger=logger):#, attr_checks=chk):
+    for gene in read_gff_file(gtf_path, no_sort=no_sort, logger=logger):#, attr_checks=chk):
         if len(tmp_genes) > 0:
             if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
                 if position is None: # return all exons
@@ -375,7 +375,7 @@ def _get_exons_from_gene_list(tmp_genes, remove_duplicates=True):
 
 def get_introns(gtf_path, min_length=0, no_sort=False, position=None, logger=None):
     tmp_genes = []
-    for gene in read_gtf_file(gtf_path, no_sort=no_sort, logger=logger):
+    for gene in read_gff_file(gtf_path, no_sort=no_sort, logger=logger):
         if len(tmp_genes) > 0:
             if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
                 for intron in _get_introns_from_gene_list(tmp_genes, min_length, position):
@@ -410,10 +410,9 @@ def _get_introns_from_gene_list(tmp_genes, min_length, position=None):
                 yield (ex1.seqname, ex1.end, ex2.start, ex1.region_id, ex1.strand)
 
 
-# FIXME: check chromlen (if last position > chromlen...)? (+ test!)
-def get_tss(gtf_path, add_start=0, add_end=0, no_sort=False, logger=None): # TODO: test!
+def get_tss(gtf_path, add_start=0, add_end=0, no_sort=False, logger=None):
     tmp_genes = []
-    for gene in read_gtf_file(gtf_path, no_sort=no_sort, do_filter=True, logger=logger):
+    for gene in read_gff_file(gtf_path, no_sort=no_sort, do_filter=True, logger=logger):
         if len(tmp_genes) > 0:
             # Had some order problems in cases like:
             #       X-->|>------------X
@@ -463,7 +462,7 @@ def _get_tss_from_gene_list(tmp_genes, add_start, add_end, remove_duplicates=Tru
 
 
 # generates all windows inside the interval [start, end]
-# TODO: consider cases where len(interval) < win_size ?
+# consider cases where len(interval) < win_size ?
 def generate_windows(start, end, win_size, win_step, fit_last=True):
     win_start = start
     win_end = win_start + win_size
@@ -482,7 +481,7 @@ def generate_windows(start, end, win_size, win_step, fit_last=True):
 def gene_slide(gtf_path, win_size, win_step, win_type, chr_lengths={}, no_sort=False, logger=None):
     tmp_genes = [] # for temporarily storing overlapping genes
 
-    for gene in read_gtf_file(gtf_path, no_sort=no_sort, logger=logger):
+    for gene in read_gff_file(gtf_path, no_sort=no_sort, logger=logger):
         if len(tmp_genes) > 0:
 
             if (tmp_genes[-1].seqname != gene.seqname): # new sequence, return last zone in tmp_genes

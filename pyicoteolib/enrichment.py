@@ -23,7 +23,7 @@ from defaults import *
 import utils
 import bam
 
-from regions import AnnotationGene, AnnotationTranscript, AnnotationExon, RegionWriter, read_gtf_file, get_exons, get_introns, gene_slide
+from regions import AnnotationGene, AnnotationTranscript, AnnotationExon, RegionWriter, read_gff_file, get_exons, get_introns, gene_slide
 
 
 
@@ -466,7 +466,7 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
 
             loadr = PackageLoader('pyicoteolib', 'templates')
             env = Environment(loader=loadr)
-            template = env.get_template('enrichtempl00.html')
+            template = env.get_template('enrich_html.html')
 
             def jinja_read_file(filename):
                 f = open(filename, 'r')
