@@ -126,7 +126,7 @@ class LineWarning(Exception):
     pass
 
 # Fields: <seqname> <source> <feature> <start> <end> <score> <strand> <frame> [attributes] [comments]
-def parse_gtf_line(line):
+def parse_gff_line(line):
     fields = line.rstrip().split('\t')
     if len(fields) < GFF_MANDATORY_FIELDS:
         raise InvalidLine('Missing some fields')
@@ -185,15 +185,15 @@ def feature_cmp(s):
 
 
 # attr_filter parameter: ignore all the lines that contain any attribute matching any {"key": "value"} in the dictionary (default = {}: process all lines)
-def read_gff_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None, attr_filter={}, no_sort=False, do_filter=False, logger=None):
+def read_gff_file(gff_path, transcript_type=["protein_coding"], attr_checks=None, attr_filter={}, no_sort=False, do_filter=False, logger=None):
     if no_sort:
         if logger: logger.warning('GTF file sort skipped. Results might be wrong.')
-        sorted_file = open(gtf_path, 'r')
+        sorted_file = open(gff_path, 'r')
     else:
         if logger: logger.info('Sorting file...')
         output_path = None
         sorter = BigSort(file_format=None, id='mergeexonid', logger=False, filter_chunks=False)
-        sorted_file = sorter.sort(gtf_path,
+        sorted_file = sorter.sort(gff_path,
                                   output_path,
                                   lambda x:(x.split()[0], int(x.split()[3]), -int(x.split()[4]), feature_cmp(x.split()[2])),
                                   tempdirs=['/tmp']) 
@@ -210,7 +210,7 @@ def read_gff_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
             if logger: logger.info('Lines read: ' + str(num))
             
         try:
-            parsed_line = parse_gtf_line(line)
+            parsed_line = parse_gff_line(line)
         except LineWarning as e:
             #if logger: logger.info("Warning. Line %s: %s" % (num, e))
             continue
@@ -297,7 +297,7 @@ def read_gff_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
             exon.set_parent(parent)
             parent.append_child(exon)
 
-    for gene in current_genes: # process last gene (repeated code, FIXME?)
+    for gene in current_genes: # process last gene (repeated code)
         yield gene
 
     # delete temporary (sorted) file
@@ -308,7 +308,7 @@ def read_gff_file(gtf_path, transcript_type=["protein_coding"], attr_checks=None
 
 
 
-def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  position=None, logger=None):
+def get_exons(gff_path, remove_duplicates=True, min_length=0, no_sort=False,  position=None, logger=None):
     tmp_genes = []
     #max_genes = 0
 
@@ -318,7 +318,7 @@ def get_exons(gtf_path, remove_duplicates=True, min_length=0, no_sort=False,  po
     #            return True
     #    return False
 
-    for gene in read_gff_file(gtf_path, no_sort=no_sort, logger=logger):#, attr_checks=chk):
+    for gene in read_gff_file(gff_path, no_sort=no_sort, logger=logger):#, attr_checks=chk):
         if len(tmp_genes) > 0:
             if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
                 if position is None: # return all exons
@@ -359,12 +359,12 @@ def _get_exons_from_gene_list(tmp_genes, remove_duplicates=True):
     exons.sort(key = lambda ex: (int(ex.start), int(ex.end)))
 
     # Remove duplicated exons (only checks e1.start == e2.start && e1.end == e2.end)
-    # (FIXME: Is there a better way to do it?)
+    # (Is there a better way to do it?)
     if remove_duplicates:
         to_remove = []
         for num, ex in enumerate(exons[1:]): # we start with "[1:]" because we compare with the previous exon in the list
             if ex.start == exons[num].start and ex.end == exons[num].end and ex.strand == exons[num].strand:
-                to_remove.append(num+1) # TODO: join exon_ids?
+                to_remove.append(num+1) # join exon_ids?
         for n in reversed(to_remove):
             exons.pop(n)
 
@@ -373,9 +373,9 @@ def _get_exons_from_gene_list(tmp_genes, remove_duplicates=True):
 
 
 
-def get_introns(gtf_path, min_length=0, no_sort=False, position=None, logger=None):
+def get_introns(gff_path, min_length=0, no_sort=False, position=None, logger=None):
     tmp_genes = []
-    for gene in read_gff_file(gtf_path, no_sort=no_sort, logger=logger):
+    for gene in read_gff_file(gff_path, no_sort=no_sort, logger=logger):
         if len(tmp_genes) > 0:
             if (gene.start > tmp_genes[-1].end) or (tmp_genes[-1].seqname != gene.seqname): # new gene not overlapping
                 for intron in _get_introns_from_gene_list(tmp_genes, min_length, position):
@@ -397,7 +397,7 @@ def _get_introns_from_gene_list(tmp_genes, min_length, position=None):
                 if ex.start > last_exon.end and ((ex.start - last_exon.end) >= min_length):
                     yield (ex.seqname, last_exon.end, ex.start, ex.region_id, ex.strand) # intron returned as tuple (seqname, start, end, id, strand)
                 last_exon = ex
-    else: # TODO: test!
+    else:
         for g in tmp_genes:
             g_exons  = [exon for exon in _get_exons_from_gene_list([g], remove_duplicates=True)]
             if len(g_exons) >= 2:
@@ -410,9 +410,9 @@ def _get_introns_from_gene_list(tmp_genes, min_length, position=None):
                 yield (ex1.seqname, ex1.end, ex2.start, ex1.region_id, ex1.strand)
 
 
-def get_tss(gtf_path, add_start=0, add_end=0, no_sort=False, logger=None):
+def get_tss(gff_path, add_start=0, add_end=0, no_sort=False, logger=None):
     tmp_genes = []
-    for gene in read_gff_file(gtf_path, no_sort=no_sort, do_filter=True, logger=logger):
+    for gene in read_gff_file(gff_path, no_sort=no_sort, do_filter=True, logger=logger):
         if len(tmp_genes) > 0:
             # Had some order problems in cases like:
             #       X-->|>------------X
@@ -452,7 +452,7 @@ def _get_tss_from_gene_list(tmp_genes, add_start, add_end, remove_duplicates=Tru
         to_remove = []
         for num, tss in enumerate(tmp_tss[1:]): # we start with "[1:]" because we compare with the previous tss in the list
             if tss[1] == tmp_tss[num][1] and tss[2] == tmp_tss[num][2] and tss[3] == tmp_tss[num][3]: # comparing start, end, and strand
-                to_remove.append(num+1) # TODO: join transcript_ids?
+                to_remove.append(num+1) # join transcript_ids?
         for n in reversed(to_remove):
             tmp_tss.pop(n)
 
@@ -478,10 +478,10 @@ def generate_windows(start, end, win_size, win_step, fit_last=True):
 
 # sliding windows
 # parameter chr_length must be a dictionary with seqname as keys and integers as values (lengths) (implemented in pyicoenrich, with "chromlen" files)
-def gene_slide(gtf_path, win_size, win_step, win_type, chr_lengths={}, no_sort=False, logger=None):
+def gene_slide(gff_path, win_size, win_step, win_type, chr_lengths={}, no_sort=False, logger=None):
     tmp_genes = [] # for temporarily storing overlapping genes
 
-    for gene in read_gff_file(gtf_path, no_sort=no_sort, logger=logger):
+    for gene in read_gff_file(gff_path, no_sort=no_sort, logger=logger):
         if len(tmp_genes) > 0:
 
             if (tmp_genes[-1].seqname != gene.seqname): # new sequence, return last zone in tmp_genes
@@ -506,7 +506,7 @@ def gene_slide(gtf_path, win_size, win_step, win_type, chr_lengths={}, no_sort=F
                         start_pos = tmp_genes[0].start
                         end_pos = tmp_genes[-1].end
                     for (start, end) in generate_windows(start_pos, end_pos, win_size, win_step):
-                        yield (sname, start, end, str(start) + ":" + str(end)) # FIXME: create id?
+                        yield (sname, start, end, str(start) + ":" + str(end)) # create id?
                     tmp_genes = []
         tmp_genes.append(gene)
         tmp_genes.sort(key = lambda gn: (int(gn.end)))
