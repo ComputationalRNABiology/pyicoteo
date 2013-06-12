@@ -2,7 +2,7 @@
 <tool id="pyicoteo_trim" name="Trim" version="2.0">
   <description>Trim the clusters to a given threshold.</description>
   <command interpreter="python">
-          pyicos remduplicates $experiment $output
+          pyicos trim $experiment $output
                 -f $experiment_format_cond.experiment_format
                 -F $output_format_cond.output_format
                 $is_experiment_open
