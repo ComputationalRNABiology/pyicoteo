@@ -195,10 +195,7 @@ class SafeReader:
 class BigSort:
     """
     This class can sort huge files without loading them fully into memory.
-    Based on a recipe by Tomasz Bieruta found at c
-
-    NOTE: This class is becoming a preprocessing module. This is a good thing, I think! But its not
-    only a sorting class then. We have to think about renaming it, or extracting functionality from it...
+    Based on a recipe by Tomasz Bieruta.
     """
     def __init__(self, file_format, read_half_open=False, frag_size=0, id=0, logger=True, filter_chunks=True, push_distance=0, buffer_size = 320000, temp_file_size = 8000000):
         self.logger = logger
@@ -221,7 +218,7 @@ class BigSort:
     def skipHeaderLines(self, key, experiment_file):
         validLine = False
         count = 0
-        while not validLine and count < 40:
+        while not validLine and count < 400: #file formats with more than 400 lines of header should die anyway 
             try:
                 currentPos = experiment_file.tell()
                 line = [experiment_file.readline()]
@@ -250,6 +247,7 @@ class BigSort:
 
                     if self.push_distance:
                         self.cluster.push(self.push_distance)
+
                 except InvalidLine:
                     if self.logger: self.logger.debug('Discarding middle invalid line: %s'%line)
                                    
@@ -264,6 +262,7 @@ class BigSort:
 
         if not tempdirs:
             tempdirs.append(gettempdir())
+
         input_file = open(input,'rb',self.temp_file_size)
         self.skipHeaderLines(key, input_file)
         try:
@@ -283,10 +282,12 @@ class BigSort:
                     chunks.append(output_chunk.name)
                 else:
                     break
+
         except KeyboardInterrupt: # If there is an interruption, delete all temporary files and raise the exception for further processing.
             print 'Removing temporary files...'
             self.remove_chunks(chunks)
             raise
+
         finally:
             input_file.close()
         
@@ -375,7 +376,8 @@ class DualSortedReader:
 class SortedFileReader:
     """
     Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
-    and yields the clusters that overlap with the region specified. The cursor will be left behind the position of the last region fed to the SortedFileReader.
+    and yields the clusters that overlap with the region specified. The cursor will be left behind the position of the last region fed 
+    to the SortedFileReader.
     """
     def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, logger=None):
         self.__dict__.update(locals())

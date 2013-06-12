@@ -674,7 +674,7 @@ class Turbomix:
  
         Cluster analysis:
         This analysis takes as a basic unit the "cluster" profile and performs a poisson taking into account the height
-        of the profile. This will help us to better know which clusters are statistically significant and which are product of chromatine noise
+        of the profile. This will help us to better know which clusters are statistically significant and which are product of chromatin noise
 
         We do this by calculating the average height of clusters in a given chromosome. Given this mean, we calculate the p-value for each height k the poisson
         function gives us the probability p of one cluster having a height k by chance. 
@@ -685,7 +685,6 @@ class Turbomix:
         This analysis takes the nucleotide as the unit to analize. We give a p-value for each "height"
         of read per nucleotides using an accumulated poisson. With this test we can infer more accurately 
         what nucleotides in the cluster are part of the DNA binding site.
-
 
         Number of reads analysis:
         We analize the number of reads of the cluster. Number of reads = sum(xi * yi) / read_length
@@ -940,7 +939,7 @@ class Turbomix:
         num_analyzed = 0
         for line in utils.open_file(self.current_experiment_path, self.experiment_format, logger=self.logger):
             line_read = Cluster(read=self.experiment_format)
-            line_read.read_line(line)
+            self.safe_read_line(line_read, line)
             if line_read.strand == PLUS_STRAND:
                 if  positive_cluster.intersects(line_read):
                      positive_cluster += line_read

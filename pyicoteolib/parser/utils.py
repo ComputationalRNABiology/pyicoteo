@@ -148,11 +148,6 @@ def parse_validate_args(parser):
         args.control_format = args.experiment_format
         args.open_control = args.open_experiment
 
-    #TODO parte de pyicoenrich
-    #if args.experiments:
-    #    args.experiment, args.experiment_b = args.experiments
-
-
     if (args.experiment_format and args.experiment_format == CUSTOM_FORMAT) or (args.output_format and args.output_format == CUSTOM_FORMAT):
         from ..core import CustomReader, CustomWriter # FIXME: better way instead of import?
         CustomReader.f_custom_in = args.f_custom_in

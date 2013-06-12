@@ -656,7 +656,6 @@ class PkWriter(Writer):
 #    CLUSTER OBJECT                  #
 ######################################
 
-
 class ReadCluster(AbstractCore):
     """
     Represents one cluster of overlapping tags or a single Tag. This object can read and write in every format provided.
@@ -792,7 +791,6 @@ class ReadCluster(AbstractCore):
 
     def copy_cluster_data(self, other):
         """Copies the info in the other cluster, keeping the readers. Faster than copy_cluster"""
-
         other.start = self.start
         other.end = self.end
         other.restart_levels()
