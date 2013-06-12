@@ -160,7 +160,7 @@ def pearson(list_one, list_two):
 
 
 def list_available_formats():
-    #TODO this is very bad, this function is a trap. Fix
+    #TODO this is very bad, this function is a trap. Sys exit is bad. Fix
     print 'Formats Pyicos can read:'
     for format in READ_FORMATS:
         print format
@@ -188,13 +188,13 @@ class SafeReader:
 
                 raise OperationFailed
             else:
-                if self.logger: self.logger.debug("Skipping invalid (%s) line: %s"%(cluster.reader.format, line))
+                if self.logger: self.logger.debug("Skipping invalid (%s) line (or header): %s"%(cluster.reader.format, line))
                 self.invalid_count += 1
     
 class BigSort:
     """
     This class can sort huge files without loading them fully into memory.
-    Based on a recipe by Tomasz Bieruta found at c
+    Based on a recipe by Tomasz Bieruta 
 
     NOTE: This class is becoming a preprocessing module. This is a good thing, I think! But its not
     only a sorting class then. We have to think about renaming it, or extracting functionality from it...

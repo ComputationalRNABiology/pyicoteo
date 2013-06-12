@@ -474,8 +474,8 @@ def enrichment(self):
         out_path = _calculate_MA(self, old_output, True, tmm_factor, replica_tmm_factor, True) #recalculate with the new factor, using the counts again
 
     if self.quant_norm:
-        self.logger.info("Full quantile normalization...")
 
+        self.logger.info("Full quantile normalization...")
         signal_a = []
         signal_prime_1 = []
         enrich = []
@@ -483,22 +483,27 @@ def enrichment(self):
             sline = line.split()
             enrich_line = dict(zip(enrichment_keys, sline))
             enrich.append(enrich_line)
-            signal_a.append(enrich_line['signal_a'])
-            signal_prime_1.append(enrich_line['signal_prime_1'])
+            signal_a.append(float(enrich_line['signal_a']))
+            signal_prime_1.append(float(enrich_line['signal_prime_1']))
         
+        #full quantile normalization
         signal_a.sort()
-        enrich.sort(key=lambda x:x['signal_b']) 
+        enrich.sort(key=lambda x:float(x['signal_b'])) 
         quant_counts = open('%s/quantcounts_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w')
         for i in range(len(enrich)):
-            enrich[i]['signal_b'] = signal_a[i] #full quantile normalization
-            enrich[i]['signal_prime_2'] = signal_prime_1[i] #full quantile normalization of the replica          
-            quant_counts.write("%s\n"%"\t".join(str(enrich[i][key]) for key in enrichment_keys[:20]))
+            enrich[i]['signal_b'] = signal_a[i] 
+
+        self.logger.info("Full quantile normalization replica...")
+        #full quantile normalization of the replica
+        signal_prime_1.sort()
+        enrich.sort(key=lambda x:float(x['signal_prime_2']))
+        for i in range(len(enrich)):
+            enrich[i]['signal_prime_2'] = signal_prime_1[i]         
+            quant_counts.write("%s\n"%"\t".join(str(enrich[i][key]) for key in enrichment_keys[:20])) #write the lines
 
         quant_counts.flush()
         out_path = _calculate_MA(self, quant_counts.name, True, 1, 1, True) #recalculate with the new factor, using the counts again
-
-
-
+        
     self.logger.info("%s regions analyzed."%self.regions_analyzed_count)
     if not NOWRITE in self.operations:
         self.logger.info("Enrichment result saved to %s"%self.current_output_path)

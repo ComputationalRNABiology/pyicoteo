@@ -950,7 +950,7 @@ class Turbomix:
         num_analyzed = 0
         for line in utils.open_file(self.current_experiment_path, self.experiment_format, logger=self.logger):
             line_read = Cluster(read=self.experiment_format)
-            line_read.read_line(line)
+            self.safe_read_line(line_read, line)
             if line_read.strand == PLUS_STRAND:
                 if  positive_cluster.intersects(line_read):
                      positive_cluster += line_read
