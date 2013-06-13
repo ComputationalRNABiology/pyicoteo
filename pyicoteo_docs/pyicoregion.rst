@@ -55,3 +55,10 @@ Pyicoregion arguments
 
 
 
+
+Credit
+-------
+
+* Developers: Juan González-Vallinas, Ferran Lloret
+* Unit and beta Testing: Juan González-Vallinas, Ferran Lloret
+* Supervision: Eduardo Eyras

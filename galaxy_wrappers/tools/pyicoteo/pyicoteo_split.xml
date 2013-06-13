@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<tool id="pyicoteo_split" name="Split" version="2.xx">
+<tool id="pyicoteo_split" name="Split" version="2.0">
   <description>Split clusters following a certain criteria.</description>
   <command interpreter="python">
           pyicos split $experiment $output
@@ -69,7 +69,6 @@
     <exit_code range="1:" level="error" />
   </stdio>
   <help>
-        <!-- TODO: help -->
         More information at: http://regulatorygenomics.upf.edu/pyicos
   </help>
 </tool>

@@ -23,7 +23,7 @@ from defaults import *
 import utils
 import bam
 
-from regions import AnnotationGene, AnnotationTranscript, AnnotationExon, RegionWriter, read_gtf_file, get_exons, get_introns, gene_slide
+from regions import AnnotationGene, AnnotationTranscript, AnnotationExon, RegionWriter, read_gff_file, get_exons, get_introns, gene_slide
 
 
 
@@ -63,7 +63,7 @@ def calculate_region(self):
 
 
     if self.region_magic:
-        regwriter = RegionWriter(self.gff_file, region_file, self.region_magic, no_sort=self.no_sort, logger=self.logger, write_as=BED)
+        regwriter = RegionWriter(self.gff_file, region_file, self.region_magic, no_sort=self.no_sort, logger=self.logger, write_as=BED, galaxy_workarounds=self.galaxy_workarounds)
         regwriter.write_regions()
 
 
@@ -299,7 +299,8 @@ def plot_enrichment(self, file_path):
             plot(A_medians, minus_points, 'r--')
 
             if self.interesting_regions:
-                plot(interesting_A, interesting_M, 'H', label='Interesting regions', color='#00EE00') # plotting "interesting" regions
+                interesting_label = self.interesting_regions.split(os.path.sep)[-1] + ' (interesting regions)'
+                plot(interesting_A, interesting_M, 'H', label=interesting_label, color='#00EE00') # plotting "interesting" regions
 
             axhline(0, linestyle='--', color="grey", alpha=0.75)
             xlabel('A')
@@ -465,7 +466,7 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
 
             loadr = PackageLoader('pyicoteolib', 'templates')
             env = Environment(loader=loadr)
-            template = env.get_template('enrichtempl00.html')
+            template = env.get_template('enrich_html.html')
 
             def jinja_read_file(filename):
                 f = open(filename, 'r')
