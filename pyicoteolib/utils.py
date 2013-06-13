@@ -189,7 +189,7 @@ class SafeReader:
 
                 raise OperationFailed
             else:
-                if self.logger: self.logger.debug("Skipping invalid (%s) line: %s"%(cluster.reader.format, line))
+                if self.logger: self.logger.debug("Skipping invalid (%s) line (or header): %s"%(cluster.reader.format, line))
                 self.invalid_count += 1
     
 class BigSort:
