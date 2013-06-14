@@ -1,5 +1,6 @@
 import unittest
 
+from pyicoteolib.parser.utils import set_defaults
 from pyicoteolib.parser import pyicoclip, pyicoenrich, pyicoller, pyicoregion, pyicos
 
 
@@ -56,6 +57,7 @@ class TestParser(unittest.TestCase):
     def test_pyicoenrich(self):
         self.parser_test(pyicoenrich)
         parser = pyicoenrich.create_parser()
+        set_defaults(parser)
         parser.parse_args('-reads a_sample.bed b_sample.bed -output bla.txt -f bed'.split())
         pyicoenrich.run_parser(parser)
 
