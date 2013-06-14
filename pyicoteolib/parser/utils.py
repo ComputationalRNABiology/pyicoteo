@@ -116,10 +116,7 @@ def init_turbomix(args, parser_name=PARSER_NAME):
     return turbomix
 
 
-def parse_validate_args(parser):
-    """
-    Parses and validates the arguments, returns a turbomix instance
-    """
+def set_defaults(parser):
     parser.set_defaults(experiment=EXPERIMENT, experiment_format=EXPERIMENT_FORMAT, open_experiment=OPEN_EXPERIMENT, debug=DEBUG, discard=DISCARD, output=OUTPUT, control=CONTROL, 
                         wig_label = LABEL, output_format=OUTPUT_FORMAT,open_output=OPEN_OUTPUT, rounding=ROUNDING, control_format=CONTROL_FORMAT, region=REGION, region_format=REGION_FORMAT, 
                         open_region =OPEN_REGION,frag_size = FRAG_SIZE, tag_length = TAG_LENGTH, span=SPAN, p_value=P_VALUE, height_limit=HEIGHT_LIMIT, 
@@ -137,6 +134,13 @@ def parse_validate_args(parser):
                         push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name=PARSER_NAME,
                         region_magic=REGION_MAGIC, gff_file=GFF_FILE, interesting_regions=INTERESTING_REGIONS, disable_significant_color=DISABLE_SIGNIFICANT,
                         f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP, galaxy_workarounds=GALAXY_WORKAROUNDS, html_output=HTML_OUTPUT)
+
+
+def parse_validate_args(parser):
+    """
+    Parses and validates the arguments, returns a turbomix instance
+    """
+    set_defaults(parser)
     args = parser.parse_args()
     validate(args)
     if args.counts_file: #the formats are overridden when using enrichment (only of cosmetic value, when printing the flags)   
@@ -177,6 +181,7 @@ def parse_validate_args(parser):
 
     return args
 
+#A bit dirty, but works. Common flags that may be used by different pyicoteo tools. If one flag corresponds exclusively to one tool, move there. 
 
 read_formats = str(READ_FORMATS)
 write_formats = str(READ_FORMATS)
@@ -248,32 +253,6 @@ optional_region.add_argument('--region', help='The region file or directory. In 
 region_format = new_subparser()
 region_format.add_argument('--region-format',default=REGION_FORMAT, help='The format the region file is written as. [default %(default)s]')
 region_format.add_argument('--open-region', action='store_true', default=OPEN_REGION, help='Define if the region file is half-open or closed notation. [Default closed]')
-#enrichment flags
-enrichment_flags = new_subparser()
-enrichment_flags.add_argument('--stranded', action='store_true', default=STRANDED_ANALYSIS, help="Decide if the strand is taken into consideration for the analysis. This requires a region file in bed format with the strand information in its 6th column.")
-enrichment_flags.add_argument('--proximity', default=PROXIMITY, type=int, help="Determines if two regions calculated automatically are close enough to be clustered. Default %(default)s nt")
-enrichment_flags.add_argument('--binsize', type=float, default=BINSIZE, help="The size of the bins to calculate the local sd and mean for the background model, as a ratio of total number or regions. Regardless of the ratio selected, the minimum window size is 50 regions, since below that threshold the results will no longer be statistically meaningful. [Default %(default)s]")        
-enrichment_flags.add_argument('--sdfold', type=float, default=SDFOLD, help="The standard deviation fold used to generate the background model. [Default %(default)s]")  
-enrichment_flags.add_argument('--recalculate', action='store_true', default=RECALCULATE, help="Recalculate the z-score when plotting. Useful for doing different plots with 'Pyicoteo plot' [Default %(default)s]")    
-enrichment_flags.add_argument('--mintags', type=float, default=REGION_MINTAGS, help="Number of tags (of the union of the experiment and experiment_b datasets) for a region to qualify to be analyzed. [Default %(default)s]") 
-enrichment_flags.add_argument('--binstep', type=float, default=WINDOW_STEP, help="Step of the sliding window for the calculation of the z-score, as a ratio of the window size selected. If you want max precision, in the zscore calculation. You can set this value to 0 in order to use a sliding window that slides only 1 region at a time, but if you have many regions the calculation can get very slow. [Default %(default)s]")  
-enrichment_flags.add_argument('--skip-plot', action='store_true', default=SKIP_PLOT, help="Skip the plotting step. [Default %(default)s]")
-enrichment_flags.add_argument('--n-norm', action='store_true', default=N_NORM, help="Divide the read counts by the total number of reads (units of million reads)")
-enrichment_flags.add_argument('--len-norm', action='store_true', default=LEN_NORM, help="Divide the read counts by region (gene, transcript...) length (reads per kilobase units)")
-#enrichment_flags.add_argument('--sequential', default=SEQUENTIAL, action='store_true', help="Iterate through the files in sequential order, instead of random access (for BAM reading). This is faster than random if you are using a lot of regions that overlap with each other") #TODO This flag doesn't work because if we order chr1 chr2 every file, instead of alphabetical, the SortedClusterReader classes will fail when changing chromosome, since the ALGORITHM depends on a sorted file
-
-
-enrichment_flags.add_argument('--region-magic', nargs='+', help="Region magic")
-enrichment_flags.add_argument('--gff-file', help="GFF file")
-enrichment_flags.add_argument('--interesting-regions', help="Path to file containing interesting regions (to be marked in the plot).")
-enrichment_flags.add_argument('--disable-significant-color', action='store_true', help="Do not plot significant regions in a different color")
-enrichment_flags.add_argument('--html-output', help="Output the enrichment results as HTML (requires the jinja2 library)")
-
-
-tmm_flag = new_subparser()
-tmm_flag.add_argument('--tmm-norm', action='store_true', default=TMM_NORM, help="Trimming the extreme A and M to correct the dataset for the differences in read density between samples. [Default %(default)s]")
-quant_flag = new_subparser()
-quant_flag.add_argument('--quant-norm', action='store_true', default=QUANT_NORM, help="Full quantile normalization of the counts. This normalization method could be considered the most conservative of them all. [Default %(default)s]")
 
 checkrep_flags = new_subparser()
 checkrep_flags.add_argument('--experiment-label', default=EXPERIMENT_LABEL, help='The label that will identify the experiment file in the "check replicas" plot')
@@ -374,6 +353,9 @@ correlation_flags.add_argument('--delta-step',type=int, default=DELTA_STEP, help
 correlation_flags.add_argument('--max-correlations',type=int, default=MAX_CORRELATIONS, help='The maximum pairs of clusters to analyze before considering the test complete. Lower this parameter to increase time performance [Default %(default)s]')    
 counts_file = new_subparser()
 counts_file.add_argument('counts_file', help='The counts file. The format required is a bed file with fields "name", "start", "end", "name2", "score(ignored)", "strand", "count file a", "count file b", "count file a", "count replica a" where the counts can be RPKMs or simple counts')
+
+
+
 
 #check replicas operation TODO unfinished
 #subparsers.add_parser('checkrep', help='Check how good the replicas are.', parents=[experiment, experiment_flags, basic_parser, replica, region, region_format, checkrep_flags, output])

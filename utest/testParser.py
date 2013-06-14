@@ -1,5 +1,7 @@
 import unittest
-from pyicoteolib.parser import PicosParser
+
+from pyicoteolib.parser import pyicoclip, pyicoenrich, pyicoller, pyicoregion, pyicos
+
 
 '''
 Sometimes it may be useful to have an ArgumentParser parse args other than those of sys.argv. 
@@ -28,22 +30,39 @@ class TestParser(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_it_works(self):
+    def parser_test(self, my_module):
         """
-        This test checks that the parser will not raise compiling errors.
+        Tests that the parsers can be created 
         """
         try:
-            p = PicosParser()
-            p.run_parser()
+            parser = my_module.create_parser()
+
         except SystemExit, e:
             self.assertEquals(type(e), type(SystemExit()))
             self.assertEquals(e.code, 2)
-        except Exception, e:
-            self.fail('unexpected exception: %s' % e)
-        else:
-            self.fail('SystemExit exception expected')
 
-        
+        except Exception, e:
+            self.fail("Unexpected Exception %s"%e)
+
+    def test_pyicoclip(self):
+        self.parser_test(pyicoclip)
+
+    def test_pyicoregion(self):
+        self.parser_test(pyicoregion)
+
+    def test_pyicoller(self):
+        self.parser_test(pyicoller)
+
+    def test_pyicoenrich(self):
+        self.parser_test(pyicoenrich)
+        parser = pyicoenrich.create_parser()
+        parser.parse_args('-reads a_sample.bed b_sample.bed -output bla.txt -f bed'.split())
+        pyicoenrich.run_parser(parser)
+
+    def test_pyicos(self):
+        #TODO iterate sub-commands
+        self.parser_test(pyicos)        
+
 
 def suite():
     suite = unittest.TestSuite()

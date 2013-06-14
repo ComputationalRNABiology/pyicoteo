@@ -8,7 +8,7 @@ Pyicoclip is an implementation of the modified False Discovery Rate algorithm pr
 
 .. _proposed: http://www.nature.com/nsmb/journal/v16/n2/full/nsmb.1545.html
 
-Theoretically, it could be used for any other kind of experiment that involves short reads and doesn't have a valid control.
+This method could in principle be used for any other kind of experiment that involves short reads and doesn't have a valid control.
 
 Region file
 -------------

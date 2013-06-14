@@ -9,8 +9,7 @@ def create_parser():
                                      )
     return parser
 
-def run_parser():
-    parser = create_parser()
+def run_parser(parser):
     args = parse_validate_args(parser)
     turbomix = init_turbomix(args, parser_name="pyicoclip")
     turbomix.operations = [MODFDR]

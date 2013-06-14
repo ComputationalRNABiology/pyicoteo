@@ -3,8 +3,6 @@ from utils import *
 import argparse
 
 def create_parser():
-
-
     parser = argparse.ArgumentParser(version=VERSION, 
                                      description="Pyicos, part of Pyicoteo suite, is a collection of tools for mapped reads processing and basic analysis.")
     subparsers = parser.add_subparsers(help='The operation you want to perform. Note that some operations imply previous automatic operations.')
@@ -13,7 +11,7 @@ def create_parser():
 
     subparsers.add_parser('subtract', help='Subtract two clustered files. Operating with directories will only give apropiate results if the files and the control are paired in alphabetical order.', parents=[experiment,experiment_flags, basic_parser, control, control_format, open_control, output, output_flags, round, normalize, tag_length, span, label, remlabels])
     #split operation
-    subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output (other formats under development).', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, split_proportion, split_absolute, label, remlabels])
+    subparsers.add_parser('split', help='Split the peaks in subpeaks. Only accepts pk or wig as output.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, split_proportion, split_absolute, label, remlabels])
     #trim operation
     subparsers.add_parser('trim', help='Trim the clusters to a given threshold.', parents=[experiment, experiment_flags, basic_parser, output, output_flags, round, trim_absolute, trim_proportion, label, remlabels, span])
     #discard operation
@@ -25,7 +23,7 @@ def create_parser():
     #push operation
     subparsers.add_parser('push', help='Push the reads in the corresponding strand. If a read doesn\'t have a strand, will be pushed from left to right. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags, basic_parser, output, output_flags, push_distance, round, label, span, remlabels])
     #poisson analysis
-    subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With this tests you will be able to decide what is the significant threshold for your reads.',
+    subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With these tests you will be able to decide what is the significant threshold for your reads.',
                           parents=[experiment,experiment_flags,  basic_parser, output_flags, optional_frag_size, pvalue, height, correction, species, remlabels, poisson_test])
     #cut operations
     subparsers.add_parser('filter', help="""Analyze the significance of accumulated reads in the file using the poisson distribution and generate the resulting profiles, in wig or pk formats""",
@@ -40,7 +38,7 @@ def create_parser():
     return parser
 
 
-def run_parser():
+def run_parser(parser):
     parser = create_parser()
     args = parse_validate_args(parser)
     turbomix = init_turbomix(args, parser_name="pyicos")

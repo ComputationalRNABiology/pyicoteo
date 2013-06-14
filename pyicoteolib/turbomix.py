@@ -648,7 +648,7 @@ class Turbomix:
 
     def remove_regions(self, cluster):
         region = Region(cluster.name, cluster.start, cluster.end)
-        if self.blacklist_reader.get_overlaping_clusters(region, overlap=EPSILON):
+        if self.blacklist_reader.overlapping_clusters(region, overlap=EPSILON):
             cluster.clear() 
 
         return cluster
@@ -917,7 +917,7 @@ class Turbomix:
         for region_line in open(self.sorted_region_path):
             region = self._region_from_sline(region_line.split())
             region.logger = self.logger
-            region.add_tags(cluster_reader.get_overlaping_clusters(region, overlap=EPSILON), True)
+            region.add_tags(list(cluster_reader.overlapping_clusters(region, overlap=EPSILON)), True)
             classified_clusters = region.get_FDR_clusters(self.repeats)
             for cluster in classified_clusters:
                 unfiltered_output.write(cluster.write_line())

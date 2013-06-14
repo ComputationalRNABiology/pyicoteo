@@ -81,13 +81,13 @@ def read_fetcher(file_path, experiment_format, read_half_open=False, rounding=Tr
         if use_samtools:
             return BamFetcherSamtools(file_path, read_half_open, rounding, cached, logger)
         else:
-            return SortedFileClusterReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
+            return SortedFileReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
     #elif experiment_format == BAM:
         #return BamFetcher(file_path, read_half_open, rounding, cached, logger) #doesnt work yet
     elif only_counts:
         return SortedFileCountReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
     else:
-        return SortedFileClusterReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
+        return SortedFileReader(file_path, experiment_format, read_half_open, rounding, cached, logger)
 
 def add_slash_to_path(path):
     if path[-1] != '/':
@@ -379,7 +379,7 @@ class SortedFileReader:
     and yields the clusters that overlap with the region specified. The cursor will be left behind the position of the last region fed 
     to the SortedFileReader.
     """
-    def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, logger=None):
+    def __init__(self, file_path, experiment_format, read_half_open=False, cached=True, rounding=True, logger=None):
         self.__dict__.update(locals())
         self.file_iterator = open(file_path, 'rb')
         self.safe_reader = SafeReader()
@@ -411,7 +411,7 @@ class SortedFileReader:
 
     def _get_cluster(self):
         """Returns line in a cluster ignoring the count of lines. Assumes that the cursor position exists"""
-        c = Cluster(read=self.experiment_format, read_half_open=self.read_half_open, rounding=self.rounding, cached=True, logger=self.logger) 
+        c = Cluster(read=self.experiment_format, read_half_open=self.read_half_open, rounding=self.rounding, cached=self.cached, logger=self.logger) 
         if self.line:
             self.safe_read_line(c, self.line)
         return c
@@ -439,72 +439,6 @@ class SortedFileReader:
  
     def safe_read_line(self, cluster, line):
         self.safe_reader.safe_read_line(cluster, line)
-
-class SortedFileClusterReader:
-    """
-    Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position,
-    and retrieves the clusters that overlap with the region specified.
-    """
-    def __init__(self, file_path, experiment_format, read_half_open=False, rounding=True, cached=True, logger=None):
-        self.__dict__.update(locals())
-        self.file_iterator = open_file(file_path, format=experiment_format, logger=logger)
-        if logger: self.logger.debug('Fetcher used for %s: Sequential Sorted Cluster Reader'%file_path)
-        if logger: self.logger.debug('Cached: %s'%self.cached)
-
-        self.__initvalues()
-        self.safe_reader = SafeReader(self.logger)
-    
-    def __initvalues(self):
-        self.slow_cursor = 1
-        self.cluster_cache = dict() 
-
-    def rewind(self):
-        """Start again reading the file from the start"""
-        self.file_iterator.seek(0)
-        self.__initvalues()
-
-    def _read_line_load_cache(self, cursor):
-        """Loads the cache if the line read by the cursor is not there yet. If the line is empty, it means that the end of file was reached,
-        so this function sends a signal for the parent function to halt. If the region is stranded, the only tags returned will be the ones of that strand"""
-        if cursor not in self.cluster_cache:
-            try:
-                line = self.file_iterator.next()
-            except StopIteration:
-                return True
-
-            self.cluster_cache[cursor] = Cluster(read=self.experiment_format, read_half_open=self.read_half_open, rounding=self.rounding, cached=self.cached, logger=self.logger)
-            self.safe_read_line(self.cluster_cache[cursor], line)
-
-        return False
-
-    def get_overlaping_clusters(self, region, overlap=1):
-        clusters = []
-        if self._read_line_load_cache(self.slow_cursor):
-            return clusters
-        # advance slow cursor and delete the clusters that are already passed by
-        while (self.cluster_cache[self.slow_cursor].name < region.name) or (self.cluster_cache[self.slow_cursor].name == region.name and region.start > self.cluster_cache[self.slow_cursor].end):
-            del self.cluster_cache[self.slow_cursor]
-            self.slow_cursor+=1
-            if self._read_line_load_cache(self.slow_cursor):
-                return clusters
-
-        # get intersections
-        fast_cursor = self.slow_cursor
-        while self.cluster_cache[fast_cursor].start <= region.end and self.cluster_cache[fast_cursor].name == region.name:
-            if self.cluster_cache[fast_cursor].overlap(region) >= overlap:
-                if not region.strand or region.strand == self.cluster_cache[fast_cursor].strand:
-                    clusters.append(self.cluster_cache[fast_cursor].copy_cluster())
-            fast_cursor += 1
-            if self._read_line_load_cache(fast_cursor):
-                return clusters
-
-        return clusters
-
-    def safe_read_line(self, cluster, line):
-        self.safe_reader.safe_read_line(cluster, line)
-
-
-
 
 class SortedFileCountReader:
     """

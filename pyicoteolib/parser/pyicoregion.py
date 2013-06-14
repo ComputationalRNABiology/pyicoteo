@@ -9,16 +9,13 @@ def create_parser():
     output.add_argument('-output', help='The output file')
     region_parser.add_argument('--region-magic', nargs='+', help="Desired features to filter (exons, introns, sliding window for inter-/intragenic zones, tss)")
 
-
-
     parser = argparse.ArgumentParser(version=VERSION, 
                                      description='Standalone region operations', 
                                      parents=[region_parser, output, output_flags, basic_parser]
                                      )
     return parser
 
-def run_parser():
-    parser = create_parser()
+def run_parser(parser):
     args = parse_validate_args(parser)
 
     turbomix = init_turbomix(args, parser_name="pyicoregion")

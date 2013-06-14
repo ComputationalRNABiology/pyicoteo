@@ -84,7 +84,7 @@ Description of the pyicoenrich counts file
 
 Column description of enrichment result where each line describes a region::
 
-    TIP: If you want to provide pyicoenrich with your own counts file, you only need to provide up to column 6)
+    TIP: If you want to provide pyicoenrich with your own generated counts file, you only need to provide up to column 6)
 
 1) name                    =  chromosome of region
 2) start                   =  region start
