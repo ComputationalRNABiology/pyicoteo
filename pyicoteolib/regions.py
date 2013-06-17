@@ -577,14 +577,15 @@ class RegionWriter():
                     cl = ReadCluster(name=seqname, start=start, end=end, strand=strand, write=self.write_as,    name2=name2)
                     self.region_file.write(cl.write_line())
             else:
-                self.logger.error("Incorrect region-magic parameter: %s" % (self.params[0]))
+                self.logger.error("Incorrect --region-magic parameter: %s" % (self.params[0]))
                 sys.exit(1)
             self.region_file.flush()
         except Exception as exc:
+            raise
             if self.logger:
                 self.logger.error(type(exc))
                 self.logger.error(exc.__str__())
-                self.logger.error('Unexpected or incorrect region-magic parameters')
+                self.logger.error('Unexpected or incorrect --region-magic parameters')
 
     def read_chromlen(self, path=None):
         length_dict = {}

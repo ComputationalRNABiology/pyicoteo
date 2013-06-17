@@ -11,8 +11,8 @@ def create_parser():
     return parser
 
 
-def run_parser(parser):
-    args = parse_validate_args(parser)
+def run_parser(parser, test_args=None):
+    args = parse_validate_args(parser, test_args)
     turbomix = init_turbomix(args, parser_name="pyicoller")
     turbomix.operations = [SPLIT, EXTEND, POISSON, FILTER, REMOVE_DUPLICATES, STRAND_CORRELATION] 
     if args.duplicates > 1: #If there is only 1 duplicate, there is no need to discard artifacts

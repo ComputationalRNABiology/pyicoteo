@@ -1,3 +1,4 @@
+import sys
 import unittest
 
 from pyicoteolib.parser.utils import set_defaults, init_turbomix, parse_validate_args
@@ -26,47 +27,38 @@ Namespace(accumulate=<built-in function max>, integers=[1, 2, 3, 4])
 Namespace(accumulate=<built-in function sum>, integers=[1, 2, 3, 4])
 '''
 
+TEST_BED1 = "test_files/mini_sorted.bed"
+TEST_BED2 = "test_files/mini_sorted2.bed"
+TEST_SAM = "test_files/p300_sample.sam"
+REGION = "test_files/region_test.bed"
+GTF = "test_files/head500_gencode.gtf"
+RESULTS_DIR = "test_files/results"
+
+
 class TestParser(unittest.TestCase):
-    
-    def setUp(self):
-        pass
-
-    def parser_test(self, my_module):
-        """
-        Tests that the parsers can be created 
-        """
-        try:
-            parser = my_module.create_parser()
-
-        except SystemExit, e:
-            self.assertEquals(type(e), type(SystemExit()))
-            self.assertEquals(e.code, 2)
-
-        except Exception, e:
-            self.fail("Unexpected Exception %s"%e)
+     
 
     def test_pyicoclip(self):
-        self.parser_test(pyicoclip)
+        parser = pyicoclip.create_parser()
+        pyicoclip.run_parser(parser, ("%s %s %s/enrich_out -f sam --silent"%(TEST_SAM, REGION, RESULTS_DIR)).split())
 
     def test_pyicoregion(self):
-        self.parser_test(pyicoregion)
+        parser = pyicoregion.create_parser()
+        pyicoregion.run_parser(parser, ("%s %s/pyicoregion_out --region-magic exons --silent"%(GTF, RESULTS_DIR)).split())
 
     def test_pyicoller(self):
-        self.parser_test(pyicoller)
+        parser = pyicoller.create_parser()
+        pyicoller.run_parser(parser, ("%s %s/pyicoller_out -f bed --silent"%(TEST_BED1, RESULTS_DIR)).split())
 
     def test_pyicoenrich(self):
-        #self.parser_test(pyicoenrich)
         parser = pyicoenrich.create_parser()
-        pyicoenrich.run_parser(parser, "-reads test_files/mini_sorted.bed test_files/mini_sorted2.bed -output test_files/results/enrich_out -f bed --silent".split())
-
-        #args = parser.parse_args('-reads a_sample.bed b_sample.bed -output bla.txt -f bed'.split())
-
-
+        pyicoenrich.run_parser(parser, ("-reads %s %s -output %s/enrich_out -f bed --silent"%(TEST_BED1, TEST_BED2, RESULTS_DIR)).split())
 
     def test_pyicos(self):
         #TODO iterate sub-commands
-        self.parser_test(pyicos)        
-
+        parser = pyicos.create_parser()       
+        sys.argv.append("subtract") #FIXME workaround, ideally pyicos parser should not use the sys library
+        pyicos.run_parser(parser, ("subtract %s %s %s/subtract_out -f bed --silent"%(TEST_BED1, TEST_BED2, RESULTS_DIR)).split())
 
 def suite():
     suite = unittest.TestSuite()

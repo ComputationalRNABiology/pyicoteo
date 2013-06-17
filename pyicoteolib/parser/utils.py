@@ -363,6 +363,10 @@ correlation_flags.add_argument('--max-correlations',type=int, default=MAX_CORREL
 counts_file = new_subparser()
 counts_file.add_argument('counts_file', help='The counts file. The format required is a bed file with fields "name", "start", "end", "name2", "score(ignored)", "strand", "count file a", "count file b", "count file a", "count replica a" where the counts can be RPKMs or simple counts')
 
+optional_gtf = new_subparser()
+optional_gtf.add_argument('--gff-file', help='The GFF file from which to extract the genomic regions, in combination with --region-magic flag')
+magic_flag = new_subparser()
+magic_flag.add_argument('--region-magic', nargs='+', help="Desired features to filter (exons, introns, sliding window for inter-/intragenic zones, tss)")
 
 
 

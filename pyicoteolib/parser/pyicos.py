@@ -38,11 +38,12 @@ def create_parser():
     return parser
 
 
-def run_parser(parser):
+def run_parser(parser, test_args=None):
     parser = create_parser()
-    args = parse_validate_args(parser)
+    args = parse_validate_args(parser, test_args)
     turbomix = init_turbomix(args, parser_name="pyicos")
-    if sys.argv[1] == 'convert':
+
+    if sys.argv[1] == 'convert': #FIXME workaround, ideally pyicos parser should not use the sys library. Break turbomix.
             if args.frag_size:
                 turbomix.operations = [EXTEND]
     elif sys.argv[1] == 'subtract':
