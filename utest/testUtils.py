@@ -1,6 +1,6 @@
 import unittest
-from pyicoslib.utils import DualSortedReader
-from pyicoslib.core import BED
+from pyicoteolib.utils import DualSortedReader
+from pyicoteolib.core import BED
 
 class TestUtils(unittest.TestCase):
     

@@ -133,15 +133,21 @@ def set_defaults(parser):
                         replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT, 
                         push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name=PARSER_NAME,
                         region_magic=REGION_MAGIC, gff_file=GFF_FILE, interesting_regions=INTERESTING_REGIONS, disable_significant_color=DISABLE_SIGNIFICANT,
-                        f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP, galaxy_workarounds=GALAXY_WORKAROUNDS, html_output=HTML_OUTPUT)
+                        f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP, galaxy_workarounds=GALAXY_WORKAROUNDS, 
+                        html_output=HTML_OUTPUT, experiments=None)
 
 
-def parse_validate_args(parser):
+def parse_validate_args(parser, test_args=None): #test_args for unit testing
     """
     Parses and validates the arguments, returns a turbomix instance
     """
     set_defaults(parser)
-    args = parser.parse_args()
+
+    if test_args: #for unit testing
+        args = parser.parse_args(test_args)
+    else:
+        args = parser.parse_args()
+
     validate(args)
     if args.counts_file: #the formats are overridden when using enrichment (only of cosmetic value, when printing the flags)   
         args.experiment_format = COUNTS
@@ -151,6 +157,9 @@ def parse_validate_args(parser):
     if not args.control_format: #If not specified, the control format is equal to the experiment format
         args.control_format = args.experiment_format
         args.open_control = args.open_experiment
+
+    if args.experiments: #for the pyicoenrich parser
+        args.experiment, args.experiment_b = args.experiments
 
     if (args.experiment_format and args.experiment_format == CUSTOM_FORMAT) or (args.output_format and args.output_format == CUSTOM_FORMAT):
         from ..core import CustomReader, CustomWriter # FIXME: better way instead of import?

@@ -1,6 +1,6 @@
 import unittest
 
-from pyicoteolib.parser.utils import set_defaults
+from pyicoteolib.parser.utils import set_defaults, init_turbomix, parse_validate_args
 from pyicoteolib.parser import pyicoclip, pyicoenrich, pyicoller, pyicoregion, pyicos
 
 
@@ -55,11 +55,13 @@ class TestParser(unittest.TestCase):
         self.parser_test(pyicoller)
 
     def test_pyicoenrich(self):
-        self.parser_test(pyicoenrich)
+        #self.parser_test(pyicoenrich)
         parser = pyicoenrich.create_parser()
-        set_defaults(parser)
-        parser.parse_args('-reads a_sample.bed b_sample.bed -output bla.txt -f bed'.split())
-        pyicoenrich.run_parser(parser)
+        pyicoenrich.run_parser(parser, "-reads test_files/mini_sorted.bed test_files/mini_sorted2.bed -output test_files/results/enrich_out -f bed --silent".split())
+
+        #args = parser.parse_args('-reads a_sample.bed b_sample.bed -output bla.txt -f bed'.split())
+
+
 
     def test_pyicos(self):
         #TODO iterate sub-commands

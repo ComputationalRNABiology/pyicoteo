@@ -47,24 +47,8 @@ def create_parser():
     #-output
     return parser
 
-def run_parser(parser):
-    args = parse_validate_args(parser)
-    if args.counts_file: #the formats are overridden when using enrichment (only of cosmetic value, when printing the flags)   
-        args.experiment_format = COUNTS
-        args.experiment_b_format = COUNTS
-        args.output_format = COUNTS
 
-
-
-    if not args.control_format: #If not specified, the control format is equal to the experiment format
-        args.control_format = args.experiment_format
-        args.open_control = args.open_experiment
-
-    if args.experiments:
-        args.experiment, args.experiment_b = args.experiments
-
-    turbomix = init_turbomix(args, parser_name="pyicoenrich")
-
+def define_operations(turbomix, args):
     turbomix.operations = [ENRICHMENT, CALCZSCORE]
     if args.push_distance:
         turbomix.operations.append(PUSH)
@@ -74,6 +58,11 @@ def run_parser(parser):
 
     if not args.skip_plot:
        turbomix.operations.append(PLOT)
+
+def run_parser(parser, test_args=None): #test_args for unit testing
+    args = parse_validate_args(parser, test_args)
+    turbomix = init_turbomix(args, parser_name="pyicoenrich")
+    define_operations(turbomix, args)
     turbomix.run()
 
 
