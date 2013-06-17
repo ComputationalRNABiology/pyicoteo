@@ -40,7 +40,9 @@ class TestParser(unittest.TestCase):
 
     def test_pyicoclip(self):
         parser = pyicoclip.create_parser()
-        pyicoclip.run_parser(parser, ("%s %s %s/enrich_out -f sam --silent"%(TEST_SAM, REGION, RESULTS_DIR)).split())
+        pyicoclip.run_parser(parser, ("%s %s/clipregion_out --region %s -f sam --silent"%(TEST_SAM, RESULTS_DIR, REGION)).split())
+        pyicoclip.run_parser(parser, ("%s %s/clipmagic_out -f sam --gff-file %s --region-magic genebody --silent"%(TEST_SAM, REGION, RESULTS_DIR)).split())
+
 
     def test_pyicoregion(self):
         parser = pyicoregion.create_parser()

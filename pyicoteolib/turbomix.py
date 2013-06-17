@@ -914,6 +914,10 @@ class Turbomix:
         cluster_reader = utils.read_fetcher(old_output, self.output_format, cached=self.cached, logger=self.logger)
         filtered_output = open(self.current_output_path, 'w+')
         unfiltered_output = open('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
+
+        if self.gff_file and self.region_magic:
+            print "MAGIC!!!!"
+
         for region_line in open(self.sorted_region_path):
             region = self._region_from_sline(region_line.split())
             region.logger = self.logger

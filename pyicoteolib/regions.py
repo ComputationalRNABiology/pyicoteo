@@ -581,7 +581,6 @@ class RegionWriter():
                 sys.exit(1)
             self.region_file.flush()
         except Exception as exc:
-            raise
             if self.logger:
                 self.logger.error(type(exc))
                 self.logger.error(exc.__str__())
