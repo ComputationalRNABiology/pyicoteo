@@ -30,6 +30,7 @@ Namespace(accumulate=<built-in function sum>, integers=[1, 2, 3, 4])
 TEST_BED1 = "test_files/mini_sorted.bed"
 TEST_BED2 = "test_files/mini_sorted2.bed"
 TEST_SAM = "test_files/p300_sample.sam"
+TEST_SAM_CONTROL = "test_files/control.sam"
 REGION = "test_files/region_test.bed"
 GTF = "test_files/head500_gencode.gtf"
 RESULTS_DIR = "test_files/results"
@@ -54,7 +55,7 @@ class TestParser(unittest.TestCase):
 
     def test_pyicoenrich(self):
         parser = pyicoenrich.create_parser()
-        pyicoenrich.run_parser(parser, ("-reads %s %s -output %s/enrich_out -f bed --silent"%(TEST_BED1, TEST_BED2, RESULTS_DIR)).split())
+        pyicoenrich.run_parser(parser, ("-reads %s %s -output %s/enrich_out -f sam --silent --pseudocount --mintags 0"%(TEST_SAM, TEST_SAM_CONTROL, RESULTS_DIR)).split())
 
     def test_pyicos(self):
         #TODO iterate sub-commands
