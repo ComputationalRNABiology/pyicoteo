@@ -75,6 +75,10 @@ class Turbomix:
         self.normalize_factor = 1
         self.logger = utils.get_logger("%s.log"%parser_name, verbose, debug)
 
+        if self.debug:
+            self.logger.info("ARGV: %s", ' '.join(sys.argv)) # TODO: DELETE
+
+
         self.is_sorted = False
         self.temp_experiment = False # Indicates if temp files were created for the experiment
         self.temp_control = False # Indicates if temporary files were created for the control
