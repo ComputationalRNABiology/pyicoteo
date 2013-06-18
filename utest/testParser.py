@@ -33,20 +33,20 @@ TEST_SAM = "test_files/p300_sample.sam"
 REGION = "test_files/region_test.bed"
 GTF = "test_files/head500_gencode.gtf"
 RESULTS_DIR = "test_files/results"
-
+#TODO choose nicer examples for the test files, mini_sorted.bed are too mini, the p300 needs a control. We need at least 2, preferably 4 
+# sets of test files and regions, preferably in different formats 
 
 class TestParser(unittest.TestCase):
      
-
     def test_pyicoclip(self):
         parser = pyicoclip.create_parser()
-        pyicoclip.run_parser(parser, ("%s %s/clipregion_out --region %s -f sam --silent"%(TEST_SAM, RESULTS_DIR, REGION)).split())
-        pyicoclip.run_parser(parser, ("%s %s/clipmagic_out -f sam --gff-file %s --region-magic genebody --silent"%(TEST_SAM, REGION, RESULTS_DIR)).split())
-
+        pyicoclip.run_parser(parser, ("%s %s/clipregion_out --region %s -f sam --silent -O -F bed_spk"%(TEST_SAM, RESULTS_DIR, REGION)).split())
+        pyicoclip.run_parser(parser, ("%s %s/clipmagic_out -f sam --gff-file %s --region-magic exons --silent -F bed_spk"%(TEST_SAM, RESULTS_DIR, GTF)).split())
 
     def test_pyicoregion(self):
         parser = pyicoregion.create_parser()
-        pyicoregion.run_parser(parser, ("%s %s/pyicoregion_out --region-magic exons --silent"%(GTF, RESULTS_DIR)).split())
+        pyicoregion.run_parser(parser, ("%s %s/pyicoregion_exons --region-magic exons --silent -F bed"%(GTF, RESULTS_DIR)).split())
+        pyicoregion.run_parser(parser, ("%s %s/pyicoregion_genebody --region-magic genebody --silent -F bed"%(GTF, RESULTS_DIR)).split())
 
     def test_pyicoller(self):
         parser = pyicoller.create_parser()

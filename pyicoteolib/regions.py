@@ -372,7 +372,6 @@ def _get_exons_from_gene_list(tmp_genes, remove_duplicates=True):
         yield ex
 
 
-
 def get_introns(gff_path, min_length=0, no_sort=False, position=None, logger=None):
     tmp_genes = []
     for gene in read_gff_file(gff_path, no_sort=no_sort, logger=logger):
@@ -431,7 +430,6 @@ def get_tss(gff_path, add_start=0, add_end=0, no_sort=False, logger=None):
         yield tss
 
 
-
 def _get_tss_from_gene_list(tmp_genes, add_start, add_end, remove_duplicates=True):
     tmp_tss = []
     for g in tmp_genes:
@@ -471,28 +469,31 @@ def generate_windows(start, end, win_size, win_step, fit_last=True):
             yield (win_start, win_start + win_size)
             win_start += win_step
             win_end += win_step
+
         if fit_last and win_end > end:
             yield (end - win_size, end)
 
-
+def get_genebody(gff_path, add_start, add_end, no_sort, logger):
+    for gene in read_gff_file(gff_path, no_sort=no_sort, logger=logger):
+        yield gene.seqname, add_start+gene.start, gene.end+add_end, gene.strand, gene.region_id
 
 # sliding windows
 # parameter chr_length must be a dictionary with seqname as keys and integers as values (lengths) (implemented in pyicoenrich, with "chromlen" files)
 def gene_slide(gff_path, win_size, win_step, win_type, chr_lengths={}, no_sort=False, logger=None):
     tmp_genes = [] # for temporarily storing overlapping genes
-
     for gene in read_gff_file(gff_path, no_sort=no_sort, logger=logger):
         if len(tmp_genes) > 0:
-
             if (tmp_genes[-1].seqname != gene.seqname): # new sequence, return last zone in tmp_genes
                 if win_type == REGION_SLIDE_INTER:
                     if tmp_genes[-1].seqname in chr_lengths.keys(): # check sequence length
                         g = tmp_genes[-1]
                         for (start, end) in generate_windows(g.end, chr_lengths[g.seqname], win_size, win_step):
-                            yield (g.seqname, start, end, str(start) + ":" + str(end)) # return last windows
+                            yield (g.seqname, start, end, "%s:%s"%(start, end)) # return last windows
+
                 elif win_type == REGION_SLIDE_INTRA:
                     for (start, end) in generate_windows(tmp_genes[0].start, tmp_genes[-1].end, win_size, win_step):
-                        yield (tmp_genes[-1].seqname, start, end, str(start) + ":" + str(end))
+                        yield (tmp_genes[-1].seqname, start, end, "%s:%s"%(start, end))
+
                 tmp_genes = []
 
             else:
@@ -501,23 +502,28 @@ def gene_slide(gff_path, win_size, win_step, win_type, chr_lengths={}, no_sort=F
                         sname = gene.seqname
                         start_pos = tmp_genes[-1].end
                         end_pos = gene.start
+
                     elif win_type == REGION_SLIDE_INTRA:
                         sname = tmp_genes[-1].seqname
                         start_pos = tmp_genes[0].start
                         end_pos = tmp_genes[-1].end
+
                     for (start, end) in generate_windows(start_pos, end_pos, win_size, win_step):
-                        yield (sname, start, end, str(start) + ":" + str(end)) # create id?
+                        yield (sname, start, end, "%s:%s"%(start, end)) # create id?
+
                     tmp_genes = []
+
         tmp_genes.append(gene)
         tmp_genes.sort(key = lambda gn: (int(gn.end)))
 
     if win_type == REGION_SLIDE_INTER and len(tmp_genes) > 0 and tmp_genes[-1].seqname in chr_lengths.keys(): # last chromosome
         g = tmp_genes[-1]
         for (start, end) in generate_windows(g.end, chr_lengths[g.seqname], win_size, win_step):
-            yield (g.seqname, start, end, str(start) + ":" + str(end))
+            yield (g.seqname, start, end, "%s:%s"%(start, end))
+
     if win_type == REGION_SLIDE_INTRA and len(tmp_genes) > 0:
         for (start, end) in generate_windows(tmp_genes[0].start, tmp_genes[-1].end, win_size, win_step):
-            yield (tmp_genes[-1].seqname, start, end, str(start) + ":" + str(end))
+            yield (tmp_genes[-1].seqname, start, end, "%s:%s"%(start, end))
         
 
 
@@ -544,22 +550,23 @@ class RegionWriter():
                 for exon in get_exons(self.gff_path, remove_duplicates=True, no_sort=self.no_sort, position=pos, logger=self.logger):
                     cl = ReadCluster(name=exon.seqname, start=exon.start, end=exon.end, strand=exon.strand, name2=exon.region_id, write=self.write_as)
                     self.region_file.write(cl.write_line())
-            elif self.params[0] == REGION_INTRONS:
 
+            elif self.params[0] == REGION_INTRONS:
                 pos = None
                 if len(self.params) > 1:
                     pos = self.params[1]
 
                 for (seqname, start, end, region_id, strand) in get_introns(self.gff_path, no_sort=self.no_sort, position=pos, logger=self.logger):
                     cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as, name2=region_id, strand=strand)
-
                     self.region_file.write(cl.write_line())
+
             elif self.params[0] == REGION_SLIDE:
                 win_size = int(self.params[1])
                 win_step = int(self.params[2])
                 if win_size < win_step:
                     self.logger.error("Window size < Step!")
                     sys.exit(1)
+
                 win_type = self.params[3]
                 if len(self.params) > 4:
                     chrlen_path = self.params[4]
@@ -567,19 +574,35 @@ class RegionWriter():
                     chrlen_path = None
                     if win_type == REGION_SLIDE_INTER:
                         self.logger.warning("Chromlen file not specified")
+
                 for (seqname, start, end, name2) in gene_slide(self.gff_path, win_size, win_step, win_type, chr_lengths=self.read_chromlen(chrlen_path), no_sort=self.no_sort, logger=self.logger):
                     cl = ReadCluster(name=seqname, start=start, end=end, write=self.write_as,    name2=name2)
                     self.region_file.write(cl.write_line())
+
             elif self.params[0] == REGION_TSS:
                 add_start = int(self.params[1])
                 add_end = int(self.params[2])
                 for (seqname, start, end, strand, name2) in get_tss(self.gff_path, add_start, add_end, no_sort=self.no_sort, logger=self.logger):
                     cl = ReadCluster(name=seqname, start=start, end=end, strand=strand, write=self.write_as,    name2=name2)
                     self.region_file.write(cl.write_line())
+
+            elif self.params[0] == REGION_GENEBODY:
+                add_start = add_end = 0
+                if len(self.params) > 1:
+                    add_start = int(self.params[1])
+                if len(self.params) > 2:
+                    add_end = int(self.params[2])                    
+
+                for (seqname, start, end, strand, name2) in get_genebody(self.gff_path, add_start, add_end, no_sort=self.no_sort, logger=self.logger):                
+                    cl = ReadCluster(name=seqname, start=start, end=end, strand=strand, write=self.write_as, name2=name2)
+                    self.region_file.write(cl.write_line())
+
             else:
                 self.logger.error("Incorrect --region-magic parameter: %s" % (self.params[0]))
                 sys.exit(1)
+
             self.region_file.flush()
+
         except Exception as exc:
             if self.logger:
                 self.logger.error(type(exc))
@@ -593,11 +616,14 @@ class RegionWriter():
                 self.logger.info("Using default chromlen file (hg19)")
                 chrlenpath = "%s/chromlen/"%os.path.dirname(os.path.abspath(__file__))
                 path = chrlenpath + "/hg19"
+
             else:
                 return length_dict
+
         if not os.path.isfile(path):
             self.logger.warning("Chromlen file not found")
             return length_dict
+
         try:
             f = open(path, 'r')
             for line in f.readlines():
@@ -605,8 +631,10 @@ class RegionWriter():
                 length_dict[l[0]] = int(l[1])
             f.close()
             #self.logger.info("Chromlen: " + str(length_dict))
+
         except IOError as ioerror:
             self.logger.warning("Chromlen file %s not found" % (path))
+
         return length_dict
 
 

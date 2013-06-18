@@ -5,7 +5,7 @@ import argparse
 def create_parser():
     parser = argparse.ArgumentParser(version=VERSION, 
                                      description="Pyicoclip, part of the Pyicoteo suite, is a peak caller specifically designed for CLIP-Seq analysis, based on the ModFDR method proposed by Yeo et al.",
-                                     parents=[experiment, experiment_flags, basic_parser, region, output, output_flags, round, pvalue, repeats, remlabels, optional_gtf, magic_flag]
+                                     parents=[experiment, experiment_flags, basic_parser, optional_region, output, output_flags, round, pvalue, repeats, remlabels, optional_gtf, magic_flag]
                                      )
     return parser
 

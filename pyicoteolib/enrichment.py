@@ -61,11 +61,9 @@ def calculate_region(self):
     self.sorted_region_path = '%s/calcregion_%s.bed'%(self._output_dir(), os.path.basename(self.current_output_path))
     region_file = open(self.sorted_region_path, 'wb')
 
-
     if self.region_magic:
         regwriter = RegionWriter(self.gff_file, region_file, self.region_magic, no_sort=self.no_sort, logger=self.logger, write_as=BED, galaxy_workarounds=self.galaxy_workarounds)
         regwriter.write_regions()
-
 
     dual_reader = utils.DualSortedReader(self.current_experiment_path, self.current_control_path, self.experiment_format, self.logger) 
     if self.stranded_analysis:

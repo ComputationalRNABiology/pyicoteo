@@ -161,6 +161,8 @@ REGION_SLIDE = 'slide'
 REGION_SLIDE_INTER = 'inter'
 REGION_SLIDE_INTRA = 'intra'
 REGION_TSS = 'tss'
+REGION_GENEBODY = 'genebody'
+
 
 REGION_MAGIC = []
 GFF_FILE = ''

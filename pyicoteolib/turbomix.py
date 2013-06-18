@@ -916,7 +916,12 @@ class Turbomix:
         unfiltered_output = open('%s/unfiltered_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
 
         if self.gff_file and self.region_magic:
-            print "MAGIC!!!!"
+            calc_region_file = open('%s/regionclip_%s'%(self._current_directory(), os.path.basename(self.current_output_path)), 'w+')
+            regwriter = RegionWriter(self.gff_file, calc_region_file, self.region_magic, no_sort=self.no_sort, logger=self.logger, write_as=BED, galaxy_workarounds=self.galaxy_workarounds)
+            regwriter.write_regions()
+            self.sorted_region_path = calc_region_file.name
+            calc_region_file.flush()
+            calc_region_file.close()
 
         for region_line in open(self.sorted_region_path):
             region = self._region_from_sline(region_line.split())
