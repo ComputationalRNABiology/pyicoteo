@@ -69,7 +69,6 @@ This indicates which read cluster is before another in a chromosome::
     c1 = Cluster(name="chr1", start=100, end=1000)
     c1_copy = Cluster(name="chr1", start=100, end=1000)
     c2 = Cluster(name="chr1", start=50000, end=100000)
-
     c1 > c2 
     False
     c1 == c1_copy

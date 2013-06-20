@@ -1,12 +1,11 @@
 from pyicoteolib.defaults import *
-from utils import *
+from common import *
 import argparse
 
 def create_parser():
 
     #enrichment flags
     enrichment_flags = new_subparser()
-    enrichment_flags.add_argument('--stranded', action='store_true', default=STRANDED_ANALYSIS, help="Decide if the strand is taken into consideration for the analysis. This requires a region file in bed format with the strand information in its 6th column.")
     enrichment_flags.add_argument('--proximity', default=PROXIMITY, type=int, help="Determines if two regions calculated automatically are close enough to be clustered. Default %(default)s nt")
     enrichment_flags.add_argument('--binsize', type=float, default=BINSIZE, help="The size of the bins to calculate the local sd and mean for the background model, as a ratio of total number or regions. Regardless of the ratio selected, the minimum window size is 50 regions, since below that threshold the results will no longer be statistically meaningful. [Default %(default)s]")        
     enrichment_flags.add_argument('--sdfold', type=float, default=SDFOLD, help="The standard deviation fold used to generate the background model. [Default %(default)s]")  
@@ -42,7 +41,7 @@ def create_parser():
                                      description='An enrichment test based on the MA plots using mapped reads files. Pyicoenrich output will consist in a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), 
                                      parents=[exp_or_count, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, 
                                               region_format, output, enrichment_flags, tmm_flag, quant_flag, total_reads_flags, 
-                                              pseudocount, zscore, optional_push, optional_frag_size]
+                                              pseudocount, zscore, optional_push, optional_frag_size, stranded_flag]
                                      )
     #-output
     return parser

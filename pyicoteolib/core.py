@@ -129,7 +129,7 @@ class ReaderFactory:
     def create_reader(self, format, half_open=False, cached=True):
         if format == BED or format == BED12:
             return BedReader(format, half_open, cached)
-        elif format == PK or format == SPK:
+        elif format == PK:
             return PkReader(format, half_open, cached)
         elif format == WIG:
             return WigReader(format, half_open, cached)
@@ -428,7 +428,7 @@ class WriterFactory:
             return WigWriter(format, half_open, span)
         elif format == VARIABLE_WIG:
             return VariableWigWriter(format, half_open, span)
-        elif format == PK or format == SPK:
+        elif format == PK:
             return PkWriter(format, half_open, span)
         elif format == SAM or format == BAM:
             return SamWriter(format, half_open, span)

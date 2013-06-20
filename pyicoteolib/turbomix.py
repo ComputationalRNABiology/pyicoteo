@@ -71,7 +71,6 @@ class Turbomix:
         if type(self.tempdir) is not list: #
             self.tempdir = [self.tempdir] 
 
-        self.stranded_analysis = (output_format == SPK)
         self.normalize_factor = 1
         self.logger = utils.get_logger("%s.log"%parser_name, verbose, debug)
 
@@ -1000,7 +999,7 @@ class Turbomix:
 
         self.frag_size = int(round(max_delta+average_len))
         if not data:
-            self.logger.warning('Not enough data to plot the correlation graph. Lower the threshold of the --height-filter flag')
+            self.logger.warning('Not enough data to plot the correlation graph. Lower the threshold of the --correlation-filter flag')
         else: 
             try:
                 if self.postscript:

@@ -10,7 +10,6 @@ Sometimes it may be useful to have an ArgumentParser parse args other than those
 This can be accomplished by passing a list of strings to parse_args. This is useful for testing at the interactive prompt:
 
 
-
 >>> parser = argparse.ArgumentParser()
 >>> parser.add_argument(
 ...     'integers', metavar='int', type=int, choices=xrange(10),
@@ -18,8 +17,6 @@ This can be accomplished by passing a list of strings to parse_args. This is use
 >>> parser.add_argument(
 ...     '--sum', dest='accumulate', action='store_const', const=sum,
 ...   default=max, help='sum the integers (default: find the max)')
-
-
 
 >>> parser.parse_args(['1', '2', '3', '4'])
 Namespace(accumulate=<built-in function max>, integers=[1, 2, 3, 4])
@@ -41,8 +38,9 @@ class TestParser(unittest.TestCase):
      
     def test_pyicoclip(self):
         parser = pyicoclip.create_parser()
-        pyicoclip.run_parser(parser, ("%s %s/clipregion_out --region %s -f sam --silent -O -F bed_spk"%(TEST_SAM, RESULTS_DIR, REGION)).split())
-        pyicoclip.run_parser(parser, ("%s %s/clipmagic_out -f sam --gff-file %s --region-magic exons --silent -F bed_spk"%(TEST_SAM, RESULTS_DIR, GTF)).split())
+        pyicoclip.run_parser(parser, ("%s %s/clipregion_out --region %s -f sam --silent -O"%(TEST_SAM, RESULTS_DIR, REGION)).split())
+        pyicoclip.run_parser(parser, ("%s %s/clipmagic_out -f sam --gff-file %s --region-magic exons --silent"%(TEST_SAM, RESULTS_DIR, GTF)).split())
+        pyicoclip.run_parser(parser, ("%s %s/clipmagic_stranded_out -f sam --gff-file %s --region-magic exons --silent --stranded"%(TEST_SAM, RESULTS_DIR, GTF)).split())
 
     def test_pyicoregion(self):
         parser = pyicoregion.create_parser()
@@ -51,7 +49,7 @@ class TestParser(unittest.TestCase):
 
     def test_pyicoller(self):
         parser = pyicoller.create_parser()
-        pyicoller.run_parser(parser, ("%s %s/pyicoller_out -f bed --silent"%(TEST_BED1, RESULTS_DIR)).split())
+        pyicoller.run_parser(parser, ("%s %s/pyicoller_out -f bed --silent --k-limit 0"%(TEST_BED1, RESULTS_DIR)).split())
 
     def test_pyicoenrich(self):
         parser = pyicoenrich.create_parser()

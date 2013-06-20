@@ -33,9 +33,8 @@ except:
     from os import rename as move 
 
 """
-Differential expression and MA plot visualization.
+Differential expression and MA plot visualization module.
 """
-
 def _region_from_dual(self, line):
         try:
             self.cluster_aux.clear()

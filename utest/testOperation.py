@@ -1,5 +1,5 @@
 import unittest
-from pyicoteolib.core import Cluster, BED, ELAND, PK, SPK, ELAND_EXPORT, WIG
+from pyicoteolib.core import Cluster, BED, ELAND, PK, ELAND_EXPORT, WIG
 from pyicoteolib.turbomix import Turbomix
 from pyicoteolib.defaults import *
 import pyicoteolib.utils as utils
@@ -27,8 +27,8 @@ class TestOperations(unittest.TestCase):
         self.bed_file.write("chrX\t2290\t2324\t0\tnoname\t+\n")
         self.bed_file.write("chrX\t2300\t2334\t0\tnoname\t+\n")
         self.bed_file.flush()
+
         self.conversion_result_path = self.files_dir + 'result_convert_cluster.pk'
-        
         self.pk_path = self.files_dir + 'test_convert.pk'
         self.pk_file = open(self.pk_path,'w+')
         self.pk_file.write('chr1\t37\t52\t16:1.00\t1.0\t-\t44\t16.0\n')
@@ -54,7 +54,6 @@ class TestOperations(unittest.TestCase):
         self.bed_extended_file.write("chrX\t2290\t2389\t0\tnoname\t+\n")
         self.bed_extended_file.write("chrX\t2290\t2389\t0\tnoname\t+\n")
         self.bed_extended_file.write("chrX\t2300\t2399\t0\tnoname\t+\n")
-
         self.bed_extended_file.flush()
 
         self.notsubtracted_path = self.files_dir + 'test_notsubtracted.bed'
@@ -64,7 +63,6 @@ class TestOperations(unittest.TestCase):
         self.notsubtracted_file.write("chr1\t1\t100\t0\t200\t+\n")
         self.notsubtracted_file.write("chr1\t1\t100\t0\t200\t+\n")
         self.notsubtracted_file.write("chr2\t1\t100\t0\t210\t+\n")
-        #self.notsubtracted_file.write("chr3\t1\t100\t0\tnoname\t+\n")
         self.notsubtracted_file.write("chrX\t101\t200\t0\tnoname\t+\n")
         self.notsubtracted_file.write("chrX\t101\t200\t0\tnoname\t+\n")
         self.notsubtracted_file.write("chr10\t301\t400\t0\tnoname\t+\n")
@@ -110,7 +108,6 @@ class TestOperations(unittest.TestCase):
         self.bed_control_file.write("chrX\t2290\t2389\t0\tnoname\t+\n")
         self.bed_control_file.write("chrX\t2290\t2389\t0\tnoname\t+\n")
         self.bed_control_file.write("chrX\t2320\t2399\t0\tnoname\t+\n")
-
         self.bed_control_file.flush()
         
         self.subtracted_path = self.files_dir + 'test_subtracted.pk'
@@ -122,6 +119,7 @@ class TestOperations(unittest.TestCase):
         self.subtracted_file.write('chrX\t101\t149\t1:1.00|48:2.00\t2.0\t.\t125\t97.0\n')
         self.subtracted_file.write('chrX\t2270\t2369\t30:1.00|20:2.00|50:1.00\t2.0\t.\t2309\t120.0\n')
         self.subtracted_file.flush()
+
         self.convert_operation = Turbomix(self.bed_path, self.conversion_result_path, experiment_format=BED, output_format=PK, rounding=False, verbose=False) 
 
         #self.convert_operation = Turbomix(self.bed_path, self.conversion_subtraction_result_path, experiment_format=BED, output_format=PK, debug = True, rounding=False)

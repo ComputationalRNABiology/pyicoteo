@@ -1,5 +1,5 @@
 from pyicoteolib.defaults import *
-from utils import *
+from common import *
 import argparse
 
 def create_parser():
@@ -7,7 +7,8 @@ def create_parser():
                                      description="Pyicoller, part of the Pyicoteo suite, is a peak caller for the analysis of punctuated ChIP-Seq data.",
                                      parents=[experiment, experiment_flags, basic_parser, optional_control, control_format, open_control, 
                                               optional_blacklist, output, output_flags, optional_frag_size, round, label, span, no_subtract, 
-                                              remlabels, pvalue, height, correction, trim_proportion, species, tolerated_duplicates, poisson_test])
+                                              remlabels, pvalue, height, correction, trim_proportion, species, tolerated_duplicates, poisson_test, 
+                                              correlation_flags])
     return parser
 
 

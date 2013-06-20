@@ -8,18 +8,43 @@ Pyicoclip is an implementation of the modified False Discovery Rate algorithm pr
 
 .. _proposed: http://www.nature.com/nsmb/journal/v16/n2/full/nsmb.1545.html
 
-This method could in principle be used for any other kind of experiment that involves short reads and doesn't have a valid control.
+This method could in principle be used for any other kind of experiment that involves short reads and doesn't have a valid control. You can provide your own region file, or otherwise you can provide a ``--region-magic`` description with a GTF file (see below )
 
-Region file
--------------
+Basic usage
+-----------
 
-You can provide your own region file, or otherwise you can provide a ``--region-magic`` description with a GTF file.
-
-
+``pyicoclip`` usage requires the experiment CLIP file and a region file in BED format. 
 
 Example::
 
-    pyicoclip my_experiment.bed my_regions.bed output.pk -f bed
+    pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed 
+
+Important flags
+---------------
+
+``--stranded``
+"""""""""""""""""
+
+You will probably want to use the --stranded flag, in order to take into consideration reads only overlapping with the strand of the regions of interest (6th column of your BED6 region file).
+
+    pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed **--stranded**
+
+
+``--region-magic`` and ``--gtf-file``
+"""""""""""""""""""""""""""""""""""""""
+
+You can automatically generate exploratory region files using the ``--region-magic`` and ``--gtf-file`` flags.
+
+For example, explore the regions 500 bases upstream and 1000 downstream of TSS::
+
+    pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed --gtf-file myref.gtf --region-magic tss -500 1000
+
+Check all genes::
+
+    pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed --gtf-file myref.gtf --region-magic genebody
+
+See :ref:`pyicoregiondocs` for more details on how to use ``--region-magic`` flag.
+
 
 Credit
 ------

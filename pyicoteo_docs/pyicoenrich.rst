@@ -28,7 +28,7 @@ In order to decide what regions are to be explored, you have 3 main options:
 
 Generate a file with the ``--region-magic`` flag and GTF file
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-See :ref:`pyicoregiondocs` for examples on how to use ``--region-magic`` flag to automatically explore exons, introns and the whole genome using sliding windows automatically from GTF files. 
+See :ref:`pyicoregiondocs` for examples on how to use ``--region-magic`` flag to automatically explore exons, introns and the whole genome using sliding windows automatically generating your region files from standard GENCODE GTF files. 
 
 Provide a regions file
 """"""""""""""""""""""""

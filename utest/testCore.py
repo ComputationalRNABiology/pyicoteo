@@ -468,7 +468,7 @@ class TestCoreObjects(unittest.TestCase):
 
     def test_eland(self):
 
-        cluster = Cluster(read=ELAND, write=SPK)
+        cluster = Cluster(read=ELAND)
         cluster.read_line('>EAS38_1_1_113_546      TAGAATAGGCGAGAATAAAGATGTTGTCTTAGAAT     U0      1       0       0       chr2.fa 199668361       R       ..')
         cluster.read_line('>EAS38_1_1_113_546      TAGAATAGGCGAGAATAAAGATGTTGTCTTAGAAT     U0      1       0       0       chr2.fa 199668362       R       ..')
         self.assertEqual(cluster.write_line(), 'chr2\t199668361\t199668396\t1:1.00|34:2.00|1:1.00\t2.0\t-\t199668378\t70.0\n')
@@ -700,9 +700,9 @@ class TestCoreObjects(unittest.TestCase):
         self.assertNotEqual(cluster, cluster3)
 
     def test_extend(self):
-        cluster = Cluster(read=BED, write=SPK)
+        cluster = Cluster(read=BED)
         cluster.read_line('chr3 1 35 noname 666 +')
-        cluster2 = Cluster(read=BED, write=SPK)
+        cluster2 = Cluster(read=BED)
         cluster2.read_line('chr3 56 100 noname 666 -')
         cluster.extend(100)
         cluster2.extend(100)

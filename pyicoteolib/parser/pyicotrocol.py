@@ -1,5 +1,5 @@
 from pyicoteolib.defaults import *
-from utils import *
+from common import *
 import argparse
 import ConfigParser
 
