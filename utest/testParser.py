@@ -49,7 +49,7 @@ class TestParser(unittest.TestCase):
 
     def test_pyicoller(self):
         parser = pyicoller.create_parser()
-        pyicoller.run_parser(parser, ("%s %s/pyicoller_out -f bed --silent --k-limit 0"%(TEST_BED1, RESULTS_DIR)).split())
+        pyicoller.run_parser(parser, ("%s %s/pyicoller_out -f bed --silent --correlation-filter 0"%(TEST_BED1, RESULTS_DIR)).split())
 
     def test_pyicoenrich(self):
         parser = pyicoenrich.create_parser()
