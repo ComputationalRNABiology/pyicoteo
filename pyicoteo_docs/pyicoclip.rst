@@ -13,21 +13,31 @@ This method could in principle be used for any other kind of experiment that inv
 Basic usage
 -----------
 
-``pyicoclip`` usage requires the experiment CLIP file and a region file in BED format. 
+``pyicoclip`` usage requires the experiment CLIP-Seq file (eland, SAM, BAM, BED formats) and a region file in BED format. Default output format is :ref:`The bedpk format`, our extended but compatible with BED format.
 
 Example::
 
     pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed 
 
+This command will output 2 files: ``output.pk`` and ``unfiltered_output.pk``. In ``output.pk`` you will get the significant peaks after applying the method an the significant p-value, in the unfiltered one you will get the unfiltered peaks (with 2 or more)
+
 Important flags
----------------
+-----------------
+
+This is a description of the most important flags. To see the complete list of flags, type ``pyicoclip -h``. Check also 
+
+
+``--p-value``
+"""""""""""""""
+
+The
 
 ``--stranded``
 """""""""""""""""
 
 You will probably want to use the --stranded flag, in order to take into consideration reads only overlapping with the strand of the regions of interest (6th column of your BED6 region file).
 
-    pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed **--stranded**
+    pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed **``--stranded``**
 
 
 ``--region-magic`` and ``--gtf-file``

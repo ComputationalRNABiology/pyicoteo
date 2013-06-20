@@ -75,14 +75,6 @@ class AbstractCore:
             return 1
         else:
             return 0     
-    #TODO not used?
-    """def extend5prime(self, extra_bases):
-        "Add extra basepairs on the 5 prime region to the genomic interval, taking into consideration the strand"
-        if self.strand == MINUS_STRAND:
-             c.end = c.end + 3000
-        else:
-            c.start = c.start - 3000        """
-       
 
     def overlap(self, other):
         """Returns the percentage of overlap of the self cluster with another cluster, from 0 to 1"""

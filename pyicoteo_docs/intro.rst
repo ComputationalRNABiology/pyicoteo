@@ -65,7 +65,6 @@ Some Pyicoteo tools (Pyicos, Pyicoller and Pyicoclip) default experiment and out
 
         The bedpk format specification. It is exactly like a BED6 format, but using the 4th column to store extra information about how the cluster was built. 
 
-
 bedpk Column definition
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -78,6 +77,29 @@ bedpk Column definition
 7) Summit: The position where the maximum height is found. The binding site is expected to be close to the summit.
 8) Area: The area covered by the cluster.
 9) p-value: The significance of the cluster calculated by the poisson operation based on peak heights or numbers of reads.
+
+
+Important flags
+--------------------
+
+The tools in Pyicoteo Suite follow the principle of minimal memory usage. Because of this, Pyicoteo makes heavy use of disk and temporary files. You should make sure that you have at least double the space of each file in your hard drive before using Pyicoteo. Also, please take into consideration the following flags:
+
+--tempdir
+^^^^^^^^^^^^
+
+Pyicoteo uses the default temporary directory in the system (in many Unix based system, the content of the variable $TEMPDIR, normally /tmp). You can change the temporary directory with this flag.
+
+--keep-temp
+^^^^^^^^^^^^^^
+
+Pyicoteo tries to delete all unnecesary temporary files. If you want to keep the files in order to check them reuse them (for example, the sorted files could be useful in combination of the ``--no-sort`` flag) or delete them, use this flag
+
+
+--postscript
+^^^^^^^^^^^^^^^
+
+
+
 
 
 Questions and Support

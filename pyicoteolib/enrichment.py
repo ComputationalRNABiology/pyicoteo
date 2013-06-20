@@ -25,7 +25,7 @@ import bam
 
 from regions import AnnotationGene, AnnotationTranscript, AnnotationExon, RegionWriter, read_gff_file, get_exons, get_introns, gene_slide
 
-
+import warnings
 
 try:
     from shutil import move
@@ -169,147 +169,149 @@ def read_interesting_regions(self, file_path):
 
 
 def plot_enrichment(self, file_path):
-    try:
-        if self.postscript:
-            import matplotlib
-            matplotlib.use("PS")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            if self.postscript:
+                import matplotlib
+                matplotlib.use("PS")
 
-        from matplotlib.pyplot import plot, hist, show, legend, figure, xlabel, ylabel, subplot, axhline, axis
-        from matplotlib import rcParams
-        rcParams['legend.fontsize'] = 8
-        #decide labels
-        if self.label1:
-            label_main = self.label1
-        else:
-            if self.real_control_path and self.real_experiment_path:
-                label_main = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
+            from matplotlib.pyplot import plot, hist, show, legend, figure, xlabel, ylabel, subplot, axhline, axis
+            from matplotlib import rcParams
+            rcParams['legend.fontsize'] = 8
+            #decide labels
+            if self.label1:
+                label_main = self.label1
             else:
-                label_main = "A VS B"
-
-        if self.label2:
-            label_control = self.label2
-        else:         
-            if self.replica_path:
-                label_control = '%s(A) VS %s(A)'%(os.path.basename(self.real_experiment_path), os.path.basename(self.replica_path))
-            else:
-                label_control = 'Background distribution'
-
-
-        #self.logger.info("Interesting regions path: %s" % (self.interesting_regions))
-        interesting_regs = []
-        if self.interesting_regions:
-            interesting_regs = read_interesting_regions(self, self.interesting_regions)
-        #self.logger.info("Interesting regions: %s" % (interesting_regs))
-        #self.logger.info("Plot path: %s" % (file_path))
-        interesting_A = []
-        interesting_M = []
-        #self.logger.info("disable_significant: %s" % (self.disable_significant_color))
-
-        A = []
-        A_prime = []
-        M = []
-        M_significant = []
-        A_significant = []
-        M_prime = []
-        A_medians = []      
-        points = []
-        minus_points = []
-        all_points = []
-        figure(figsize=(8,6))
-        biggest_A  = -sys.maxint #for drawing
-        smallest_A = sys.maxint #for drawing
-        biggest_M = 0 #for drawing
-        self.logger.info("Loading table...")
-        for line in open(file_path):
-            sline = line.split()
-            try:
-                enrich = dict(zip(enrichment_keys, sline)) 
-
-                # WARNING: for slide inter and slide intra: name2 = 'start:end' (no gene_id, FIXME?)
-                name2 = enrich['name2'].split(':')
-                gene_id = name2[0]
-                if len(name2) >= 2:
-                    transcript_id = name2[1] # consider transcript_id? (exons)
+                if self.real_control_path and self.real_experiment_path:
+                    label_main = '%s VS %s'%(os.path.basename(self.real_experiment_path), os.path.basename(self.real_control_path))
                 else:
-                    transcript_id = None
-                if gene_id in interesting_regs or transcript_id in interesting_regs:
-                    interesting_M.append(float(enrich["M"]))
-                    interesting_A.append(float(enrich["A"]))
+                    label_main = "A VS B"
 
-                biggest_A = max(biggest_A, float(enrich["A"]))         
-                smallest_A = min(smallest_A, float(enrich["A"]))   
-                biggest_M = max(biggest_M, abs(float(enrich["M"])))          
-                biggest_A = max(biggest_A, float(enrich["A_prime"]))         
-                smallest_A = min(smallest_A, float(enrich["A_prime"]))
-                biggest_M = max(biggest_M, abs(float(enrich["M_prime"])))
-                positive_point = self.zscore*float(enrich["sd"])+float(enrich["mean"])
-                negative_point = -self.zscore*float(enrich["sd"])+float(enrich["mean"])
-                A_median = float(enrich["A_median"])
-                all_points.append((A_median, positive_point, negative_point))
-                if abs(float(enrich["zscore"])) < self.zscore:
-                    M.append(float(enrich["M"]))
-                    A.append(float(enrich["A"]))
+            if self.label2:
+                label_control = self.label2
+            else:         
+                if self.replica_path:
+                    label_control = '%s(A) VS %s(A)'%(os.path.basename(self.real_experiment_path), os.path.basename(self.replica_path))
                 else:
-                    M_significant.append(float(enrich["M"]))
-                    A_significant.append(float(enrich["A"]))
-   
-                M_prime.append(float(enrich["M_prime"]))
-                A_prime.append(float(enrich["A_prime"]))
-            except ValueError:
-                pass #to skip the header
-        all_points.sort(key= lambda x:x[0])
-        
-        for t in all_points:
-            (A_medians.append(t[0]), points.append(t[1]), minus_points.append(t[2])) 
-                
-        if points:
-            margin = 1.1
-            A_medians.append(biggest_A*margin)
-            points.append(points[-1])
-            minus_points.append(minus_points[-1])
-            A_medians.insert(0, smallest_A)
-            points.insert(0, points[0])
-            minus_points.insert(0, minus_points[0])
-            self.logger.info("Plotting points...")
-            subplot(211)
-            xlabel('A')
-            ylabel('M')
-            axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
-            plot(A_prime, M_prime, '.', label=label_control, color = '#666666')
-            plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
-            plot(A_medians, minus_points,  'r--')            
-            axhline(0, linestyle='--', color="grey", alpha=0.75)  
-            legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
-            subplot(212)
-            axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
-            plot(A, M, 'k.', label=label_main)
+                    label_control = 'Background distribution'
 
 
-            if self.disable_significant_color:
-                significant_marker = 'k.'
-            else:
-                significant_marker = 'r.'
-
-            plot(A_significant, M_significant, significant_marker, label="%s (significant)"%label_main)
-
-            plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
-            plot(A_medians, minus_points, 'r--')
-
+            #self.logger.info("Interesting regions path: %s" % (self.interesting_regions))
+            interesting_regs = []
             if self.interesting_regions:
-                interesting_label = self.interesting_regions.split(os.path.sep)[-1] + ' (interesting regions)'
-                plot(interesting_A, interesting_M, 'H', label=interesting_label, color='#00EE00') # plotting "interesting" regions
+                interesting_regs = read_interesting_regions(self, self.interesting_regions)
+            #self.logger.info("Interesting regions: %s" % (interesting_regs))
+            #self.logger.info("Plot path: %s" % (file_path))
+            interesting_A = []
+            interesting_M = []
+            #self.logger.info("disable_significant: %s" % (self.disable_significant_color))
 
-            axhline(0, linestyle='--', color="grey", alpha=0.75)
-            xlabel('A')
-            ylabel('M')
-            legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
-            self._save_figure("enrichment_MA")
-        else:
-            self.logger.warning("Nothing to plot.")
-    except ImportError:
-        if self.debug:
-            raise
-        __matplotlibwarn(self)
+            A = []
+            A_prime = []
+            M = []
+            M_significant = []
+            A_significant = []
+            M_prime = []
+            A_medians = []      
+            points = []
+            minus_points = []
+            all_points = []
+            figure(figsize=(8,6))
+            biggest_A  = -sys.maxint #for drawing
+            smallest_A = sys.maxint #for drawing
+            biggest_M = 0 #for drawing
+            self.logger.info("Loading table...")
+            for line in open(file_path):
+                sline = line.split()
+                try:
+                    enrich = dict(zip(enrichment_keys, sline)) 
+
+                    # WARNING: for slide inter and slide intra: name2 = 'start:end' (no gene_id, FIXME?)
+                    name2 = enrich['name2'].split(':')
+                    gene_id = name2[0]
+                    if len(name2) >= 2:
+                        transcript_id = name2[1] # consider transcript_id? (exons)
+                    else:
+                        transcript_id = None
+                    if gene_id in interesting_regs or transcript_id in interesting_regs:
+                        interesting_M.append(float(enrich["M"]))
+                        interesting_A.append(float(enrich["A"]))
+
+                    biggest_A = max(biggest_A, float(enrich["A"]))         
+                    smallest_A = min(smallest_A, float(enrich["A"]))   
+                    biggest_M = max(biggest_M, abs(float(enrich["M"])))          
+                    biggest_A = max(biggest_A, float(enrich["A_prime"]))         
+                    smallest_A = min(smallest_A, float(enrich["A_prime"]))
+                    biggest_M = max(biggest_M, abs(float(enrich["M_prime"])))
+                    positive_point = self.zscore*float(enrich["sd"])+float(enrich["mean"])
+                    negative_point = -self.zscore*float(enrich["sd"])+float(enrich["mean"])
+                    A_median = float(enrich["A_median"])
+                    all_points.append((A_median, positive_point, negative_point))
+                    if abs(float(enrich["zscore"])) < self.zscore:
+                        M.append(float(enrich["M"]))
+                        A.append(float(enrich["A"]))
+                    else:
+                        M_significant.append(float(enrich["M"]))
+                        A_significant.append(float(enrich["A"]))
+       
+                    M_prime.append(float(enrich["M_prime"]))
+                    A_prime.append(float(enrich["A_prime"]))
+                except ValueError:
+                    pass #to skip the header
+            all_points.sort(key= lambda x:x[0])
+            
+            for t in all_points:
+                (A_medians.append(t[0]), points.append(t[1]), minus_points.append(t[2])) 
+                    
+            if points:
+                margin = 1.1
+                A_medians.append(biggest_A*margin)
+                points.append(points[-1])
+                minus_points.append(minus_points[-1])
+                A_medians.insert(0, smallest_A)
+                points.insert(0, points[0])
+                minus_points.insert(0, minus_points[0])
+                self.logger.info("Plotting points...")
+                subplot(211)
+                xlabel('A')
+                ylabel('M')
+                axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
+                plot(A_prime, M_prime, '.', label=label_control, color = '#666666')
+                plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
+                plot(A_medians, minus_points,  'r--')            
+                axhline(0, linestyle='--', color="grey", alpha=0.75)  
+                legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
+                subplot(212)
+                axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
+                plot(A, M, 'k.', label=label_main)
+
+
+                if self.disable_significant_color:
+                    significant_marker = 'k.'
+                else:
+                    significant_marker = 'r.'
+
+                plot(A_significant, M_significant, significant_marker, label="%s (significant)"%label_main)
+
+                plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
+                plot(A_medians, minus_points, 'r--')
+
+                if self.interesting_regions:
+                    interesting_label = self.interesting_regions.split(os.path.sep)[-1] + ' (interesting regions)'
+                    plot(interesting_A, interesting_M, 'H', label=interesting_label, color='#00EE00') # plotting "interesting" regions
+
+                axhline(0, linestyle='--', color="grey", alpha=0.75)
+                xlabel('A')
+                ylabel('M')
+                legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
+                self._save_figure("enrichment_MA")
+            else:
+                self.logger.warning("Nothing to plot.")
+        except ImportError:
+            if self.debug:
+                raise
+            __matplotlibwarn(self)
 
 def __matplotlibwarn(self):
     self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')    

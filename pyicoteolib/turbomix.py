@@ -39,16 +39,20 @@ except:
     from os import rename as move 
 
 
+class NeedFragmentSize(Exception):
+    pass
+
+
 class OperationFailed(Exception):
     pass                 
 
-
+#FIXME Turbomix became a blob antipattern. Sorry about that, I was trying to do something too ambitious with it. 
+# Feel free to extract as much functionality as possible from it, break it down, kill it, etc. Juan GV. 
 class Turbomix:
     """
     This class is the pipeline that makes possible the different combination of operations. 
     It has different switches that are activated by the list 'self.operations'.
 
-    #TODO Break this down. This became a blob anti-pattern. 
     """
 
     def __init__(self, experiment_path, output_path, experiment_format=BED, output_format=PK, label=LABEL, 
@@ -385,7 +389,6 @@ class Turbomix:
     
     def filter_files(self):
         """Filter the files removing the duplicates."""
-        #TODO normalize should go here too
         self.current_experiment_path = self._filter_file(self.current_experiment_path, "experiment", self.temp_experiment, self.experiment_format, self.open_experiment)
         if self.experiment_format == BAM: 
             self.experiment_format = SAM
@@ -401,7 +404,7 @@ class Turbomix:
 
     def decide_sort(self, experiment_path, control_path=None):
         """Decide if the files need to be sorted or not."""
-        #TODO refractor this, copy pasted code (warning, its not as easy as it seems)
+        #FIXME refractor this, copy pasted code (warning, its not as easy as it seems)
         if self.force_sort or self.tag_to_cluster or self.do_subtract or self.do_heuremove or self.do_dupremove or MODFDR in self.operations or ENRICHMENT in self.operations or REMOVE_REGION in self.operations or STRAND_CORRELATION in self.operations or self.frag_size or PUSH in self.operations:
             self.experiment_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment', logger=self.logger, push_distance=self.push_distance)
             self.experiment_b_preprocessor = utils.BigSort(self.experiment_format, self.open_experiment, self.frag_size, 'experiment_b', logger=self.logger, push_distance=self.push_distance)
@@ -462,7 +465,6 @@ class Turbomix:
 
     def operate(self, experiment_path, control_path=None, output_path=None):
         """Operate expects single paths, not directories. It's called from run() several times if the experiment for pyicoteo is a directory"""
-        #TODO This is where the combination of operations should be done. Operations should be executed in order of inclusion to the list while taking into consideration dependencies and co-runs
         try:
             self.i_cant_do()
             #per operation variables
@@ -745,11 +747,11 @@ class Turbomix:
             k+=1
 
     def poisson_retrieve_data(self, cluster):
-        if self.estimate_frag_size: #TODO We need to estimate the fragment size if not provided
+        if self.estimate_frag_size: 
             if cluster.tag_length:
                 self.frag_size = cluster.tag_length
             else:
-                self.frag_size = 100 
+                raise NeedFragmentSize
                 
         acum_numtags = 0.
         self.total_clusters+=1
@@ -984,6 +986,7 @@ class Turbomix:
         data = []
         max_delta = 0
         max_corr = -1
+        average_len = 0
         if num_analyzed:
             average_len = acum_length/num_analyzed
             self.logger.info("Average analyzed length %s"%average_len)
@@ -995,11 +998,16 @@ class Turbomix:
                         max_delta = delta
                         max_corr = self.delta_results[delta]
                     self.logger.debug('Delta %s:%s'%(delta, self.delta_results[delta]))
-        self.logger.info('Correlation test RESULT: You should extend this dataset to %s nucleotides'%(max_delta+average_len))
 
-        self.frag_size = int(round(max_delta+average_len))
+        if average_len: 
+            self.logger.info('Correlation test RESULT: You should extend this dataset to %s nucleotides'%(max_delta+average_len))
+            self.frag_size = int(round(max_delta+average_len))
+        else:
+            self.logger.warning("NOT ENOUGH DATA to calculate strand correlation. Assuming fragment size is 100. Please check your experiment file format. Are you sure this is a Punctuated ChIP-Seq experiment? this is probably not good")
+            self.frag_size = 100
+
         if not data:
-            self.logger.warning('Not enough data to plot the correlation graph. Lower the threshold of the --correlation-filter flag')
+            self.logger.warning('NOT ENOUGH DATA to plot the correlation graph. Lower the threshold of the --correlation-filter flag. In general, this means that your experiment has little coverage, or that there was some mistake. This is probably not good.')
         else: 
             try:
                 if self.postscript:
