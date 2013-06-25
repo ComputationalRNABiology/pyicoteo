@@ -889,7 +889,8 @@ class Turbomix:
                 self.logger.debug("Discarding _region_from_sline %s"%'\t'.join(sline))
 
 
-    def _save_figure(self, figure_name):
+    def _save_figure(self, figure_name, width = None, height= None):
+        #FIXME move to utils.py, maybe a separate plotting module
         if self.postscript:
             exten = 'ps'
         else:
@@ -897,12 +898,19 @@ class Turbomix:
         from matplotlib.pyplot import savefig, clf, show
         if self.showplots:
             show()
+
         else:
             figure_path = '%s/%s_%s.%s'%(self._output_dir(), figure_name, os.path.basename(self.current_output_path), exten) 
             import warnings 
             with warnings.catch_warnings(): #To make the RuntimeWarning go away
                 warnings.simplefilter("ignore")
-            savefig(figure_path)
+
+
+            if width and height:
+                 savefig(figure_path, bbox_inches="tight", width=width, height=height,  pad_inches=0.7)
+            else:
+                savefig(figure_path, scatterpoints = 1)
+
             self.logger.info("%s figure saved to %s"%(figure_name, figure_path))
         clf()
         
@@ -1003,7 +1011,7 @@ class Turbomix:
             self.logger.info('Correlation test RESULT: You should extend this dataset to %s nucleotides'%(max_delta+average_len))
             self.frag_size = int(round(max_delta+average_len))
         else:
-            self.logger.warning("NOT ENOUGH DATA to calculate strand correlation. Assuming fragment size is 100. Please check your experiment file format. Are you sure this is a Punctuated ChIP-Seq experiment? this is probably not good")
+            self.logger.warning("NOT ENOUGH DATA to calculate strand correlation. Assuming fragment size is 100nt. Please check your experiment file format. Are you sure this is a Punctuated ChIP-Seq experiment? This is probably not good.")
             self.frag_size = 100
 
         if not data:

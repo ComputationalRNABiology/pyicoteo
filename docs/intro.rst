@@ -10,9 +10,10 @@ Download & Install
 
 .. _`Latest version`: https://bitbucket.org/regulatorygenomicsupf/pyicoteo/downloads
 
-You can also download older versions (up to 1.1b) from our `Sourceforge repository`_.
 
-.. _`Sourceforge repository`: http://sourceforge.net/projects/pyicos/ 
+You can also download older versions (up to 1.1b) from our `Older Sourceforge repository`_.
+
+.. _`Older Sourceforge repository`: http://sourceforge.net/projects/pyicos/ 
 
 
 The command line tools can be used directly without installation. However, installation is recommended, and necessary if you intend to use the Pyicoteolib. To do so decompress the folder and run the setup.py script with administrator privileges::

@@ -22,9 +22,10 @@ def create_parser():
     subparsers.add_parser('extend', help='Extends the reads of a file to the desired length. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags,  basic_parser,  output, output_flags, frag_size, round, label, span, remlabels])
     #push operation
     subparsers.add_parser('push', help='Push the reads in the corresponding strand. If a read doesn\'t have a strand, will be pushed from left to right. This operation requires tag-like files (bed, eland, sam)', parents=[experiment,experiment_flags, basic_parser, output, output_flags, push_distance, round, label, span, remlabels])
+    #DEPRECATED doesnt really make sense, will incorporate it again if needed
     #poisson analysis
-    subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With these tests you will be able to decide what is the significant threshold for your reads.',
-                          parents=[experiment,experiment_flags,  basic_parser, output_flags, optional_frag_size, pvalue, height, correction, species, remlabels, poisson_test])
+    #subparsers.add_parser('poisson', help='Analyze the significance of accumulated reads in the file using the poisson distribution. With these tests you will be able to decide what is the significant threshold for your reads.',
+    #                      parents=[experiment,experiment_flags,  basic_parser, output_flags, optional_frag_size, pvalue, height, correction, species, remlabels, poisson_test])
     #cut operations
     subparsers.add_parser('filter', help="""Analyze the significance of accumulated reads in the file using the poisson distribution and generate the resulting profiles, in wig or pk formats""",
                           parents=[experiment,experiment_flags,  basic_parser, output, optional_frag_size, output_flags, round, pvalue, height, correction, threshold, species, remlabels, poisson_test])

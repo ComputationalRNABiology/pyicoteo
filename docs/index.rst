@@ -23,11 +23,11 @@ Table of Contents
   :maxdepth: 2
 
   intro
-  pyicos
-  pyicoller
   pyicoenrich
   pyicoclip
+  pyicos
   pyicoregion
+  pyicoller
   pyicotrocol
   pyicoteolib
 

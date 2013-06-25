@@ -12,7 +12,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-VERSION = "2.0.3"
+VERSION = "2.0.4"
 
 #Formats
 ELAND = 'eland'
@@ -122,6 +122,7 @@ EXPERIMENT_LABEL = 'Experiment'
 REPLICA_LABEL = 'Replica'
 TITLE_LABEL = ''  
 COUNT_FILTER=0
+OVERLAP=0.5
 
 #CONSTANTS
 PLUS_STRAND = "+"

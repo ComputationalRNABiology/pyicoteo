@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Pyicoller &mdash; pyicoteo 2.0.5 documentation</title>
+    <title>Pyicoller &mdash; pyicoteo 2.0.4 documentation</title>
     
     <link rel="stylesheet" href="_static/pyramid.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -15,7 +15,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '2.0.5',
+        VERSION:     '2.0.4',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,9 +24,9 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="pyicoteo 2.0.5 documentation" href="index.html" />
+    <link rel="top" title="pyicoteo 2.0.4 documentation" href="index.html" />
     <link rel="next" title="Pyicoenrich" href="pyicoenrich.html" />
-    <link rel="prev" title="pyicos command line operations" href="pyicos.html" />
+    <link rel="prev" title="Pyicos" href="pyicos.html" />
 <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -46,9 +46,9 @@
           <a href="pyicoenrich.html" title="Pyicoenrich"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="pyicos.html" title="pyicos command line operations"
+          <a href="pyicos.html" title="Pyicos"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">pyicoteo 2.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -66,6 +66,30 @@
 <div class="section" id="important-flags">
 <h2>Important flags<a class="headerlink" href="#important-flags" title="Permalink to this headline">¶</a></h2>
 <p>This is a description of the most important flags. To see the complete list of flags, type <tt class="docutils literal"><span class="pre">pyicoller</span> <span class="pre">-h</span></tt> to get the full list.</p>
+<dl class="option">
+<dt id="cmdoption--species">
+<tt class="descname">--species</tt><tt class="descclassname"> SPECIES</tt><a class="headerlink" href="#cmdoption--species" title="Permalink to this definition">¶</a></dt>
+<dd><p>The species assembly that you are analyzing. This will read the length of the chromosomes of this species from the files inside the folder &#8220;chrdesc&#8221;. If the species information is not known, pyicoller will try to connect to the UCSC database and download it. [Default hg19]</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption--duplicates">
+<tt class="descname">--duplicates</tt><tt class="descclassname"> DUPLICATES</tt><a class="headerlink" href="#cmdoption--duplicates" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of duplicated reads allowed by the algorithm. Any duplicated read after this threshold will be discarded. By default, no duplicated reads are allowed.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-x">
+<tt class="descname">-x</tt><tt class="descclassname"> FRAG_SIZE</tt><tt class="descclassname">, </tt><tt class="descname">--frag-size</tt><tt class="descclassname"> FRAG_SIZE</tt><a class="headerlink" href="#cmdoption-x" title="Permalink to this definition">¶</a></dt>
+<dd><p>The estimated inmmunoprecipitated sequence fragment size. This is used by Pyicoller to reconstruct the original signal. If not specified, a <a class="reference internal" href="pyicos.html#strcorr"><em>strcorr (Strand Correlation)</em></a> test will be performed in order to estimate the fragment length.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption--poisson-test">
+<tt class="descname">--poisson-test</tt><tt class="descclassname"> POISSON_TEST</tt><a class="headerlink" href="#cmdoption--poisson-test" title="Permalink to this definition">¶</a></dt>
+<dd><p>Decide what property of the read clusters will be used for the poisson analysis. <tt class="docutils literal"><span class="pre">--poisson-test</span> <span class="pre">height</span></tt> will use the summit of the peaks, <tt class="docutils literal"><span class="pre">--poisson-test</span> <span class="pre">numtags</span></tt> the total number of reads and <tt class="docutils literal"><span class="pre">--poisson-test</span> <span class="pre">length</span></tt> the length occupied by the peaks. Default is <tt class="docutils literal"><span class="pre">height</span></tt></p>
+</dd></dl>
+
 </div>
 <div class="section" id="credit">
 <h2>Credit<a class="headerlink" href="#credit" title="Permalink to this headline">¶</a></h2>
@@ -96,7 +120,7 @@
 
   <h4>Previous topic</h4>
   <p class="topless"><a href="pyicos.html"
-                        title="previous chapter">pyicos command line operations</a></p>
+                        title="previous chapter">Pyicos</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="pyicoenrich.html"
                         title="next chapter">Pyicoenrich</a></p>
@@ -127,14 +151,14 @@
           <a href="pyicoenrich.html" title="Pyicoenrich"
              >next</a> |</li>
         <li class="right" >
-          <a href="pyicos.html" title="pyicos command line operations"
+          <a href="pyicos.html" title="Pyicos"
              >previous</a> |</li>
-        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">pyicoteo 2.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, Regulatory Genomics Group.
-      Last updated on Jun 21, 2013.
+      Last updated on Jun 25, 2013.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>

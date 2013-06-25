@@ -55,6 +55,8 @@ Here we tolerate 1 duplicate so a read can not occur more often than twice::
     pyicos remduplicates my_experiment.bed my_experiment_1dupl.bed --duplicates 1 -f bed -o -F bed
 
 
+.. _strcorr:
+
 strcorr (Strand Correlation)
 --------------------------------
 Finds the optimal extension value by finding the "gap" between groups of positive and negative cluster of reads by performing a pearson correlation test.
@@ -127,30 +129,6 @@ Output: bedpk or Wiggle files
 Example::
 
     pyicos discard peaks.bedpk peaks_discA.bedpk 
-
-
-poisson
--------
-
-This is the test to assess significance of peaks along the whole genome (as for ChIP-Seq). We do 3 different global poisson statistical tests for each chromosome in a file:
-
- 
-    **Max height analysis**
-
-    Lambda is calculated from the maximum heights of the clusters by calculating the average height of a cluster in a given region. Pyicos will obtain the p-value_height of one cluster having a height k by chance.
-
-    **Number of reads analysis**
-
-    Lambda is obtained from the number of reads in clusters.
-
-    **Nucleotide analysis**
-
-    Lambda is obtained from the number of nucleotides in a cluster. 
-
-
-Example::
-
-    pyicos poisson peaks.bedpk
 
 filter
 ------

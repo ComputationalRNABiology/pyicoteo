@@ -5,7 +5,9 @@ Pyicoteo* is a suite of tools for the analysis of high-throughput sequencing dat
 
 `* Pronounced as in Spanish  "picoteo"_ /pɪkɒtɛɒ/: (n) Appetizer-type foods that accompany drinks before or instead of a meal)`
 
+The documentation can be found at:
 
+http://regulatorygenomics.upf.edu/pyicoteo
 
 
 

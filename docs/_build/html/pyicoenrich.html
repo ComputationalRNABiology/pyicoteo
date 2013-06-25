@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Pyicoenrich &mdash; pyicoteo 2.0.5 documentation</title>
+    <title>Pyicoenrich &mdash; pyicoteo 2.0.4 documentation</title>
     
     <link rel="stylesheet" href="_static/pyramid.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -15,7 +15,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '2.0.5',
+        VERSION:     '2.0.4',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="pyicoteo 2.0.5 documentation" href="index.html" />
+    <link rel="top" title="pyicoteo 2.0.4 documentation" href="index.html" />
     <link rel="next" title="Pyicoclip" href="pyicoclip.html" />
     <link rel="prev" title="Pyicoller" href="pyicoller.html" />
 <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
@@ -48,7 +48,7 @@
         <li class="right" >
           <a href="pyicoller.html" title="Pyicoller"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">pyicoteo 2.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -59,16 +59,22 @@
             
   <div class="section" id="pyicoenrich">
 <span id="id1"></span><h1>Pyicoenrich<a class="headerlink" href="#pyicoenrich" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="introduction">
-<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
-<p>Enrichment analysis can be applied on any type of -seq data. Pyicoenrich performs enrichment analysis on sequenced reads from two conditions. Like this you can find out how significant the difference of these two conditions is, in terms of the number/density of reads overlapping a region of interest.</p>
+<p>Enrichment analysis can be applied on any type of -seq data. Pyicoenrich performs enrichment analysis on sequenced reads from two conditions. You can find out how significant the difference of these two conditions is in terms of the number of reads overlapping a region of interest.</p>
+<div class="section" id="basic-usage">
+<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline">¶</a></h2>
+<p><tt class="docutils literal"><span class="pre">Pyicoenrich</span></tt> usage requires the experiment files in reads format (BED, SAM/BAM, Eland...).</p>
+<p>Example:</p>
+<div class="highlight-python"><pre>pyicoenrich -reads condition_a.bed condition_b.bed -output output.pk -f bed --region my_regions.bed</pre>
+</div>
+<p>Alternatively, you can provide a counts file with the already calculated read counts for the interesting regions (see <a class="reference internal" href="#countsformat"><em>Counts file</em></a>):</p>
+<div class="highlight-python"><pre>pyicoenrich -counts a_and_b.counts -output result.out</pre>
+</div>
+<p><tt class="docutils literal"><span class="pre">Pyicoenrich</span></tt> scoring system is based on the <a class="reference external" href="http://en.wikipedia.org/wiki/MA_plot">MA-Plot</a>. The main idea behind it is that regions with less saturation (smaller A, left side of the x axis) are less reliable to detect differential enrichment. Every point in the MA-plot represents a region, the y axis is the log2 ratio of the normalized reads in the region (M value), while the mean number of reads in a region is the average of the normalized log2 counts (A value).</p>
 <div class="figure">
-<img alt="_images/enrichment.png" src="_images/enrichment.png" />
+<img alt="_images/ma_basic.png" src="_images/ma_basic.png" style="width: 40em;" />
+<p class="caption">Each point represents a region. The top plot is the background comparison (either technical or using replicas), the bottom one is the comparison between the 2 conditions. The distribution of the regions in the background (up) is used to calculate the Z-scores on the comparison of the 2 conditions (down).</p>
 </div>
-</div>
-<div class="section" id="ma-plot">
-<h2>MA Plot<a class="headerlink" href="#ma-plot" title="Permalink to this headline">¶</a></h2>
-<p>Pyicoenrich is based on the <a class="reference external" href="http://en.wikipedia.org/wiki/MA_plot">MA-Plot</a>.</p>
+<p>In both cases, the result file will be in <a class="reference internal" href="#countsformat"><em>Counts file</em></a></p>
 </div>
 <div class="section" id="region-exploration">
 <h2>Region exploration<a class="headerlink" href="#region-exploration" title="Permalink to this headline">¶</a></h2>
@@ -86,7 +92,7 @@
 </div>
 <div class="section" id="do-nothing">
 <h3>Do nothing<a class="headerlink" href="#do-nothing" title="Permalink to this headline">¶</a></h3>
-<p>Don&#8217;t really know where you want to look yet? If no region file is provided, Pyicoenrich will automatically generate one with taking he union of reads from both conditions as a region and gives back Z-Scores for the generated regions.</p>
+<p>If no region file is provided, Pyicoenrich will automatically generate one with taking he union of reads from both conditions as a region and gives back Z-Scores for the generated regions.</p>
 <p>The flag <tt class="docutils literal"><span class="pre">--proximity</span></tt> controls the distance with which the regions are considered &#8220;joined&#8221;. Default is 50nt:</p>
 <div class="highlight-python"><pre>pyicoenrich -reads kidney1.bed liver1.bed -output Pyicoenrich_Kidney_Liver_result -f bed --proximity 50nt</pre>
 </div>
@@ -95,72 +101,67 @@
 </div>
 </div>
 </div>
-<div class="section" id="pseudocounts-flag">
-<h2><tt class="docutils literal"><span class="pre">--pseudocounts</span></tt> flag<a class="headerlink" href="#pseudocounts-flag" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="important-flags">
+<h2>Important flags<a class="headerlink" href="#important-flags" title="Permalink to this headline">¶</a></h2>
+<p>This is a description of the most important flags. To see the complete list of flags, type <tt class="docutils literal"><span class="pre">pyicoenrich</span> <span class="pre">-h</span></tt> to get the full list.</p>
+<div class="section" id="interesting-regions">
+<h3><tt class="docutils literal"><span class="pre">--interesting-regions</span></tt><a class="headerlink" href="#interesting-regions" title="Permalink to this headline">¶</a></h3>
+<p>Providing a list of interesting regions matching the 4th column of the regions file (using <tt class="docutils literal"><span class="pre">-reads</span></tt>) or count file (using <tt class="docutils literal"><span class="pre">-counts</span></tt>) will highlight them in the MA plot.</p>
+<div class="figure">
+<img alt="_images/Enrich_Interesting.png" src="_images/Enrich_Interesting.png" style="width: 40em;" />
+<p class="caption">Example of an enrichment output plot using <tt class="docutils literal"><span class="pre">--interesting-regions</span></tt>.</p>
+</div>
+<p>Assuming that we are using reads, a region file named <tt class="docutils literal"><span class="pre">regions.bed</span></tt> and a list of interesting regions <tt class="docutils literal"><span class="pre">interreg.txt</span></tt>, this is how the files will look like.</p>
+<p>Region file (regions.bed):</p>
+<div class="highlight-python"><pre>chr1    1     100     region1    0    .
+chr1    1000  1100    region2    0    .
+chr10   1     100     region3    0    .
+...
+chrN    x     y       regionN    0    .</pre>
+</div>
+<p>Interesting regions file (interreg.txt):</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">region2</span>
+<span class="n">region10</span>
+<span class="o">...</span>
+<span class="n">regionZ</span>
+</pre></div>
+</div>
+<p>Example command:</p>
+<div class="highlight-python"><pre>pyicoenrich -reads kidney1.bed liver1.bed -output rpkm_norm.enrich -f bed --region genes.bed --interesting-regions interreg.txt</pre>
+</div>
+</div>
+<div class="section" id="pseudocounts">
+<h3><tt class="docutils literal"><span class="pre">--pseudocounts</span></tt><a class="headerlink" href="#pseudocounts" title="Permalink to this headline">¶</a></h3>
 <p>As regions with 0 reads in one condition might be especially interesting, Pyicoenrich can use pseudocounts, in order to avoid a division by 0: Pyicoenrich calculates the ratio of number of reads in both conditions. As there might not be any reads in a region, Pyicoenrich assumes that there is already 1 read in each region in each condition.</p>
 </div>
-<div class="section" id="stranded-flag">
-<h2><tt class="docutils literal"><span class="pre">--stranded</span></tt> flag<a class="headerlink" href="#stranded-flag" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="stranded">
+<h3><tt class="docutils literal"><span class="pre">--stranded</span></tt><a class="headerlink" href="#stranded" title="Permalink to this headline">¶</a></h3>
 <p>To take into consideration reads that coincide with the strand direction of the regions (6th column in your BED6 file)</p>
 </div>
-<div class="section" id="replica-or-technical-control-swap">
-<h2>Replica or technical control (swap)<a class="headerlink" href="#replica-or-technical-control-swap" title="Permalink to this headline">¶</a></h2>
-<p>To calculate the Z-Score, Pyicoenrich compares the differences between condition A and condition B with the differences between A and A&#8217; (while A&#8217; is the biological replica of A). If no biological replica is available, Pyicoenrich uses a sample swap as a reference. With sample swap we mean that reads from condition A and B are mixed randomly and divided in two sets (with size of those of A and B). In the two resulting sets we do not expect any significant differences, just like in replicas.</p>
-<div class="figure">
-<img alt="_images/swap.png" src="_images/swap.png" />
-<p class="caption">Technical replica (swap) illustration</p>
 </div>
-<div class="section" id="examples">
-<h3>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h3>
-<p>With replica:</p>
-<div class="highlight-python"><pre>pyicoenrich -reads kidney1.bed liver1.bed -output n_norm.enrich -f bed --region genes.bed --replica kidney2.bed</pre>
-</div>
-<p>Using a swap:</p>
-<div class="highlight-python"><pre>pyicoenrich -reads kidney1.bed liver1.bed -output n_norm.enrich -f bed --region genes.bed</pre>
-</div>
-</div>
-</div>
-<div class="section" id="description-of-the-pyicoenrich-counts-file">
-<h2>Description of the pyicoenrich counts file<a class="headerlink" href="#description-of-the-pyicoenrich-counts-file" title="Permalink to this headline">¶</a></h2>
-<p>Column description of enrichment result where each line describes a region:</p>
-<div class="highlight-python"><pre>TIP: If you want to provide pyicoenrich with your own generated counts file, you only need to provide up to column 6)</pre>
-</div>
-<ol class="arabic simple">
-<li>name                    =  chromosome of region</li>
-<li>start                   =  region start</li>
-<li>end                     =  region end</li>
-<li>name2                   =  alternative label for the region, useful to put the gene name on it</li>
-<li>score                   =  Reserved by a &#8221;.&#8221; as it is used by the UCSC browser for coloring.</li>
-<li>strand                  =  region strand</li>
-<li>signal_a                =  Counts in experiment A (normalized if used)</li>
-<li>signal_b                =  Counts in experiment B (normalized if used)</li>
-<li>signal_prime_1          =  Counts in experiment A (exactly the same as signal_a) or random background 1 (normalized if used)</li>
-<li>signal_prime_2         =  Counts in experiment replica A or random background 2 (normalized if used)</li>
-<li>A                      =  (log2(signal_a)+log2(signal_b))/2</li>
-<li>M                      =  log2(signal_a/signal_b)</li>
-<li>total_reads_a          =  total number of reads in sample a</li>
-<li>total_reads_b          =  total number of reads in sample b</li>
-<li>num_tags_a             =  number of reads in sample a overlapping the region</li>
-<li>num_tags_b             =  number of reads in sample b overlapping the region</li>
-<li>A_prime                =  (log2(signal_prime_1)+log2(signal_prime_2))/2</li>
-<li>M_prime                =  log2(signal_prime_1/signal_prime_2)</li>
-<li>total_reads_a          =  total number of reads in sample a</li>
-<li>total_reads_b          =  total number of reads in sample b</li>
-<li>total_reads_prime_1    =  total number of reads in sample prime 1</li>
-<li>total_reads_prime_2    =  total number of reads in sample prime 2</li>
-<li>A_median               =   median of A values in window</li>
-<li>mean                       =   mean of M_prime values in window</li>
-<li>sd                     =   standard deviation of M_prime values in window</li>
-<li>zscore                 =  score for the significance of the difference of enrichment between condition a and b compared to prime 1  and prime 2</li>
-</ol>
-</div>
-<div class="section" id="normalization-methods">
-<h2>Normalization methods<a class="headerlink" href="#normalization-methods" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="normalization-flags">
+<h2>Normalization flags<a class="headerlink" href="#normalization-flags" title="Permalink to this headline">¶</a></h2>
 <p>Pyicoenrich included several popular normalization methods for the counts.</p>
 <blockquote>
 <div><strong>PUBLIC SERVICE ANNOUNCEMENT:</strong> When dealing with normalization methods, one has to be very careful.
 There is no silver bullet, you need to understand your data and then apply the method that is appropriate for it.
 If you are in doubt, please consult your local statistician.</div></blockquote>
+<div class="section" id="ma-calculation-adjustment">
+<h3>MA calculation adjustment<a class="headerlink" href="#ma-calculation-adjustment" title="Permalink to this headline">¶</a></h3>
+<p>The different z-scores values are calculated using a sliding through the region points left to right in the y axis (smaller to greater saturation of reads). You can tweak this calculation using the <tt class="docutils literal"><span class="pre">--binsize</span></tt> and <tt class="docutils literal"><span class="pre">--binstep</span></tt></p>
+<dl class="option">
+<dt id="cmdoption--binsize">
+<tt class="descname">--binsize</tt><tt class="descclassname"></tt><a class="headerlink" href="#cmdoption--binsize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p>The size of the bins to calculate the local sd and mean for the background model, as a ratio of total number or regions. Regardless of the ratio selected, the minimum window size is 50 regions, since below that threshold the results will no longer be  statistically meaningful. The default bin size is 0.3 (30% of the region points.)</p>
+<dl class="option">
+<dt id="cmdoption--binstep">
+<tt class="descname">--binstep</tt><tt class="descclassname"></tt><a class="headerlink" href="#cmdoption--binstep" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p>Step of the sliding window for the calculation of the z-score, as a ratio of the window size selected. Closer to 0 values will provide better precision, but slower performance, closer to 1 less precision but faster calculation. Default slide is 0.1 (10% of the total regions)</p>
+</div>
 <div class="section" id="total-reads-normalization-n-norm">
 <h3>Total reads normalization (<tt class="docutils literal"><span class="pre">--n-norm</span></tt>)<a class="headerlink" href="#total-reads-normalization-n-norm" title="Permalink to this headline">¶</a></h3>
 <p>This normalization will calculate the <em>number of reads per million reads</em> in each region and sample. This is a <em>very simple</em> normalization that tries to correct the bias of comparing different samples by total number of reads. You can activate it with the <tt class="docutils literal"><span class="pre">--n-norm</span></tt> flag.</p>
@@ -227,30 +228,39 @@ If you are in doubt, please consult your local statistician.</div></blockquote>
 <p>This method is suitable when your samples have too much variability. As eloquently put by <a class="reference external" href="http://simplystatistics.org/2013/04/26/mindlessly-normalizing-genomics-data-is-bad-but-ignoring-unwanted-variability-can-be-worse/">Simplystatistics</a></p>
 </div>
 </div>
-<div class="section" id="interesting-regions">
-<h2><tt class="docutils literal"><span class="pre">--interesting-regions</span></tt><a class="headerlink" href="#interesting-regions" title="Permalink to this headline">¶</a></h2>
-<p>Providing a list of interesting regions matching the 4th column of the region or count file will highlight them in the MA plot.</p>
-<div class="figure">
-<img alt="_images/Enrich_Interesting.png" src="_images/Enrich_Interesting.png" />
-<p class="caption">Example of an enrichment output plot using <tt class="docutils literal"><span class="pre">--interesting-regions</span></tt>.</p>
+<div class="section" id="counts-file">
+<span id="countsformat"></span><h2>Counts file<a class="headerlink" href="#counts-file" title="Permalink to this headline">¶</a></h2>
+<p>Column description of enrichment result where each line describes a region:</p>
+<div class="highlight-python"><pre>TIP: If you want to provide pyicoenrich with your own generated counts file, you only need to provide up to column 6)</pre>
 </div>
-<p>Example:</p>
-<div class="highlight-python"><pre>"""
-Region file (regions.bed)
-chr1 1 100     region1 0 .
-chr1 1000 1100 region2 0 .
-chr2 1 100     region3 0 .
-...
-chrN x y       regionN 0 .
-
-Interesting regions file (interreg.txt)
-region4
-region10
-...
-regionZ
-"""
-pyicoenrich -reads kidney1.bed liver1.bed -output rpkm_norm.enrich -f bed --region genes.bed --interesting-regions interreg.txt</pre>
-</div>
+<ol class="arabic simple">
+<li>name                    =  chromosome of region</li>
+<li>start                   =  region start</li>
+<li>end                     =  region end</li>
+<li>name2                   =  alternative label for the region, useful to put the gene name on it</li>
+<li>score                   =  Reserved by a &#8221;.&#8221; as it is used by the UCSC browser for coloring.</li>
+<li>strand                  =  region strand</li>
+<li>signal_a                =  Counts in experiment A (normalized if used)</li>
+<li>signal_b                =  Counts in experiment B (normalized if used)</li>
+<li>signal_prime_1          =  Counts in experiment A (exactly the same as signal_a) or random background 1 (normalized if used)</li>
+<li>signal_prime_2         =  Counts in experiment replica A or random background 2 (normalized if used)</li>
+<li>A                      =  (log2(signal_a)+log2(signal_b))/2</li>
+<li>M                      =  log2(signal_a/signal_b)</li>
+<li>total_reads_a          =  total number of reads in sample a</li>
+<li>total_reads_b          =  total number of reads in sample b</li>
+<li>num_tags_a             =  number of reads in sample a overlapping the region</li>
+<li>num_tags_b             =  number of reads in sample b overlapping the region</li>
+<li>A_prime                =  (log2(signal_prime_1)+log2(signal_prime_2))/2</li>
+<li>M_prime                =  log2(signal_prime_1/signal_prime_2)</li>
+<li>total_reads_a          =  total number of reads in sample a</li>
+<li>total_reads_b          =  total number of reads in sample b</li>
+<li>total_reads_prime_1    =  total number of reads in sample prime 1</li>
+<li>total_reads_prime_2    =  total number of reads in sample prime 2</li>
+<li>A_median               =   median of A values in window</li>
+<li>mean                   =   mean of M_prime values in window</li>
+<li>sd                     =   standard deviation of M_prime values in window</li>
+<li>zscore                 =  score for the significance of the difference of enrichment between condition a and b compared to prime 1  and prime 2</li>
+</ol>
 </div>
 <div class="section" id="credit">
 <h2>Credit<a class="headerlink" href="#credit" title="Permalink to this headline">¶</a></h2>
@@ -273,22 +283,21 @@ pyicoenrich -reads kidney1.bed liver1.bed -output rpkm_norm.enrich -f bed --regi
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Pyicoenrich</a><ul>
-<li><a class="reference internal" href="#introduction">Introduction</a></li>
-<li><a class="reference internal" href="#ma-plot">MA Plot</a></li>
+<li><a class="reference internal" href="#basic-usage">Basic usage</a></li>
 <li><a class="reference internal" href="#region-exploration">Region exploration</a><ul>
 <li><a class="reference internal" href="#generate-a-file-with-the-region-magic-flag-and-gtf-file">Generate a file with the <tt class="docutils literal"><span class="pre">--region-magic</span></tt> flag and GTF file</a></li>
 <li><a class="reference internal" href="#provide-a-regions-file">Provide a regions file</a></li>
 <li><a class="reference internal" href="#do-nothing">Do nothing</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#pseudocounts-flag"><tt class="docutils literal"><span class="pre">--pseudocounts</span></tt> flag</a></li>
-<li><a class="reference internal" href="#stranded-flag"><tt class="docutils literal"><span class="pre">--stranded</span></tt> flag</a></li>
-<li><a class="reference internal" href="#replica-or-technical-control-swap">Replica or technical control (swap)</a><ul>
-<li><a class="reference internal" href="#examples">Examples</a></li>
+<li><a class="reference internal" href="#important-flags">Important flags</a><ul>
+<li><a class="reference internal" href="#interesting-regions"><tt class="docutils literal"><span class="pre">--interesting-regions</span></tt></a></li>
+<li><a class="reference internal" href="#pseudocounts"><tt class="docutils literal"><span class="pre">--pseudocounts</span></tt></a></li>
+<li><a class="reference internal" href="#stranded"><tt class="docutils literal"><span class="pre">--stranded</span></tt></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#description-of-the-pyicoenrich-counts-file">Description of the pyicoenrich counts file</a></li>
-<li><a class="reference internal" href="#normalization-methods">Normalization methods</a><ul>
+<li><a class="reference internal" href="#normalization-flags">Normalization flags</a><ul>
+<li><a class="reference internal" href="#ma-calculation-adjustment">MA calculation adjustment</a></li>
 <li><a class="reference internal" href="#total-reads-normalization-n-norm">Total reads normalization (<tt class="docutils literal"><span class="pre">--n-norm</span></tt>)</a></li>
 <li><a class="reference internal" href="#region-length-normalization-len-norm">Region length normalization (<tt class="docutils literal"><span class="pre">--len-norm</span></tt>)</a></li>
 <li><a class="reference internal" href="#rpkm-len-norm-and-n-norm">RPKM (<tt class="docutils literal"><span class="pre">--len-norm</span></tt> and <tt class="docutils literal"><span class="pre">--n-norm</span></tt>)</a></li>
@@ -296,7 +305,7 @@ pyicoenrich -reads kidney1.bed liver1.bed -output rpkm_norm.enrich -f bed --regi
 <li><a class="reference internal" href="#full-quantile-normalization-quant-norm">Full quantile normalization (<tt class="docutils literal"><span class="pre">--quant-norm</span></tt>)</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#interesting-regions"><tt class="docutils literal"><span class="pre">--interesting-regions</span></tt></a></li>
+<li><a class="reference internal" href="#counts-file">Counts file</a></li>
 <li><a class="reference internal" href="#credit">Credit</a></li>
 </ul>
 </li>
@@ -337,12 +346,12 @@ pyicoenrich -reads kidney1.bed liver1.bed -output rpkm_norm.enrich -f bed --regi
         <li class="right" >
           <a href="pyicoller.html" title="Pyicoller"
              >previous</a> |</li>
-        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">pyicoteo 2.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, Regulatory Genomics Group.
-      Last updated on Jun 21, 2013.
+      Last updated on Jun 25, 2013.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>

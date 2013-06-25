@@ -7,7 +7,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Pyicos &mdash; pyicoteo 2.0.5 documentation</title>
+    <title>Pyicos &mdash; pyicoteo 2.0.4 documentation</title>
     
     <link rel="stylesheet" href="_static/pyramid.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -15,7 +15,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '',
-        VERSION:     '2.0.5',
+        VERSION:     '2.0.4',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,9 +24,9 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="pyicoteo 2.0.5 documentation" href="index.html" />
-    <link rel="next" title="Pyicoller" href="pyicoller.html" />
-    <link rel="prev" title="Getting Started" href="intro.html" />
+    <link rel="top" title="pyicoteo 2.0.4 documentation" href="index.html" />
+    <link rel="next" title="Pyicotrocol" href="pyicotrocol.html" />
+    <link rel="prev" title="Pyicoregion" href="pyicoregion.html" />
 <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
 <!--[if lte IE 6]>
@@ -43,12 +43,12 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="pyicoller.html" title="Pyicoller"
+          <a href="pyicotrocol.html" title="Pyicotrocol"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="intro.html" title="Getting Started"
+          <a href="pyicoregion.html" title="Pyicoregion"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">pyicoteo 2.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -97,7 +97,7 @@
 </div>
 </div>
 <div class="section" id="strcorr-strand-correlation">
-<h2>strcorr (Strand Correlation)<a class="headerlink" href="#strcorr-strand-correlation" title="Permalink to this headline">¶</a></h2>
+<span id="strcorr"></span><h2>strcorr (Strand Correlation)<a class="headerlink" href="#strcorr-strand-correlation" title="Permalink to this headline">¶</a></h2>
 <p>Finds the optimal extension value by finding the &#8220;gap&#8221; between groups of positive and negative cluster of reads by performing a pearson correlation test.</p>
 </div>
 <div class="section" id="extend">
@@ -152,21 +152,6 @@ Operating with directories will only give appropiate results if the files and th
 <div class="highlight-python"><pre>pyicos discard peaks.bedpk peaks_discA.bedpk</pre>
 </div>
 </div>
-<div class="section" id="poisson">
-<h2>poisson<a class="headerlink" href="#poisson" title="Permalink to this headline">¶</a></h2>
-<p>This is the test to assess significance of peaks along the whole genome (as for ChIP-Seq). We do 3 different global poisson statistical tests for each chromosome in a file:</p>
-<blockquote>
-<div><p><strong>Max height analysis</strong></p>
-<p>Lambda is calculated from the maximum heights of the clusters by calculating the average height of a cluster in a given region. Pyicos will obtain the p-value_height of one cluster having a height k by chance.</p>
-<p><strong>Number of reads analysis</strong></p>
-<p>Lambda is obtained from the number of reads in clusters.</p>
-<p><strong>Nucleotide analysis</strong></p>
-<p>Lambda is obtained from the number of nucleotides in a cluster.</p>
-</div></blockquote>
-<p>Example:</p>
-<div class="highlight-python"><pre>pyicos poisson peaks.bedpk</pre>
-</div>
-</div>
 <div class="section" id="filter">
 <h2>filter<a class="headerlink" href="#filter" title="Permalink to this headline">¶</a></h2>
 <p>Detect and select significant clusters in the file. There are two steps in this operation: Through the poisson operation the thresholds are determined. Next the peaks are filtered according to these thresholds.</p>
@@ -213,7 +198,6 @@ Operating with directories will only give appropiate results if the files and th
 <li><a class="reference internal" href="#subtract">subtract</a></li>
 <li><a class="reference internal" href="#split">split</a></li>
 <li><a class="reference internal" href="#discard">discard</a></li>
-<li><a class="reference internal" href="#poisson">poisson</a></li>
 <li><a class="reference internal" href="#filter">filter</a></li>
 <li><a class="reference internal" href="#push">push</a></li>
 <li><a class="reference internal" href="#credit">Credit</a></li>
@@ -222,11 +206,11 @@ Operating with directories will only give appropiate results if the files and th
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="intro.html"
-                        title="previous chapter">Getting Started</a></p>
+  <p class="topless"><a href="pyicoregion.html"
+                        title="previous chapter">Pyicoregion</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="pyicoller.html"
-                        title="next chapter">Pyicoller</a></p>
+  <p class="topless"><a href="pyicotrocol.html"
+                        title="next chapter">Pyicotrocol</a></p>
 <div id="searchbox" style="display: none">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
@@ -251,17 +235,17 @@ Operating with directories will only give appropiate results if the files and th
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="pyicoller.html" title="Pyicoller"
+          <a href="pyicotrocol.html" title="Pyicotrocol"
              >next</a> |</li>
         <li class="right" >
-          <a href="intro.html" title="Getting Started"
+          <a href="pyicoregion.html" title="Pyicoregion"
              >previous</a> |</li>
-        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">pyicoteo 2.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, Regulatory Genomics Group.
-      Last updated on Jun 21, 2013.
+      Last updated on Jun 25, 2013.
       Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
     </div>
   </body>

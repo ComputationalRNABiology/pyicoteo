@@ -14,7 +14,10 @@ pyicoteolib/regions.py
 pyicoteolib/turbomix.py
 pyicoteolib/utils.py
 pyicoteolib/chromlen/__init__.py
+pyicoteolib/chromlen/__init__.pyc
 pyicoteolib/chromlen/getChromosomeDescription.py
+pyicoteolib/chromlen/getChromosomeDescription.pyc
+pyicoteolib/chromlen/hg16
 pyicoteolib/chromlen/hg17
 pyicoteolib/chromlen/hg18
 pyicoteolib/chromlen/hg19
@@ -22,10 +25,10 @@ pyicoteolib/chromlen/mm8
 pyicoteolib/chromlen/mm9
 pyicoteolib/parser/__init__.py
 pyicoteolib/parser/argparse.py
+pyicoteolib/parser/common.py
 pyicoteolib/parser/pyicoclip.py
 pyicoteolib/parser/pyicoenrich.py
 pyicoteolib/parser/pyicoller.py
 pyicoteolib/parser/pyicoregion.py
 pyicoteolib/parser/pyicos.py
 pyicoteolib/parser/pyicotrocol.py
-pyicoteolib/parser/utils.py

@@ -176,9 +176,10 @@ def plot_enrichment(self, file_path):
                 import matplotlib
                 matplotlib.use("PS")
 
-            from matplotlib.pyplot import plot, hist, show, legend, figure, xlabel, ylabel, subplot, axhline, axis
+            from matplotlib.pyplot import *
             from matplotlib import rcParams
-            rcParams['legend.fontsize'] = 8
+            rcParams.update({'font.size': 22})
+            rcParams['legend.fontsize'] = 14
             #decide labels
             if self.label1:
                 label_main = self.label1
@@ -196,10 +197,10 @@ def plot_enrichment(self, file_path):
                 else:
                     label_control = 'Background distribution'
 
-
             #self.logger.info("Interesting regions path: %s" % (self.interesting_regions))
             interesting_regs = []
             if self.interesting_regions:
+                self.logger.info("Reading interesting regions...")
                 interesting_regs = read_interesting_regions(self, self.interesting_regions)
             #self.logger.info("Interesting regions: %s" % (interesting_regs))
             #self.logger.info("Plot path: %s" % (file_path))
@@ -217,7 +218,7 @@ def plot_enrichment(self, file_path):
             points = []
             minus_points = []
             all_points = []
-            figure(figsize=(8,6))
+            figure(figsize=(14,22))
             biggest_A  = -sys.maxint #for drawing
             smallest_A = sys.maxint #for drawing
             biggest_M = 0 #for drawing
@@ -226,7 +227,6 @@ def plot_enrichment(self, file_path):
                 sline = line.split()
                 try:
                     enrich = dict(zip(enrichment_keys, sline)) 
-
                     # WARNING: for slide inter and slide intra: name2 = 'start:end' (no gene_id, FIXME?)
                     name2 = enrich['name2'].split(':')
                     gene_id = name2[0]
@@ -234,6 +234,7 @@ def plot_enrichment(self, file_path):
                         transcript_id = name2[1] # consider transcript_id? (exons)
                     else:
                         transcript_id = None
+
                     if gene_id in interesting_regs or transcript_id in interesting_regs:
                         interesting_M.append(float(enrich["M"]))
                         interesting_A.append(float(enrich["A"]))
@@ -273,47 +274,52 @@ def plot_enrichment(self, file_path):
                 points.insert(0, points[0])
                 minus_points.insert(0, minus_points[0])
                 self.logger.info("Plotting points...")
-                subplot(211)
-                xlabel('A')
-                ylabel('M')
+                #Background plot
+                subplot(211, axisbg="lightyellow")
+                xlabel('Average', fontsize=30)
+                ylabel('Log2 ratio', fontsize=30)
                 axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
                 plot(A_prime, M_prime, '.', label=label_control, color = '#666666')
-                plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
+                plot(A_medians, points, 'r--', label="Z-score (%s)"%self.zscore)            
                 plot(A_medians, minus_points,  'r--')            
                 axhline(0, linestyle='--', color="grey", alpha=0.75)  
-                legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
-                subplot(212)
+                leg = legend(fancybox=True, scatterpoints=1, numpoints=1, loc=2, ncol=4, mode="expand")
+                leg.get_frame().set_alpha(0.5)
+                #Experiment plot
+                subplot(212, axisbg="lightyellow")
                 axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
                 plot(A, M, 'k.', label=label_main)
 
 
                 if self.disable_significant_color:
-                    significant_marker = 'k.'
+                    significant_marker = 'ko'
                 else:
-                    significant_marker = 'r.'
+                    significant_marker = 'ro'
 
                 plot(A_significant, M_significant, significant_marker, label="%s (significant)"%label_main)
-
-                plot(A_medians, points, 'r--', label="z-score %s"%self.zscore)            
+                plot(A_medians, points, 'r--', label="Z-score (%s)"%self.zscore)            
                 plot(A_medians, minus_points, 'r--')
 
                 if self.interesting_regions:
-                    interesting_label = self.interesting_regions.split(os.path.sep)[-1] + ' (interesting regions)'
+                    interesting_label = label_main + ' (interesting)'
                     plot(interesting_A, interesting_M, 'H', label=interesting_label, color='#00EE00') # plotting "interesting" regions
 
                 axhline(0, linestyle='--', color="grey", alpha=0.75)
-                xlabel('A')
-                ylabel('M')
-                legend(bbox_to_anchor=(0., 1.01, 1., .101), loc=3, ncol=1, mode="expand", borderaxespad=0.)
-                self._save_figure("enrichment_MA")
+                xlabel('Average', fontsize=30)
+                ylabel('Log2 ratio', fontsize=30)
+                leg2 = legend(fancybox=True, scatterpoints=1, numpoints=1, loc=2, ncol=4)
+                leg2.get_frame().set_alpha(0.7)
+                self._save_figure("enrichment_MA", width=500, height=2800)
             else:
                 self.logger.warning("Nothing to plot.")
+
         except ImportError:
             if self.debug:
                 raise
             __matplotlibwarn(self)
 
 def __matplotlibwarn(self):
+    #FIXME move to utils.py or plotting module
     self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')    
 
 def __calc_M(signal_a, signal_b):
@@ -407,7 +413,6 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
                                                                                    replica_factor, self.average_total_reads, numreads_background_1)
                         signal_background_2 = region_of_interest.normalized_counts(self.len_norm, self.n_norm, self.total_regions, self.pseudocount, 
                                                                                    replica_factor, self.average_total_reads, numreads_background_2)
-
 
             #if there is no data in the replica or in the swap and we are not using pseudocounts, dont write the data 
             if signal_a > 0 and signal_b > 0 and signal_background_1 > 0 and signal_background_2 > 0 or self.use_MA:
