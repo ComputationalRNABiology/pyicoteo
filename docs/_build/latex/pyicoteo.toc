@@ -1,0 +1,66 @@
+\select@language {english}
+\contentsline {chapter}{\numberline {1}Getting Started}{3}{chapter.1}
+\contentsline {section}{\numberline {1.1}Download \& Install}{3}{section.1.1}
+\contentsline {section}{\numberline {1.2}Check installation}{3}{section.1.2}
+\contentsline {section}{\numberline {1.3}Dependencies}{3}{section.1.3}
+\contentsline {subsection}{\numberline {1.3.1}Matplotlib}{3}{subsection.1.3.1}
+\contentsline {subsection}{\numberline {1.3.2}Samtools}{4}{subsection.1.3.2}
+\contentsline {section}{\numberline {1.4}The bedpk format}{4}{section.1.4}
+\contentsline {subsection}{\numberline {1.4.1}bedpk Column definition}{4}{subsection.1.4.1}
+\contentsline {chapter}{\numberline {2}Pyicoteolib}{5}{chapter.2}
+\contentsline {section}{\numberline {2.1}Pyicoteolib.core}{5}{section.2.1}
+\contentsline {subsection}{\numberline {2.1.1}ReadCluster}{5}{subsection.2.1.1}
+\contentsline {subsubsection}{Common python operators}{5}{subsubsection*.3}
+\contentsline {paragraph}{Adding}{5}{paragraph*.4}
+\contentsline {paragraph}{Subtracting}{6}{paragraph*.5}
+\contentsline {paragraph}{Length}{6}{paragraph*.6}
+\contentsline {paragraph}{Comparison operators (\textless {} \textgreater {} == !=)}{6}{paragraph*.7}
+\contentsline {subsubsection}{Read a .bed file, print the chromosome and the length of each read}{6}{subsubsection*.8}
+\contentsline {subsubsection}{Read some .bed lines, cluster them, output a wiggle file}{6}{subsubsection*.9}
+\contentsline {paragraph}{ReadRegion}{7}{paragraph*.10}
+\contentsline {subsection}{\numberline {2.1.2}pyicoteolib.utils}{7}{subsection.2.1.2}
+\contentsline {subsection}{\numberline {2.1.3}BAM reader}{7}{subsection.2.1.3}
+\contentsline {subsection}{\numberline {2.1.4}Credit}{7}{subsection.2.1.4}
+\contentsline {chapter}{\numberline {3}Command-line based tools}{9}{chapter.3}
+\contentsline {section}{\numberline {3.1}pyicos command line operations}{9}{section.3.1}
+\contentsline {subsection}{\numberline {3.1.1}convert}{9}{subsection.3.1.1}
+\contentsline {subsection}{\numberline {3.1.2}remregions}{9}{subsection.3.1.2}
+\contentsline {subsection}{\numberline {3.1.3}remduplicates}{10}{subsection.3.1.3}
+\contentsline {subsection}{\numberline {3.1.4}strcorr (Strand Correlation)}{10}{subsection.3.1.4}
+\contentsline {subsection}{\numberline {3.1.5}extend}{10}{subsection.3.1.5}
+\contentsline {subsection}{\numberline {3.1.6}subtract}{10}{subsection.3.1.6}
+\contentsline {subsection}{\numberline {3.1.7}split}{12}{subsection.3.1.7}
+\contentsline {subsection}{\numberline {3.1.8}discard}{12}{subsection.3.1.8}
+\contentsline {subsection}{\numberline {3.1.9}poisson}{12}{subsection.3.1.9}
+\contentsline {subsection}{\numberline {3.1.10}filter}{13}{subsection.3.1.10}
+\contentsline {subsection}{\numberline {3.1.11}push}{13}{subsection.3.1.11}
+\contentsline {subsection}{\numberline {3.1.12}Credit}{13}{subsection.3.1.12}
+\contentsline {section}{\numberline {3.2}Pyicoller}{14}{section.3.2}
+\contentsline {subsection}{\numberline {3.2.1}Credit}{14}{subsection.3.2.1}
+\contentsline {section}{\numberline {3.3}Pyicoenrich}{14}{section.3.3}
+\contentsline {subsection}{\numberline {3.3.1}Introduction}{14}{subsection.3.3.1}
+\contentsline {subsection}{\numberline {3.3.2}MA Plot}{14}{subsection.3.3.2}
+\contentsline {subsection}{\numberline {3.3.3}Region exploration}{14}{subsection.3.3.3}
+\contentsline {subsubsection}{Generate a file with the --region-magic flag and GTF file}{15}{subsubsection*.11}
+\contentsline {subsubsection}{Provide a regions file}{15}{subsubsection*.12}
+\contentsline {subsubsection}{Do nothing}{15}{subsubsection*.13}
+\contentsline {subsection}{\numberline {3.3.4}\texttt {-{-}pseudocounts} flag}{15}{subsection.3.3.4}
+\contentsline {subsection}{\numberline {3.3.5}\texttt {-{-}stranded} flag}{15}{subsection.3.3.5}
+\contentsline {subsection}{\numberline {3.3.6}Replica or technical control (swap)}{15}{subsection.3.3.6}
+\contentsline {subsubsection}{Examples}{16}{subsubsection*.14}
+\contentsline {subsection}{\numberline {3.3.7}Description of the pyicoenrich counts file}{16}{subsection.3.3.7}
+\contentsline {subsection}{\numberline {3.3.8}Normalization methods}{17}{subsection.3.3.8}
+\contentsline {subsubsection}{Total reads normalization (\texttt {-{-}n-norm})}{17}{subsubsection*.15}
+\contentsline {subsubsection}{Region length normalization (\texttt {-{-}len-norm})}{18}{subsubsection*.19}
+\contentsline {subsubsection}{RPKM (\texttt {-{-}len-norm} and \texttt {-{-}n-norm})}{18}{subsubsection*.20}
+\contentsline {subsubsection}{Trimmed Means of M values normalization (\texttt {-{-}tmm-norm})}{18}{subsubsection*.21}
+\contentsline {subsubsection}{Full quantile normalization (\texttt {-{-}quant-norm})}{18}{subsubsection*.24}
+\contentsline {subsection}{\numberline {3.3.9}\texttt {-{-}interesting-regions}}{19}{subsection.3.3.9}
+\contentsline {subsection}{\numberline {3.3.10}Credit}{19}{subsection.3.3.10}
+\contentsline {section}{\numberline {3.4}pyicoclip}{19}{section.3.4}
+\contentsline {subsection}{\numberline {3.4.1}Introduction}{19}{subsection.3.4.1}
+\contentsline {subsection}{\numberline {3.4.2}Region file}{19}{subsection.3.4.2}
+\contentsline {subsection}{\numberline {3.4.3}Credit}{20}{subsection.3.4.3}
+\contentsline {section}{\numberline {3.5}Pyicoregion}{20}{section.3.5}
+\contentsline {subsection}{\numberline {3.5.1}Pyicoregion arguments}{20}{subsection.3.5.1}
+\contentsline {chapter}{\numberline {4}Protocol files}{21}{chapter.4}

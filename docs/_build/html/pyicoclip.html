@@ -1,0 +1,176 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pyicoclip &mdash; pyicoteo 2.0.5 documentation</title>
+    
+    <link rel="stylesheet" href="_static/pyramid.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pyicoteo 2.0.5 documentation" href="index.html" />
+    <link rel="next" title="Pyicoregion" href="pyicoregion.html" />
+    <link rel="prev" title="Pyicoenrich" href="pyicoenrich.html" />
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head>
+  <body>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="pyicoregion.html" title="Pyicoregion"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pyicoenrich.html" title="Pyicoenrich"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="pyicoclip">
+<span id="id1"></span><h1>Pyicoclip<a class="headerlink" href="#pyicoclip" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p>Pyicoclip is an implementation of the modified False Discovery Rate algorithm <a class="reference external" href="http://www.nature.com/nsmb/journal/v16/n2/full/nsmb.1545.html">proposed</a> by Yeo et al. to determine which clusters are significant in a list of genomic regions (like genes or transcripts). This method is typically used in CLIP-Seq data that doesn&#8217;t have a valid control experiment to compare against.</p>
+<p>This method could in principle be used for any other kind of experiment that involves short reads and doesn&#8217;t have a valid control. You can provide your own region file, or otherwise you can provide a <tt class="docutils literal"><span class="pre">--region-magic</span></tt> description with a GTF file (see below )</p>
+</div>
+<div class="section" id="basic-usage">
+<h2>Basic usage<a class="headerlink" href="#basic-usage" title="Permalink to this headline">¶</a></h2>
+<p><tt class="docutils literal"><span class="pre">pyicoclip</span></tt> usage requires the experiment CLIP-Seq file (eland, SAM, BAM, BED formats) and a region file in BED format. Default output format is <em class="xref std std-ref">The bedpk format</em>, our extended but compatible with BED format.</p>
+<p>Example:</p>
+<div class="highlight-python"><pre>pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed</pre>
+</div>
+<p>This command will output 2 files: <tt class="docutils literal"><span class="pre">output.pk</span></tt> and <tt class="docutils literal"><span class="pre">unfiltered_output.pk</span></tt>. In <tt class="docutils literal"><span class="pre">output.pk</span></tt> you will get the significant peaks after applying the method an the significant p-value, in the unfiltered one you will get the unfiltered peaks with 2 or more overlapping reads.  Single reads are omitted from the output.</p>
+</div>
+<div class="section" id="important-flags">
+<h2>Important flags<a class="headerlink" href="#important-flags" title="Permalink to this headline">¶</a></h2>
+<p>This is a description of the most important flags. To see the complete list of flags, type <tt class="docutils literal"><span class="pre">pyicoclip</span> <span class="pre">-h</span></tt> to get the full list.</p>
+<div class="section" id="stranded">
+<h3><tt class="docutils literal"><span class="pre">--stranded</span></tt><a class="headerlink" href="#stranded" title="Permalink to this headline">¶</a></h3>
+<p>You will probably want to use the &#8211;stranded flag, in order to take into consideration reads only overlapping with the strand of the regions of interest (6th column of your BED6 region file):</p>
+<div class="highlight-python"><pre>pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed **``--stranded``**</pre>
+</div>
+</div>
+<div class="section" id="p-value">
+<h3><tt class="docutils literal"><span class="pre">--p-value</span></tt><a class="headerlink" href="#p-value" title="Permalink to this headline">¶</a></h3>
+<p>The threshold to make it to the significant peaks list. Default is 0.01</p>
+</div>
+<div class="section" id="region-magic-and-gtf-file">
+<h3><tt class="docutils literal"><span class="pre">--region-magic</span></tt> and <tt class="docutils literal"><span class="pre">--gtf-file</span></tt><a class="headerlink" href="#region-magic-and-gtf-file" title="Permalink to this headline">¶</a></h3>
+<p>You can automatically generate exploratory region files using the <tt class="docutils literal"><span class="pre">--region-magic</span></tt> and <tt class="docutils literal"><span class="pre">--gtf-file</span></tt> flags.</p>
+<p>For example, explore the regions 500 bases upstream and 1000 downstream of TSS:</p>
+<div class="highlight-python"><pre>pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed --gtf-file myref.gtf --region-magic tss -500 1000</pre>
+</div>
+<p>Check all genes:</p>
+<div class="highlight-python"><pre>pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed --gtf-file myref.gtf --region-magic genebody</pre>
+</div>
+<p>See <a class="reference internal" href="pyicoregion.html#pyicoregion"><em>Pyicoregion</em></a> documentation for more details on how to use <tt class="docutils literal"><span class="pre">--region-magic</span></tt> flag.</p>
+</div>
+</div>
+<div class="section" id="credit">
+<h2>Credit<a class="headerlink" href="#credit" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Developer: Juan González-Vallinas</li>
+<li>Beta Testing: Mireya Plass, Juan González-Vallinas</li>
+<li>Supervision: Eduardo Eyras</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Pyicoclip</a><ul>
+<li><a class="reference internal" href="#introduction">Introduction</a></li>
+<li><a class="reference internal" href="#basic-usage">Basic usage</a></li>
+<li><a class="reference internal" href="#important-flags">Important flags</a><ul>
+<li><a class="reference internal" href="#stranded"><tt class="docutils literal"><span class="pre">--stranded</span></tt></a></li>
+<li><a class="reference internal" href="#p-value"><tt class="docutils literal"><span class="pre">--p-value</span></tt></a></li>
+<li><a class="reference internal" href="#region-magic-and-gtf-file"><tt class="docutils literal"><span class="pre">--region-magic</span></tt> and <tt class="docutils literal"><span class="pre">--gtf-file</span></tt></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#credit">Credit</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pyicoenrich.html"
+                        title="previous chapter">Pyicoenrich</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pyicoregion.html"
+                        title="next chapter">Pyicoregion</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="pyicoregion.html" title="Pyicoregion"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pyicoenrich.html" title="Pyicoenrich"
+             >previous</a> |</li>
+        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Regulatory Genomics Group.
+      Last updated on Jun 21, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

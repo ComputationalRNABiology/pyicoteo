@@ -1,0 +1,178 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pyicotrocol &mdash; pyicoteo 2.0.5 documentation</title>
+    
+    <link rel="stylesheet" href="_static/pyramid.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pyicoteo 2.0.5 documentation" href="index.html" />
+    <link rel="next" title="Pyicoteolib.core" href="pyicoteolib.html" />
+    <link rel="prev" title="Pyicoregion" href="pyicoregion.html" />
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head>
+  <body>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="pyicoteolib.html" title="Pyicoteolib.core"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="pyicoregion.html" title="Pyicoregion"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="pyicotrocol">
+<span id="protocoldocs"></span><h1>Pyicotrocol<a class="headerlink" href="#pyicotrocol" title="Permalink to this headline">¶</a></h1>
+<p>Pyicotrocol offers access to the whole functionality of Pyicoteo, allowing for combination of operations in the different Pyicoteo suite tools.</p>
+<p>It also has the nice advantage in terms of experiment reproducibility, since you don&#8217;t need to save the command you used, what you did stays in the text file.
+Execution
+&#8212;&#8212;&#8212;</p>
+<p>To run a protocol file type:</p>
+<div class="highlight-python"><pre>pyicotrocol my_protocol.ini</pre>
+</div>
+<div class="section" id="syntax">
+<h2>Syntax<a class="headerlink" href="#syntax" title="Permalink to this headline">¶</a></h2>
+<p>Pyicotrocols files are based on the <a class="reference external" href="http://en.wikipedia.org/wiki/INI_file">.ini format</a></p>
+</div>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>This example is equivalent of using pyicoller (To determine significant peaks; recommended for transcription factors)</p>
+<div class="highlight-python"><pre>[Pyicotrocol]
+
+; your files:
+experiment          = my_experiment.bed
+control             = control.bed
+region              = regions_to_be_removed.bed
+
+; format of all files:
+experiment_format   = bed
+control_format      = bed
+region_format       = bed
+
+; half-open?
+open_experiment     = true
+open_control        = true
+open_region         = true
+
+; your result:
+output              = significant_peaks.bedpk
+
+; operations that will be applied:
+operations          = remove_duplicates, remove, extend, normalize, subtract, trim, poisson, filter, split
+
+; flags to specify what the operations should do:
+duplicates=0            ; Number of duplicates that are tolerated
+frag_size=150           ; Estimated fragment size
+correction=0.8          ; Fraction of the genome that is mappable
+trim_proportion=0.1     ; Fraction of the cluster height below which the peak is trimmed
+split_proportion=0.9    ; Fraction of the lower maximum; if the read coverage between two maxima falls below it the peak will be split
+height_limit=100        ; After this value the poisson calculation will not assign lower p-values to the peaks anymore</pre>
+</div>
+</div>
+<div class="section" id="credit">
+<h2>Credit<a class="headerlink" href="#credit" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Developer: Juan González-Vallinas</li>
+<li>Testing: Sonja Althammer, Juan González-Vallinas</li>
+<li>Supervision: Eduardo Eyras</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Pyicotrocol</a><ul>
+<li><a class="reference internal" href="#syntax">Syntax</a></li>
+<li><a class="reference internal" href="#examples">Examples</a></li>
+<li><a class="reference internal" href="#credit">Credit</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pyicoregion.html"
+                        title="previous chapter">Pyicoregion</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="pyicoteolib.html"
+                        title="next chapter">Pyicoteolib.core</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="pyicoteolib.html" title="Pyicoteolib.core"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="pyicoregion.html" title="Pyicoregion"
+             >previous</a> |</li>
+        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Regulatory Genomics Group.
+      Last updated on Jun 21, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

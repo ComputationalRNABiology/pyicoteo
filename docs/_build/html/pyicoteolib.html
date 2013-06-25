@@ -1,0 +1,238 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Pyicoteolib.core &mdash; pyicoteo 2.0.5 documentation</title>
+    
+    <link rel="stylesheet" href="_static/pyramid.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pyicoteo 2.0.5 documentation" href="index.html" />
+    <link rel="prev" title="Pyicotrocol" href="pyicotrocol.html" />
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head>
+  <body>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="pyicotrocol.html" title="Pyicotrocol"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="pyicoteolib-core">
+<span id="libdocs"></span><h1>Pyicoteolib.core<a class="headerlink" href="#pyicoteolib-core" title="Permalink to this headline">¶</a></h1>
+<p>Pyicoteolib is the library and the building blocks of the Pyicoteo suite. The pyicoteolib.core library contains the main holders of data in two main objects: ReadCluster and ReadRegion.</p>
+<div class="section" id="readcluster">
+<h2>ReadCluster<a class="headerlink" href="#readcluster" title="Permalink to this headline">¶</a></h2>
+<p>A ReadCluster object may contain one read or a group of <strong>overlapping</strong> reads. It can read both tag like (bed, sam, bam..) and histogram like (wig, bed_pk...) formats. Instances of the ReadCluster object can be added, compared, subtracted to other readCluster objects with standard python syntax.</p>
+<p>The ReadCluster object is optimized in order to deal with millions of overlaps, and has been tested with multiple different HTS datasets. The optimization consists in 2 main principles:</p>
+<div class="section" id="common-python-operators">
+<h3>Common python operators<a class="headerlink" href="#common-python-operators" title="Permalink to this headline">¶</a></h3>
+<p>All the following standard operators are supported:</p>
+<div class="section" id="adding">
+<h4>Adding<a class="headerlink" href="#adding" title="Permalink to this headline">¶</a></h4>
+<p>Adding combines the signal of 2 different ReadClusters, with nucleotide precision:</p>
+<div class="highlight-python"><pre>from pyicoteolib.core import ReadCluster, PK
+
+cluster1 = ReadCluster(read=PK)
+cluster2 = ReadCluster(read=PK)
+cluster1.read_line('chr1 1 45 9:2.00|41:3.00|50:2.00|45:1.00')
+cluster2.read_line('chr1 1 125 9:4.00|41:3.00|30:2.00|45:1.00')
+result = cluster1 + cluster2
+
+result.write_line()
+
+chr1    1   145 50:6.00|30:4.00|20:3.00|25:2.00|20:1.00 6.0 .   25  550.0</pre>
+</div>
+</div>
+<div class="section" id="subtracting">
+<h4>Subtracting<a class="headerlink" href="#subtracting" title="Permalink to this headline">¶</a></h4>
+<p>Substracts the signal of 2 different ReadClusters, with nucleotide precision:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyicoteolib.core</span> <span class="kn">import</span> <span class="n">ReadCluster</span><span class="p">,</span> <span class="n">SAM</span><span class="p">,</span> <span class="n">PK</span>
+
+<span class="n">cluster1</span> <span class="o">=</span> <span class="n">ReadCluster</span><span class="p">(</span><span class="n">read</span><span class="o">=</span><span class="n">SAM</span><span class="p">)</span>
+<span class="n">cluster2</span> <span class="o">=</span> <span class="n">ReadCluster</span><span class="p">(</span><span class="n">read</span><span class="o">=</span><span class="n">PK</span><span class="p">)</span>
+<span class="n">cluster1</span><span class="o">.</span><span class="n">read_line</span><span class="p">(</span><span class="s">&#39;SL-XAJ_1_FC305HJAAXX:2:21:872:1402  0   chr1    1   50  36M *   0   0   AAAAGGGGGAATAAAAAGTAACCCAAAACTAACTAT    &lt;&lt;&lt;,7&lt;&lt;&lt;&lt;&lt;7&lt;1:71)&lt;+51&lt;+&lt;5(75()1344+2    PG:Z:FC_305HJAAXX_ln_2.dat&#39;</span><span class="p">)</span>
+<span class="n">cluster2</span><span class="o">.</span><span class="n">read_line</span><span class="p">(</span><span class="s">&#39;chr1 1 125 9:4.00|41:3.00|30:2.00|45:1.00&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">cluster2</span> <span class="o">-</span> <span class="n">cluster1</span>
+
+<span class="n">result</span><span class="o">.</span><span class="n">write_line</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="length">
+<h4>Length<a class="headerlink" href="#length" title="Permalink to this headline">¶</a></h4>
+<p>Returns the length of the read cluster:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">c</span> <span class="o">=</span> <span class="n">Cluster</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;chrX&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="mi">10000</span><span class="p">)</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+<span class="mi">10000</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="comparison-operators">
+<h4>Comparison operators (&lt; &gt; == !=)<a class="headerlink" href="#comparison-operators" title="Permalink to this headline">¶</a></h4>
+<p>This indicates which read cluster is before another in a chromosome:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">c1</span> <span class="o">=</span> <span class="n">Cluster</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;chr1&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">c1_copy</span> <span class="o">=</span> <span class="n">Cluster</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;chr1&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">c2</span> <span class="o">=</span> <span class="n">Cluster</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">&quot;chr1&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">50000</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span>
+<span class="n">c1</span> <span class="o">&gt;</span> <span class="n">c2</span>
+<span class="bp">False</span>
+<span class="n">c1</span> <span class="o">==</span> <span class="n">c1_copy</span>
+<span class="bp">True</span>
+</pre></div>
+</div>
+<p>Lets see some usage examples.</p>
+</div>
+</div>
+<div class="section" id="read-a-bed-file-print-the-chromosome-and-the-length-of-each-read">
+<h3>Read a .bed file, print the chromosome and the length of each read<a class="headerlink" href="#read-a-bed-file-print-the-chromosome-and-the-length-of-each-read" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyicoteolib.core</span> <span class="kn">import</span> <span class="n">ReadCluster</span><span class="p">,</span> <span class="n">BED</span>
+
+<span class="n">bed_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;/path/to/myfile.bed&quot;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">bed_file</span><span class="p">:</span>
+    <span class="n">rc</span> <span class="o">=</span> <span class="n">ReacCluster</span><span class="p">(</span><span class="n">read_as</span><span class="o">=</span><span class="n">BED</span><span class="p">)</span>
+    <span class="n">rc</span><span class="o">.</span><span class="n">read_line</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+    <span class="k">print</span> <span class="nb">len</span><span class="p">(</span><span class="n">rc</span><span class="p">),</span> <span class="n">rc</span><span class="o">.</span><span class="n">area</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="read-some-bed-lines-cluster-them-output-a-wiggle-file">
+<h3>Read some .bed lines, cluster them, output a wiggle file<a class="headerlink" href="#read-some-bed-lines-cluster-them-output-a-wiggle-file" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">pyicoteolib.core</span> <span class="kn">import</span> <span class="n">ReadCluster</span>
+
+<span class="n">cluster</span> <span class="o">=</span>  <span class="n">Cluster</span><span class="p">(</span><span class="n">read</span><span class="o">=</span><span class="s">&quot;bed&quot;</span><span class="p">,</span> <span class="n">write</span><span class="o">=</span><span class="s">&quot;bed_wig&quot;</span><span class="p">)</span>
+<span class="n">cluster</span><span class="o">.</span><span class="n">read_line</span><span class="p">(</span><span class="s">&#39;chr1 1 20000 id1 0 +&#39;</span><span class="p">)</span>
+<span class="n">cluster</span><span class="o">.</span><span class="n">read_line</span><span class="p">(</span><span class="s">&#39;chr1 1 20000 id2 0 +&#39;</span><span class="p">)</span>
+<span class="n">cluster</span><span class="o">.</span><span class="n">read_line</span><span class="p">(</span><span class="s">&#39;chr1 1 20000 id3 0 +&#39;</span><span class="p">)</span>
+<span class="n">cluster</span><span class="o">.</span><span class="n">read_line</span><span class="p">(</span><span class="s">&#39;chr1 1001 20000 id4 0 +&#39;</span><span class="p">)</span>
+<span class="n">cluster</span><span class="o">.</span><span class="n">write_line</span><span class="p">()</span>
+</pre></div>
+</div>
+<div class="section" id="readregion">
+<h4>ReadRegion<a class="headerlink" href="#readregion" title="Permalink to this headline">¶</a></h4>
+<p>A ReadRegion object holds a genomic region that may contain ReadClusters</p>
+</div>
+</div>
+</div>
+<div class="section" id="pyicoteolib-utils">
+<h2>pyicoteolib.utils<a class="headerlink" href="#pyicoteolib-utils" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="bam-reader">
+<h2>BAM reader<a class="headerlink" href="#bam-reader" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="credit">
+<h2>Credit<a class="headerlink" href="#credit" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Developers: Juan González-Vallinas, Ferran Lloret</li>
+<li>Unit and beta Testing: Juan González-Vallinas, Ferran Lloret</li>
+<li>Supervision: Eduardo Eyras</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Pyicoteolib.core</a><ul>
+<li><a class="reference internal" href="#readcluster">ReadCluster</a><ul>
+<li><a class="reference internal" href="#common-python-operators">Common python operators</a><ul>
+<li><a class="reference internal" href="#adding">Adding</a></li>
+<li><a class="reference internal" href="#subtracting">Subtracting</a></li>
+<li><a class="reference internal" href="#length">Length</a></li>
+<li><a class="reference internal" href="#comparison-operators">Comparison operators (&lt; &gt; == !=)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#read-a-bed-file-print-the-chromosome-and-the-length-of-each-read">Read a .bed file, print the chromosome and the length of each read</a></li>
+<li><a class="reference internal" href="#read-some-bed-lines-cluster-them-output-a-wiggle-file">Read some .bed lines, cluster them, output a wiggle file</a><ul>
+<li><a class="reference internal" href="#readregion">ReadRegion</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pyicoteolib-utils">pyicoteolib.utils</a></li>
+<li><a class="reference internal" href="#bam-reader">BAM reader</a></li>
+<li><a class="reference internal" href="#credit">Credit</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="pyicotrocol.html"
+                        title="previous chapter">Pyicotrocol</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="pyicotrocol.html" title="Pyicotrocol"
+             >previous</a> |</li>
+        <li><a href="index.html">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Regulatory Genomics Group.
+      Last updated on Jun 21, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

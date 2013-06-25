@@ -1,0 +1,194 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to Pyicoteo &mdash; pyicoteo 2.0.5 documentation</title>
+    
+    <link rel="stylesheet" href="_static/pyramid.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0.5',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="pyicoteo 2.0.5 documentation" href="#" />
+    <link rel="next" title="Getting Started" href="intro.html" />
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Neuton&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<link rel="stylesheet" href="http://fonts.googleapis.com/css?family=Nobile:regular,italic,bold,bolditalic&amp;subset=latin" type="text/css" media="screen" charset="utf-8" />
+<!--[if lte IE 6]>
+<link rel="stylesheet" href="_static/ie6.css" type="text/css" media="screen" charset="utf-8" />
+<![endif]-->
+
+  </head>
+  <body>
+
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="intro.html" title="Getting Started"
+             accesskey="N">next</a> |</li>
+        <li><a href="#">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="welcome-to-pyicoteo">
+<h1>Welcome to Pyicoteo<a class="headerlink" href="#welcome-to-pyicoteo" title="Permalink to this headline">¶</a></h1>
+<p>Pyicoteo* is a suite of tools for the analysis of high-throughput sequencing data. It works with genomic coordinates, it was mainly developed using Solexa/Illumina mapped reads, but in its core it is platform-agnostic. There are currently 6 different tools for the analysis of HTS data: 5 command-line based tools, which are: <a class="reference internal" href="pyicos.html#pyicos"><em>Pyicos</em></a> for genomic coordinates manipulation, <a class="reference internal" href="pyicoller.html#pyicoller"><em>Pyicoller</em></a> for peak calling on punctuated ChIP-Seq, <a class="reference internal" href="pyicoenrich.html#pyicoenrich"><em>Pyicoenrich</em></a> for differential enrichment between two conditions, <a class="reference internal" href="pyicoclip.html#pyicoclip"><em>Pyicoclip</em></a> for calling CLIP-Seq peaks without a control, <a class="reference internal" href="pyicoregion.html#pyicoregion"><em>Pyicoregion</em></a> for generating exploratory regions automatically.</p>
+<p>Pyicoteo suite also includes one <a class="reference internal" href="pyicotrocol.html#protocoldocs"><em>configuration file based</em></a> and a <a class="reference internal" href="pyicoteolib.html#libdocs"><em>python library</em></a> for scripting using HTS data:</p>
+<p>Before start using it, it is highly recommended that you have a look at the <a class="reference internal" href="intro.html#intro"><em>Getting Started</em></a> document:</p>
+<div class="highlight-python"><pre>* Pronounced as in Spanish  "picoteo"_ /pɪkɒtɛɒ/:
+  (n) Appetizer-type foods that accompany drinks before or instead of a meal.</pre>
+</div>
+<div class="section" id="table-of-contents">
+<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Getting Started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#download-install">Download &amp; Install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#check-installation">Check installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#dependencies">Dependencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#the-bedpk-format">The bedpk format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#general-and-important-flags">General and important flags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="intro.html#questions-and-support">Questions and Support</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyicos.html">Pyicos</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#convert">convert</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#remregions">remregions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#remduplicates">remduplicates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#strcorr-strand-correlation">strcorr (Strand Correlation)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#extend">extend</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#subtract">subtract</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#split">split</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#discard">discard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#poisson">poisson</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#filter">filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#push">push</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicos.html#credit">Credit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyicoller.html">Pyicoller</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicoller.html#important-flags">Important flags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoller.html#credit">Credit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyicoenrich.html">Pyicoenrich</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#ma-plot">MA Plot</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#region-exploration">Region exploration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#pseudocounts-flag"><tt class="docutils literal"><span class="pre">--pseudocounts</span></tt> flag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#stranded-flag"><tt class="docutils literal"><span class="pre">--stranded</span></tt> flag</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#replica-or-technical-control-swap">Replica or technical control (swap)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#description-of-the-pyicoenrich-counts-file">Description of the pyicoenrich counts file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#normalization-methods">Normalization methods</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#interesting-regions"><tt class="docutils literal"><span class="pre">--interesting-regions</span></tt></a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoenrich.html#credit">Credit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyicoclip.html">Pyicoclip</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicoclip.html#introduction">Introduction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoclip.html#basic-usage">Basic usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoclip.html#important-flags">Important flags</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoclip.html#credit">Credit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyicoregion.html">Pyicoregion</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicoregion.html#pyicoregion-arguments">Pyicoregion arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoregion.html#credit">Credit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyicotrocol.html">Pyicotrocol</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicotrocol.html#syntax">Syntax</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicotrocol.html#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicotrocol.html#credit">Credit</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyicoteolib.html">Pyicoteolib.core</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyicoteolib.html#readcluster">ReadCluster</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoteolib.html#pyicoteolib-utils">pyicoteolib.utils</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoteolib.html#bam-reader">BAM reader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyicoteolib.html#credit">Credit</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to Pyicoteo</a><ul>
+<li><a class="reference internal" href="#table-of-contents">Table of Contents</a><ul>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Next topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="next chapter">Getting Started</a></p>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="intro.html" title="Getting Started"
+             >next</a> |</li>
+        <li><a href="#">pyicoteo 2.0.5 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Regulatory Genomics Group.
+      Last updated on Jun 21, 2013.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
