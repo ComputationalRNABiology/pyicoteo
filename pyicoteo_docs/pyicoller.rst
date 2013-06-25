@@ -1,3 +1,5 @@
+.. _Pyicoller:
+
 Pyicoller
 =========
 
@@ -7,6 +9,12 @@ This peak caller is a combination of some of Pyicos commands (extend, normalize,
 Example::
 
     pyicoller my_experiment.bed significant_peaks.bedpk -f bed -o --control control.bed --control-format bed --open-control --region regions_to_be_removed.bed --remlabels chrY --correction 0.8 --k-limit 20 --p-value 0.001 -x 130
+
+
+Important flags
+-----------------
+
+This is a description of the most important flags. To see the complete list of flags, type ``pyicoller -h`` to get the full list.
 
 
 Credit

@@ -1,4 +1,6 @@
-pyicoclip
+.. _Pyicoclip:
+
+Pyicoclip
 =========
 
 Introduction
@@ -19,25 +21,25 @@ Example::
 
     pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed 
 
-This command will output 2 files: ``output.pk`` and ``unfiltered_output.pk``. In ``output.pk`` you will get the significant peaks after applying the method an the significant p-value, in the unfiltered one you will get the unfiltered peaks (with 2 or more)
+This command will output 2 files: ``output.pk`` and ``unfiltered_output.pk``. In ``output.pk`` you will get the significant peaks after applying the method an the significant p-value, in the unfiltered one you will get the unfiltered peaks with 2 or more overlapping reads.  Single reads are omitted from the output.
 
 Important flags
 -----------------
 
-This is a description of the most important flags. To see the complete list of flags, type ``pyicoclip -h``. Check also 
+This is a description of the most important flags. To see the complete list of flags, type ``pyicoclip -h`` to get the full list.
+
+``--stranded``
+"""""""""""""""""
+
+You will probably want to use the --stranded flag, in order to take into consideration reads only overlapping with the strand of the regions of interest (6th column of your BED6 region file)::
+
+    pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed **``--stranded``**
 
 
 ``--p-value``
 """""""""""""""
 
-The
-
-``--stranded``
-"""""""""""""""""
-
-You will probably want to use the --stranded flag, in order to take into consideration reads only overlapping with the strand of the regions of interest (6th column of your BED6 region file).
-
-    pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed **``--stranded``**
+The threshold to make it to the significant peaks list. Default is 0.01 
 
 
 ``--region-magic`` and ``--gtf-file``
@@ -53,7 +55,7 @@ Check all genes::
 
     pyicoclip my_experiment.bed output.pk -f bed --region my_regions.bed --gtf-file myref.gtf --region-magic genebody
 
-See :ref:`pyicoregiondocs` for more details on how to use ``--region-magic`` flag.
+See :ref:`Pyicoregion` documentation for more details on how to use ``--region-magic`` flag.
 
 
 Credit

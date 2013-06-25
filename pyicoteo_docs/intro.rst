@@ -79,26 +79,34 @@ bedpk Column definition
 9) p-value: The significance of the cluster calculated by the poisson operation based on peak heights or numbers of reads.
 
 
-Important flags
---------------------
+General and important flags
+------------------------------
+
+Disk usage flags
+^^^^^^^^^^^^^^^^^^
 
 The tools in Pyicoteo Suite follow the principle of minimal memory usage. Because of this, Pyicoteo makes heavy use of disk and temporary files. You should make sure that you have at least double the space of each file in your hard drive before using Pyicoteo. Also, please take into consideration the following flags:
 
---tempdir
-^^^^^^^^^^^^
+``--tempdir``
+^^^^^^^^^^^^^^^
 
 Pyicoteo uses the default temporary directory in the system (in many Unix based system, the content of the variable $TEMPDIR, normally /tmp). You can change the temporary directory with this flag.
 
---keep-temp
-^^^^^^^^^^^^^^
+``--keep-temp``
+^^^^^^^^^^^^^^^^^^^^
 
 Pyicoteo tries to delete all unnecesary temporary files. If you want to keep the files in order to check them reuse them (for example, the sorted files could be useful in combination of the ``--no-sort`` flag) or delete them, use this flag
 
 
---postscript
-^^^^^^^^^^^^^^^
+``--postscript``
+^^^^^^^^^^^^^^^^^^^^^
 
+If you want to get a postscript output on your plots instead of png.
 
+``--showplots``
+^^^^^^^^^^^^^^^^^^^^
+
+To launch matplotlib interactive mode instead of saving the resulting plot. 
 
 
 

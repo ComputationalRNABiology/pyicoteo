@@ -1,3 +1,5 @@
+.. _Pyicoenrich:
+
 Pyicoenrich
 ===========
 
@@ -16,7 +18,7 @@ Pyicoenrich is based on the MA-Plot_.
 
 .. _MA-Plot: http://en.wikipedia.org/wiki/MA_plot
 
-(Figura)
+.. figure: 
 
 
 Region exploration
@@ -28,7 +30,8 @@ In order to decide what regions are to be explored, you have 3 main options:
 
 Generate a file with the ``--region-magic`` flag and GTF file
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-See :ref:`pyicoregiondocs` for examples on how to use ``--region-magic`` flag to automatically explore exons, introns and the whole genome using sliding windows automatically generating your region files from standard GENCODE GTF files. 
+
+See the :ref:`Pyicoregion` documentation for examples on how to use ``--region-magic`` flag to automatically explore exons, introns and the whole genome using sliding windows automatically generating your region files from standard GENCODE GTF files. 
 
 Provide a regions file
 """"""""""""""""""""""""
@@ -56,6 +59,8 @@ As regions with 0 reads in one condition might be especially interesting, Pyicoe
 
 ``--stranded`` flag
 -----------------------
+
+To take into consideration reads that coincide with the strand direction of the regions (6th column in your BED6 file)
 
 
 Replica or technical control (swap)

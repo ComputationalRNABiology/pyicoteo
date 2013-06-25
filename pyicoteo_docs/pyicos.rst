@@ -1,5 +1,7 @@
-pyicos command line operations
-======================================================
+.. _Pyicos:
+
+Pyicos
+========
 
 Pyicos is a command line utility for the conversion and manipulation of genomic coordinates files. It follows a command/sub-command structure
 

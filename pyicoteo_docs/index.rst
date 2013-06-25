@@ -6,16 +6,17 @@
 Welcome to Pyicoteo
 *******************
 
-Pyicoteo* is a suite of tools for the analysis of high-throughput sequencing data. It works with genomic coordinates, it was mainly developed using Solexa/Illumina mapped reads, but it it's core is platform-agnostic. There are currently 6 different tools for the analysis of HTS data: 5 command-line based, one :ref:`configuration file based <protocoldocs>` and a :ref:`python library <libdocs>` for scripting::
+Pyicoteo* is a suite of tools for the analysis of high-throughput sequencing data. It works with genomic coordinates, it was mainly developed using Solexa/Illumina mapped reads, but in its core it is platform-agnostic. There are currently 6 different tools for the analysis of HTS data: 5 command-line based tools, which are: :ref:`Pyicos` for genomic coordinates manipulation, :ref:`Pyicoller` for peak calling on punctuated ChIP-Seq, :ref:`Pyicoenrich` for differential enrichment between two conditions, :ref:`Pyicoclip` for calling CLIP-Seq peaks without a control, :ref:`pyicoregion` for generating exploratory regions automatically.
+
+Pyicoteo suite also includes one :ref:`configuration file based <protocoldocs>` and a :ref:`python library <libdocs>` for scripting using HTS data::
+
+Before start using it, it is highly recommended that you have a look at the :ref:`intro` document::
 
 	* Pronounced as in Spanish  "picoteo"_ /pɪkɒtɛɒ/: 
           (n) Appetizer-type foods that accompany drinks before or instead of a meal.
 
 
-Please start by reading the :ref:`intro` document. 
-
-
-Full Table of Contents
+Table of Contents
 ======================
 
 .. toctree::
@@ -31,9 +32,3 @@ Full Table of Contents
   pyicoteolib
 
 
-Protocol files
-==============
-
-A configuration file based tool that exposes most functionality of the Pyicoteo suite, making it very useful when trying to combine different tools (for example, Pyicos and Pyicoenrich functionality)
-
-Read more about it at 

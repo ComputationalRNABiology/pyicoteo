@@ -1,4 +1,4 @@
-.. _pyicoregiondocs:
+.. _Pyicoregion:
 
 Pyicoregion
 ===========
@@ -59,6 +59,6 @@ Pyicoregion arguments
 Credit
 -------
 
-* Developers: Juan González-Vallinas, Ferran Lloret
+* Developers: Ferran Lloret, Juan González-Vallinas
 * Unit and beta Testing: Juan González-Vallinas, Ferran Lloret
 * Supervision: Eduardo Eyras

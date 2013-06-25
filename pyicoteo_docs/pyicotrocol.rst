@@ -5,8 +5,7 @@ Pyicotrocol
 
 Pyicotrocol offers access to the whole functionality of Pyicoteo, allowing for combination of operations in the different Pyicoteo suite tools.
 
-It also has the nice advantage in terms of experiment reproducibility and being an alternative to running a command. 
-
+It also has the nice advantage in terms of experiment reproducibility, since you don't need to save the command you used, what you did stays in the text file.
 Execution
 ---------
 
@@ -16,7 +15,6 @@ To run a protocol file type::
 
 Syntax
 ------
-
 
 Pyicotrocols files are based on the `.ini format`_
 
