@@ -26,7 +26,7 @@ import ConfigParser
 from turbomix import Turbomix, OperationFailed
 from defaults import *
 
-VERSION = "1.3"
+VERSION = "1.2b"
 __version__ = VERSION
 
 class PicosParser:
@@ -361,7 +361,7 @@ class PicosParser:
                             total_reads_a=TOTAL_READS_A, total_reads_b=TOTAL_READS_B, total_reads_replica=TOTAL_READS_REPLICA, a_trim=A_TRIM, m_trim=M_TRIM, 
                             use_replica=USE_REPLICA, tempdir=TEMPDIR, samtools=USESAMTOOLS, access_sequential=SEQUENTIAL, experiment_label = EXPERIMENT_LABEL, 
                             replica_label = REPLICA_LABEL, title_label = TITLE_LABEL, count_filter = COUNT_FILTER, force_sort=FORCE_SORT, 
-                            push_distance=PUSH_DIST, quant_norm=QUANT_NORM)
+                            push_distance=PUSH_DIST, quant_norm=QUANT_NORM, experiments=None)
         args = parser.parse_args()
         #Add any parameters found in the config file. Override them with anything found in the args later
         if sys.argv[1] == 'protocol':

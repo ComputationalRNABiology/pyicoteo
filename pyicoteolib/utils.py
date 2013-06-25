@@ -196,6 +196,7 @@ class BigSort:
     """
     This class can sort huge files without loading them fully into memory.
     Based on a recipe by Tomasz Bieruta.
+
     """
     def __init__(self, file_format, read_half_open=False, frag_size=0, id=0, logger=True, filter_chunks=True, push_distance=0, buffer_size = 320000, temp_file_size = 8000000):
         self.logger = logger
