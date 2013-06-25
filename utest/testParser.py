@@ -1,7 +1,7 @@
 import sys
 import unittest
 
-from pyicoteolib.parser.utils import set_defaults, init_turbomix, parse_validate_args
+from pyicoteolib.parser.common import set_defaults, init_turbomix, parse_validate_args
 from pyicoteolib.parser import pyicoclip, pyicoenrich, pyicoller, pyicoregion, pyicos
 
 
