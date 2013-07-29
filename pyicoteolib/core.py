@@ -528,10 +528,10 @@ class SamWriter(Writer):
                 for tag in split_tags:
                     tags = cluster.decompose()
                     for tag in tags:
-                        lines = '%s%s'%(lines, sam_blueprint%(tag.name2, samflag, tag.name, tag.start+self.correction, len(tag), tag.sequence, (len(tag)+self.correction)*'I'))
+                        lines = '%s%s'%(lines, sam_blueprint%(tag.name2, samflag, tag.name, tag.start+self.correction, len(tag)+self.correction, tag.sequence, (len(tag)+self.correction)*'I'))
                 return lines
             else:
-                return sam_blueprint%(cluster.name2, samflag, cluster.name, cluster.start+self.correction, len(cluster), cluster.sequence, (len(cluster)+self.correction)*'I')
+                return sam_blueprint%(cluster.name2, samflag, cluster.name, cluster.start+self.correction, len(cluster)+self.correction, cluster.sequence, (len(cluster)+self.correction)*'I')
 
 
 class WigWriter(Writer):

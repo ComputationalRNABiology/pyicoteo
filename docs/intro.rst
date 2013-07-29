@@ -8,12 +8,12 @@ Download & Install
 
 **Download Pyicoteo**  `Latest version`_ from our repository.
 
-.. _`Latest version`: https://bitbucket.org/regulatorygenomicsupf/pyicoteo/downloads
+.. _`Latest version`: https://github.com/RegulatoryGenomicsUPF/pyicoteo/tags
 
 
-You can also download older versions (up to 1.1b) from our `Older Sourceforge repository`_.
+You can also download older versions of Pyicos (up to 1.1b) from our `Old Sourceforge repository`_.
 
-.. _`Older Sourceforge repository`: http://sourceforge.net/projects/pyicos/ 
+.. _`Old Sourceforge repository`: http://sourceforge.net/projects/pyicos/ 
 
 
 The command line tools can be used directly without installation. However, installation is recommended, and necessary if you intend to use the Pyicoteolib. To do so decompress the folder and run the setup.py script with administrator privileges::
@@ -88,6 +88,7 @@ Disk usage flags
 
 The tools in Pyicoteo Suite follow the principle of minimal memory usage. Because of this, Pyicoteo makes heavy use of disk and temporary files. You should make sure that you have at least double the space of each file in your hard drive before using Pyicoteo. Also, please take into consideration the following flags:
 
+
 ``--tempdir``
 ^^^^^^^^^^^^^^^
 
@@ -116,4 +117,4 @@ Questions and Support
 
 If you have any problems or suggestions please join the `Pyicoteo Google Group`_ and ask! 
 
-.. _`Pyicoteo Google Group`: http://groups.google.com/group/pyicos
+.. _`Pyicoteo Google Group`: http://groups.google.com/group/pyicoteo

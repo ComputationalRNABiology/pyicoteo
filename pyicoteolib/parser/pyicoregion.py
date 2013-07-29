@@ -10,6 +10,7 @@ def create_parser():
     output_flags_region = new_subparser()
     output_flags_region.add_argument('-O','--open-output', action='store_true', default=OPEN_OUTPUT, help='Define if the output is half-open or closed notation. [Default closed]')
     output_flags_region.add_argument('-F','--output-format',default="bed", help='Format desired for the output. You can choose between %s. [default BED]'%write_formats)
+    output_flags_region.add_argument('--no-duplicates', default=False, action="store_true", help='Remove duplicated regions (same coordinates) from the output')
     parser = argparse.ArgumentParser(version=VERSION, 
                                      description='Standalone region operations', 
                                      parents=[region_parser, output, output_flags_region, basic_parser, magic_flag]

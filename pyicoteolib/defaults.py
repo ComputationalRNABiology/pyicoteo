@@ -12,7 +12,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-VERSION = "2.0.4"
+VERSION = "2.0.5"
 
 #Formats
 ELAND = 'eland'
@@ -32,7 +32,7 @@ CUSTOM_FORMAT = 'custom'
 CLUSTER_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG, PK)
 WIG_FORMATS = (WIG, VARIABLE_WIG, FIXED_WIG)
 READ_FORMATS = (ELAND, BED, WIG, PK, SAM, BAM, COUNTS,  CUSTOM_FORMAT) #formats that we actually can read as
-WRITE_FORMATS = (ELAND, BED, WIG, VARIABLE_WIG, PK) #formats we can actually write as
+WRITE_FORMATS = (ELAND, BED, WIG, SAM, VARIABLE_WIG, PK) #formats we can actually write as
 
 REGION_FORMATS = (BED, BED12)
 #Enrichment header
@@ -120,7 +120,7 @@ USE_REPLICA=False
 SEQUENTIAL=False
 EXPERIMENT_LABEL = 'Experiment'
 REPLICA_LABEL = 'Replica'
-TITLE_LABEL = ''  
+TITLE_LABEL = ''
 COUNT_FILTER=0
 OVERLAP=0.5
 
