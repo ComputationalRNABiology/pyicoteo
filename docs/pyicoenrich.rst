@@ -211,39 +211,45 @@ This method is suitable when your samples have too much variability. As eloquent
 
 .. _countsformat:
 
-Counts file 
-----------------
+Input Counts file
+-------------------
 
-Column description of enrichment result where each line describes a region::
+You can provide pyicoenrich a count file instead of read files. The required file is a text file with the following columns::
 
-    TIP: If you want to provide pyicoenrich with your own generated counts file, you only need to provide up to column 6)
+    1) name                    =  region label (chromosome, gene name, transcript...) 
+    2) start                   =  region start coordinates
+    3) end                     =  region end coordinates
+    4) name2                   =  alternative label 
+    5) score                   =  Reserved by a "." as it is used by the UCSC browser for coloring. 
+    6) strand                  =  region strand. Options are ``+`` for positive strand, ``-`` for negative strand and ``.`` for none
+    7) signal_a                =  Counts in experiment A (normalized)
+    8) signal_b                =  Counts in experiment B (normalized)
+    9) signal_prime_1          =  Counts in experiment A (exactly the same as signal_a) or random background 1 (normalized) 
+    10) signal_prime_2         =  Counts in experiment replica A or random background 2 (normalized if used) 
 
-1) name                    =  chromosome of region
-2) start                   =  region start
-3) end                     =  region end
-4) name2                   =  alternative label for the region, useful to put the gene name on it
-5) score                   =  Reserved by a "." as it is used by the UCSC browser for coloring. 
-6) strand                  =  region strand
-7) signal_a                =  Counts in experiment A (normalized if used)
-8) signal_b                =  Counts in experiment B (normalized if used)
-9) signal_prime_1          =  Counts in experiment A (exactly the same as signal_a) or random background 1 (normalized if used) 
-10) signal_prime_2         =  Counts in experiment replica A or random background 2 (normalized if used) 
-11) A                      =  (log2(signal_a)+log2(signal_b))/2
-12) M                      =  log2(signal_a/signal_b)
-13) total_reads_a          =  total number of reads in sample a
-14) total_reads_b          =  total number of reads in sample b
-15) num_tags_a             =  number of reads in sample a overlapping the region
-16) num_tags_b             =  number of reads in sample b overlapping the region
-17) A_prime                =  (log2(signal_prime_1)+log2(signal_prime_2))/2    
-18) M_prime                =  log2(signal_prime_1/signal_prime_2)   
-19) total_reads_a          =  total number of reads in sample a
-20) total_reads_b          =  total number of reads in sample b
-21) total_reads_prime_1    =  total number of reads in sample prime 1 
-22) total_reads_prime_2    =  total number of reads in sample prime 2
-23) A_median               =   median of A values in window
-24) mean                   =   mean of M_prime values in window
-25) sd                     =   standard deviation of M_prime values in window
-26) zscore                 =  score for the significance of the difference of enrichment between condition a and b compared to prime 1  and prime 2 
+Output Counts file 
+---------------------
+
+The output of pyicoenrich will look as follows. Column description of enrichment result where each line describes a region::
+
+    For columns 1-10, see above. 
+
+    11) A                      =  (log2(signal_a)+log2(signal_b))/2
+    12) M                      =  log2(signal_a/signal_b)
+    13) total_reads_a          =  total number of reads in sample a
+    14) total_reads_b          =  total number of reads in sample b
+    15) num_tags_a             =  number of reads in sample a overlapping the region
+    16) num_tags_b             =  number of reads in sample b overlapping the region
+    17) A_prime                =  (log2(signal_prime_1)+log2(signal_prime_2))/2    
+    18) M_prime                =  log2(signal_prime_1/signal_prime_2)   
+    19) total_reads_a          =  total number of reads in sample a
+    20) total_reads_b          =  total number of reads in sample b
+    21) total_reads_prime_1    =  total number of reads in sample prime 1 
+    22) total_reads_prime_2    =  total number of reads in sample prime 2
+    23) A_median               =   median of A values in window
+    24) mean                   =   mean of M_prime values in window
+    25) sd                     =   standard deviation of M_prime values in window
+    26) zscore                 =  score for the significance of the difference of enrichment between condition a and b compared to prime 1  and prime 2 
 
 
 Credit
