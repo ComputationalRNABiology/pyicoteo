@@ -626,6 +626,8 @@ def enrichment(self):
         quant_counts.flush()
         out_path = _calculate_MA(self, quant_counts.name, True, 1, 1, True) #recalculate with the new factor, using the counts again
 
+        self._manage_temp_file(quant_counts.name)
+
     self.logger.info("%s regions analyzed."%self.regions_analyzed_count)
     if not NOWRITE in self.operations:
         self.logger.info("Enrichment result saved to %s"%self.current_output_path)
