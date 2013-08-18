@@ -64,7 +64,7 @@ Returns the length of the read cluster::
 Comparison operators (< > == !=)
 """""""""""""""""""""""""""""""""""""
 
-This indicates which read cluster is before another in a chromosome::
+This indicates which read cluster is before another in a coordinate system::
 
     c1 = Cluster(name="chr1", start=100, end=1000)
     c1_copy = Cluster(name="chr1", start=100, end=1000)
@@ -77,8 +77,8 @@ This indicates which read cluster is before another in a chromosome::
 
 Lets see some usage examples.
 
-Read a .bed file, print the chromosome and the length of each read
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Read a .bed file, print the length andd the area of each cluster of overlapping reads
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ::
 
     from pyicoteolib.core import ReadCluster, BED
@@ -193,8 +193,6 @@ Trim the borders of an histogram given a theshold. The ratio parameter indicates
     chr1    121 140 4.00
     """        
 
-
-
 ``split(ratio=0.9, absolute=0)``
 """"""""""""""""""""""""""""""""""""""
 
@@ -268,6 +266,8 @@ Where t is a ratio between 0 and 1. By default :math:`t=0.05`. The cluster will 
     """
 
     #Second peak. Note how the extremes of the peak are conserved.
+
+    """
     chrX    85  89  2.00
     chrX    90  99  4.00
     chrX    100 109 5.00
@@ -276,12 +276,15 @@ Where t is a ratio between 0 and 1. By default :math:`t=0.05`. The cluster will 
     chrX    130 139 5.00
     chrX    140 149 3.00
     chrX    150 159 1.00
-
+    """
+    
 is_artifact()
 """"""""""""""
 
 Returns True if the read histogram looks like a punctuated ChIP-Seq artifact, returns False otherwise.
 A ReadCluster is considered artifactual if it is shorter than 100 nucleotides or the maximum height takes more than is more than 30% of the cluster::
+
+    from pyicoteolib.core import ReadCluster
 
     art = ReadCluster(read="bed")
     art.read_line("chr1 1 200 repeat 0 +")
@@ -295,7 +298,22 @@ A ReadCluster is considered artifactual if it is shorter than 100 nucleotides or
 
 is_empty()
 """""""""""
-Returns True if the ReadCluster contains no reads, returns False otherwise.
+
+Returns True if the ReadCluster contains no reads, returns False otherwise::
+
+
+    from pyicoteolib.core import ReadCluster
+
+    c = ReadCluster(read="bed")
+    c.is_empty()
+
+    True
+
+    c.read_line("gene1  10000 120000 ")
+
+    c.is_empty()
+
+    False
 
 ReadRegion
 -------------
@@ -327,22 +345,35 @@ Important functions of the instances::
 SortedFileCountReader
 ------------------------
 
-Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position, and retrieves the *counts* (number of reads) that overlap with the region specified. Because this class doesn't store the reads, but only counts them, it doesn't have memory problems when encountering huge clusters of reads.  
+Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position, and retrieves the *counts* (number of reads) that overlap with the region specified. Because this class doesn't store the reads, but only counts them, it doesn't have memory problems when encountering huge clusters of reads.
+
 
 BigSort
 -----------
 
 This class can sort huge files without loading them fully into memory. It divides the files smaller files, sorts them and then merges them. 
 
-
 Important functions::
 
     def __init__(self, file_format, read_half_open=False, frag_size=0, id=0, logger=True, filter_chunks=True, push_distance=0, buffer_size = 320000, temp_file_size = 8000000):
-        """Sorting buffer and file size is configurable through the ``buffer_size`` and ``temp_file_size`` parameters respectively. This class can also preprocess the reads, applying it extension and displacement (push) conversions while sorting, optimizing speed. The sorting format defines how the sorting will be performed."""
-
+        """
+        Constructor. Sorting buffer and file size is configurable through the ``buffer_size`` and ``temp_file_size`` parameters respectively. For optimization reason, this class can also preprocess the reads, applying extend or displacement (push) of reads while sorting. The sorting format defines how the sorting will be performed.
+        """
 
     def sort(self, input, output=None, key=None, tempdirs=[]):    
-        """key parameter defines the lambda function for sorting. A list of temporary directories can be provided for the sorting algorithm to use through the tempdirs parameter."""
+        """
+        Key parameter defines the lambda function for sorting. A list of temporary directories can be provided for the sorting algorithm to use through the tempdirs parameter.
+        """
+
+
+Example of sorting a huge SAM file::
+
+        from pyicoteolib.utils import BigSort
+    
+        unsorted_file = open("/path/to/file/unsorted.sam")
+        #we want to sort and extend the reads 1000 bp in strand direction at the same time
+        sorter = utils.BigSort("sam", False, frag_size=0, 'fisort%s'%temp_name, logger=self.logger)
+        sorted_file = sorter.sort(old_path, None, utils.sorting_lambda(file_format))
 
 
 Credit
