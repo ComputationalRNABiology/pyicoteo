@@ -83,6 +83,14 @@ bedpk Column definition
 General and important flags
 ------------------------------
 
+-f or --input-format
+^^^^^^^^^^^^^^^^^^^^^^^
+Format desired for the output. You can choose between eland, bed, bed_wig, bed_pk, sam, counts and custom. Depending of the tool used, so
+
+-F or --output-format
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+
 Disk usage flags
 ^^^^^^^^^^^^^^^^^^
 
@@ -90,23 +98,23 @@ The tools in Pyicoteo Suite follow the principle of minimal memory usage. Becaus
 
 
 ``--tempdir``
-^^^^^^^^^^^^^^^
+""""""""""""""""""
 
 Pyicoteo uses the default temporary directory in the system (in many Unix based system, the content of the variable $TEMPDIR, normally /tmp). You can change the temporary directory with this flag.
 
 ``--keep-temp``
-^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""
 
 Pyicoteo tries to delete all unnecesary temporary files. If you want to keep the files in order to check them reuse them (for example, the sorted files could be useful in combination of the ``--no-sort`` flag) or delete them, use this flag
 
 
 ``--postscript``
-^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""
 
 If you want to get a postscript output on your plots instead of png.
 
 ``--showplots``
-^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""
 
 To launch matplotlib interactive mode instead of saving the resulting plot. 
 

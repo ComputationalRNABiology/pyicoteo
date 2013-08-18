@@ -849,7 +849,7 @@ class ReadCluster(AbstractCore):
             try:
                 self._flush_tag_cache()
                 if self.num_levels() > 1:
-                    self.logger.error('Complex wig or pk clusters extension is not supported. Convert your files to a "tag" format (bed or sam).')
+                    self.logger.error('Extension of clustered reads is not supported.')
                     raise InvalidLine
 
                 self.sequence = None #deleting the sequence because the extension makes the sequence invalid (and incidentally screws up the counting of the length in the SAM format too)
@@ -896,20 +896,18 @@ class ReadCluster(AbstractCore):
                 #print 'Estoy atascado', self.start, self.end, self._levels
                 pass
 
-
-
     def _subtrim(self, threshold, end, left):
         while self.num_levels() > 0:
             if self.get_level_height(end) < threshold:
                 if left:
-                    self.start+= self.get_level_length(end)
+                    self.start += self.get_level_length(end)
                 else:
                     self.end -= self.get_level_length(end)
                 self.delete_level(end)
             else:
                 break
     
-    def trim(self, percentage=0.3, absolute=0):
+    def trim(self, ratio=0.3, absolute=0):
         """Trims the cluster to a given threshold"""
         if absolute > 0:
             threshold = absolute
@@ -919,7 +917,7 @@ class ReadCluster(AbstractCore):
         self._subtrim(threshold, 0, True) #trim the left side of the cluster
         self._subtrim(threshold, -1, False) #trim the right side of the cluster
 
-    def split(self, percentage=0.9, absolute=0):
+    def split(self, ratio=0.9, absolute=0):
         """
         Scans each cluster position from start to end and looks for local maxima x and local minima y.
         Given two consecutive local maxima x_{i} and x_{i+1} we define the smallest of them as x_{min}.
@@ -981,18 +979,23 @@ class ReadCluster(AbstractCore):
                     left_len = right_len
                     if length%2 == 0: # it's even
                         left_len-=1
+
                     if left_len:
                         new_cluster.append_level(left_len, height)
+
                     self.__subsplit(new_cluster, clusters, nucleotides, left_len+1)
+
                     if right_len:
                         new_cluster.append_level(right_len, height)
                 else:
                     new_cluster.append_level(length, height) # add significant parts to the profile
+
                 nucleotides+=length
                 level_number+=1
 
             if not new_cluster.is_empty():
                self.__subsplit(new_cluster, clusters, nucleotides, length)
+
             return clusters
         else:
             return [self]
@@ -1041,6 +1044,7 @@ class ReadCluster(AbstractCore):
         self._flush_tag_cache()
         if len(self) < 100:
             return True
+            
         h = self.max_height()
         max_len = 0.
         for length, height in self:

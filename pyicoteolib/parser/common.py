@@ -258,7 +258,7 @@ optional_output.add_argument('--output', help='The output file or directory')
 
 output_flags = new_subparser()
 output_flags.add_argument('-O','--open-output', action='store_true', default=OPEN_OUTPUT, help='Define if the output is half-open or closed notation. [Default closed]')
-output_flags.add_argument('-F','--output-format',default=OUTPUT_FORMAT, help='Format desired for the output. You can choose between %s. WARNING, for some operations, some outputs are not valid. See operation help for more info. [default pk]'%write_formats)
+output_flags.add_argument('-F','--output-format',default=OUTPUT_FORMAT, help='Output format. Valid formats are %s.'%str(WRITE_FORMATS))
 blacklist_help = 'Reads a bed file with coordinates that you want to exclude from the analysis. Useful for discarding "noisy" probable artifactual regions like centromeres and repeat regions. [Default %(default)s]'
 blacklist = new_subparser()
 blacklist.add_argument('blacklist', default=BLACKLIST, help=blacklist_help)
