@@ -303,13 +303,13 @@ ReadRegion
 A ReadRegion object holds a genomic region that may contain ReadClusters. 
 
 
-pyicoteolib.utils
-------------------
+Pyicoteolib.utils
+=====================
 
 The utils modules contains several file manipulation classes optimized for minimal working memory usage while working with huge sequential text files.  
 
 SortedFileReader
-^^^^^^^^^^^^^^^^^^^^^^
+------------------
 
 Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position, and yields the clusters that overlap with the region specified. The cursor will be left behind the position of the last region fed to the SortedFileReader.
 
@@ -325,12 +325,12 @@ Important functions of the instances::
         """Returns clusters of reads overlapping with the given region. Sufficient overlap between reads and regions is defined by the overlap parameter."""
 
 SortedFileCountReader
-^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------
 
 Holds a cursor and a file path. Given a start and an end, it iterates through the file starting on the cursor position, and retrieves the *counts* (number of reads) that overlap with the region specified. Because this class doesn't store the reads, but only counts them, it doesn't have memory problems when encountering huge clusters of reads.  
 
 BigSort
-^^^^^^^^^^^^
+-----------
 
 This class can sort huge files without loading them fully into memory. It divides the files smaller files, sorts them and then merges them. 
 
@@ -338,11 +338,11 @@ This class can sort huge files without loading them fully into memory. It divide
 Important functions::
 
     def __init__(self, file_format, read_half_open=False, frag_size=0, id=0, logger=True, filter_chunks=True, push_distance=0, buffer_size = 320000, temp_file_size = 8000000):
-        "Sorting buffer and file size is configurable through the ``buffer_size`` and ``temp_file_size`` parameters respectively. This class can also preprocess the reads, applying it extension and displacement (push) conversions while sorting, optimizing speed. The sorting format defines how the sorting will be performed.""
+        """Sorting buffer and file size is configurable through the ``buffer_size`` and ``temp_file_size`` parameters respectively. This class can also preprocess the reads, applying it extension and displacement (push) conversions while sorting, optimizing speed. The sorting format defines how the sorting will be performed."""
 
 
     def sort(self, input, output=None, key=None, tempdirs=[]):    
-
+        """key parameter defines the lambda function for sorting. A list of temporary directories can be provided for the sorting algorithm to use through the tempdirs parameter."""
 
 
 Credit
