@@ -190,7 +190,7 @@ def read_gff_file(gff_path, transcript_type=["protein_coding"], attr_checks=None
         if logger: logger.warning('GTF file sort skipped. Results might be wrong.')
         sorted_file = open(gff_path, 'r')
     else:
-        if logger: logger.info('Sorting file...')
+        if logger: logger.info('Sorting GTF file...')
         output_path = None
         sorter = BigSort(file_format=None, id='mergeexonid', logger=False, filter_chunks=False)
         sorted_file = sorter.sort(gff_path,
@@ -198,7 +198,7 @@ def read_gff_file(gff_path, transcript_type=["protein_coding"], attr_checks=None
                                   lambda x:(x.split()[0], int(x.split()[3]), -int(x.split()[4]), feature_cmp(x.split()[2])),
                                   tempdirs=['/tmp']) 
         # sorted by seqname, start, -end, feature
-        if logger: logger.info('File sorted')
+        if logger: logger.info('GTF file sorted')
 
     current_genes = []
     #current_genes = deque() # use queue instead of list?
@@ -303,9 +303,6 @@ def read_gff_file(gff_path, transcript_type=["protein_coding"], attr_checks=None
     # delete temporary (sorted) file
     #print "SORTED_FILE: " + sorted_file.name
     os.remove(os.path.abspath(sorted_file.name))
-
-
-
 
 
 def get_exons(gff_path, remove_duplicates=True, min_length=0, no_sort=False,  position=None, logger=None):
@@ -529,13 +526,14 @@ def gene_slide(gff_path, win_size, win_step, win_type, chr_lengths={}, no_sort=F
 
 
 class RegionWriter():
-    def __init__(self, gff_path, region_file, params, write_as=BED, no_sort=False, logger=None, galaxy_workarounds=False):
+    def __init__(self, gff_path, region_file, params, write_as=BED, no_sort=False, logger=None, galaxy_workarounds=False, debug=False):
         self.gff_path = gff_path
         self.region_file = region_file
         self.params = params
         self.write_as = write_as
         self.no_sort = no_sort
         self.logger = logger
+        self.debug = debug
         self.galaxy_workarounds = galaxy_workarounds
         #self.write_regions()
 
@@ -604,6 +602,8 @@ class RegionWriter():
             self.region_file.flush()
 
         except Exception as exc:
+            if self.debug:
+                raise
             if self.logger:
                 self.logger.error(type(exc))
                 self.logger.error(exc.__str__())
@@ -616,7 +616,6 @@ class RegionWriter():
                 self.logger.info("Using default chromlen file (hg19)")
                 chrlenpath = "%s/chromlen/"%os.path.dirname(os.path.abspath(__file__))
                 path = chrlenpath + "/hg19"
-
             else:
                 return length_dict
 

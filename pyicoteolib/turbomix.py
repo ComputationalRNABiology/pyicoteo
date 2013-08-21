@@ -16,7 +16,6 @@ from __future__ import with_statement
 import os.path
 import sys
 import os
-
 import logging
 import math
 import random
@@ -401,7 +400,6 @@ class Turbomix:
                 self.control_format = SAM
 
 
-
     def decide_sort(self, experiment_path, control_path=None):
         """Decide if the files need to be sorted or not."""
         #FIXME refractor this, copy pasted code (warning, its not as easy as it seems)
@@ -476,7 +474,6 @@ class Turbomix:
             self.current_output_path = output_path
             self.cluster.clear()
             self.cluster_aux.clear()
-
             self.start_operation_message()
             self.decide_sort(experiment_path, control_path)
             self.estimate_frag_size = self.do_poisson and not self.frag_size
@@ -905,7 +902,6 @@ class Turbomix:
             with warnings.catch_warnings(): #To make the RuntimeWarning go away
                 warnings.simplefilter("ignore")
 
-
             if width and height:
                  savefig(figure_path, bbox_inches="tight", width=width, height=height,  pad_inches=0.7)
             else:
@@ -989,7 +985,6 @@ class Turbomix:
                         positive_cluster = positive_cluster_cache.pop() 
                     else:
                         break
-
         # Use the results
         data = []
         max_delta = 0

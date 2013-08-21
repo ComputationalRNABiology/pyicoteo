@@ -29,6 +29,15 @@ from bam import BamReader, BamFetcher, BamFetcherSamtools
 class OperationFailed(Exception):
     pass                 
 
+def manage_temp_file(path, keep_temp, logger):
+    """A temporary file that is no longer needed is given, and depending on the value of self.keep_temp its removed or kept"""
+    if keep_temp:
+        logger.info("Temp file kept at: %s (remember cleaning them!)"%path)
+    else:
+        os.remove(path)
+        logger.info('Temporary file %s removed'%path)
+
+
 def sorting_lambda(format):
     if format == ELAND:
         return lambda x:(x.split()[6], int(x.split()[7]), len(x.split()[1]))
@@ -493,6 +502,7 @@ class SortedFileCountReader:
         # get intersections
         while self.current_tag.start <= region.end and self.current_tag.name == region.name:
             if self.current_tag.overlap(region) >= overlap:
+            
                 if not region.strand or region.strand == self.current_tag.strand:
                     counts += 1
 
