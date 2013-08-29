@@ -366,17 +366,18 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
             else:
                 self.logger.debug("Reading tags for %s ..."%region_of_interest)
                 if self.experiment_format == BAM:
-                    tags_a = len(file_a_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON))
-                    tags_b = len(file_b_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON))
+                    print self.overlap
+                    tags_a = len(file_a_reader.get_overlaping_clusters(region_of_interest, overlap=self.overlap))
+                    tags_b = len(file_b_reader.get_overlaping_clusters(region_of_interest, overlap=self.overlap))
                 else:
-                    tags_a = file_a_reader.get_overlaping_counts(region_of_interest, overlap=EPSILON)
-                    tags_b = file_b_reader.get_overlaping_counts(region_of_interest, overlap=EPSILON)
+                    tags_a = file_a_reader.get_overlaping_counts(region_of_interest, overlap=self.overlap)
+                    tags_b = file_b_reader.get_overlaping_counts(region_of_interest, overlap=self.overlap)
 
                 if self.use_replica:            
                     if self.experiment_format == BAM:
-                        replica_tags = len(replica_reader.get_overlaping_clusters(region_of_interest, overlap=EPSILON))
+                        replica_tags = len(replica_reader.get_overlaping_clusters(region_of_interest, overlap=self.overlap))
                     else:
-                        replica_tags = replica_reader.get_overlaping_counts(region_of_interest, overlap=EPSILON)
+                        replica_tags = replica_reader.get_overlaping_counts(region_of_interest, overlap=self.overlap)
 
                 self.logger.debug("... done. tags_a: %s tags_b: %s"%(tags_a, tags_b))
 
@@ -458,7 +459,6 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
     else:
         out_file.flush()
         out_file.close()
-
         # Outputting to HTML (if specified)
         if self.html_output is not None:
             self.logger.info("Generating HTML")
@@ -517,8 +517,6 @@ def _calculate_total_lengths(self):
                         self.total_reads_replica += float(enrich["signal_prime_2"])
                 except ValueError:
                     self.logger.debug("(Counting) skip header...")
-
-
     else:
         self.logger.info("... counting number of lines in files...")
         if not self.total_reads_a:
@@ -575,7 +573,6 @@ def enrichment(self):
     else:
         ma_path = self.sorted_region_path
 
-
     out_path = _calculate_MA(self, ma_path, bool(self.counts_file), 1, 1, file_a_reader, file_b_reader, replica_reader)
     self.already_norm = True
     self.logger.debug("Already normalized: %s"%self.already_norm)
@@ -596,7 +593,6 @@ def enrichment(self):
         out_path = _calculate_MA(self, old_output, True, tmm_factor, replica_tmm_factor, True) #recalculate with the new factor, using the counts again
 
     if self.quant_norm:
-
         self.logger.info("Full quantile normalization...")
         signal_a = []
         signal_prime_1 = []
@@ -795,7 +791,6 @@ def __sub_zscore(sdfold, entry, point):
     entry["zscore"] = str(get_zscore(float(entry["M"]), float(entry["mean"]), sdfold*float(entry["sd"])))
 
 
-
 def check_replica(self):
     #discard everything below the flag
     new_experiment = []
@@ -811,7 +806,6 @@ def check_replica(self):
     #print self.replica_values
     self.experiment_values = new_experiment
     self.replica_values = new_replica
-
     try:
         if self.postscript:
             import matplotlib

@@ -116,7 +116,7 @@ def init_turbomix(args, parser_name=PARSER_NAME):
                         args.use_replica, args.tempdir, args.samtools, args.access_sequential, args.experiment_label, args.replica_label, args.title_label, 
                         args.count_filter, args.force_sort, args.push_distance, args.quant_norm, parser_name, args.region_magic, args.gff_file, 
                         args.interesting_regions, args.disable_significant_color, args.f_custom_in, args.custom_in_sep, args.f_custom_out, 
-                        args.custom_out_sep, args.galaxy_workarounds, args.html_output)
+                        args.custom_out_sep, args.galaxy_workarounds, args.html_output, args.overlap)
 
     validate_operations(args, turbomix)
     return turbomix
@@ -140,7 +140,7 @@ def set_defaults(parser):
                         push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name=PARSER_NAME,
                         region_magic=REGION_MAGIC, gff_file=GFF_FILE, interesting_regions=INTERESTING_REGIONS, disable_significant_color=DISABLE_SIGNIFICANT,
                         f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP, galaxy_workarounds=GALAXY_WORKAROUNDS, 
-                        html_output=HTML_OUTPUT, experiments=None, no_duplicates=False)
+                        html_output=HTML_OUTPUT, experiments=None, no_duplicates=False, OVERLAP=EPSILON)
 
 
 def parse_validate_args(parser, test_args=None): #test_args for unit testing
@@ -376,6 +376,9 @@ optional_gtf = new_subparser()
 optional_gtf.add_argument('--gff-file', help='The GFF file from which to extract the genomic regions, in combination with --region-magic flag')
 magic_flag = new_subparser()
 magic_flag.add_argument('--region-magic', nargs='+', help="Desired features to filter (exons, introns, sliding window for inter-/intragenic zones, tss)")
+
+overlap_flag = new_subparser()
+overlap_flag.add_argument('--overlap', type=float, default=EPSILON, help="Minimum overlap between a read and a region to be considered 'inside' it [default is EPSILON, the smallest number closest to 0]")
 
 
 

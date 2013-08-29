@@ -16,8 +16,6 @@ def create_parser():
     enrichment_flags.add_argument('--n-norm', action='store_true', default=N_NORM, help="Divide the read counts by the total number of reads (units of million reads)")
     enrichment_flags.add_argument('--len-norm', action='store_true', default=LEN_NORM, help="Divide the read counts by region (gene, transcript...) length (reads per kilobase units)")
     
-    #enrichment_flags.add_argument('--overlap', type=float, default=OVERLAP, help="Average overlap with the region for a read to be considered 'inside' it [default %(default)s]")
-
     #enrichment_flags.add_argument('--sequential', default=SEQUENTIAL, action='store_true', help="Iterate through the files in sequential order, instead of random access (for BAM reading). This is faster than random if you are using a lot of regions that overlap with each other") #TODO This flag doesn't work because if we order chr1 chr2 every file, instead of alphabetical, the SortedClusterReader classes will fail when changing chromosome, since the ALGORITHM depends on a sorted file
 
     enrichment_flags.add_argument('--region-magic', nargs='+', help="Region magic")
@@ -43,7 +41,7 @@ def create_parser():
                                      description='An enrichment test based on the MA plots using mapped reads files. Pyicoenrich output will consist in a results table and a MA plot (optional, but matplotlib required >=0.9.7). The fields of this table are as follows: %s'%(" | ".join(enrichment_keys)), 
                                      parents=[exp_or_count, experiment_flags, basic_parser, output_flags, optional_replica, optional_region, 
                                               region_format, output, enrichment_flags, tmm_flag, quant_flag, total_reads_flags, 
-                                              pseudocount, zscore, optional_push, optional_frag_size, stranded_flag]
+                                              pseudocount, zscore, optional_push, optional_frag_size, stranded_flag, overlap_flag]
                                      )
     #-output
     return parser

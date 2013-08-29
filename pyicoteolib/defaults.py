@@ -12,7 +12,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-VERSION = "2.0.5"
+VERSION = "2.1.1"
 
 #Formats
 ELAND = 'eland'
@@ -160,7 +160,6 @@ REGION_SLIDE_INTER = 'inter'
 REGION_SLIDE_INTRA = 'intra'
 REGION_TSS = 'tss'
 REGION_GENEBODY = 'genebody'
-
 
 REGION_MAGIC = []
 GFF_FILE = ''
