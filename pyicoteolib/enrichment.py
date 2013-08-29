@@ -16,7 +16,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys, os
 import math
 import random
-from tempfile import gettempdir
 
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 from defaults import *
@@ -36,17 +35,18 @@ except:
 Differential expression and MA plot visualization module.
 """
 def _region_from_dual(self, line):
-        try:
-            self.cluster_aux.clear()
-            self.cluster_aux.read_line(line)
-            strand = None
-            if self.stranded_analysis:
-                strand = self.cluster_aux.strand
-            ret = Region(self.cluster_aux.name, self.cluster_aux.start, self.cluster_aux.end, name2=self.cluster_aux.name2, strand=strand)
-            self.cluster_aux.clear()
-            return ret                
-        except ValueError:
-            pass #discarding header
+    try:
+        self.cluster_aux.clear()
+        self.cluster_aux.read_line(line)
+        strand = None
+        if self.stranded_analysis:
+            strand = self.cluster_aux.strand
+        ret = Region(self.cluster_aux.name, self.cluster_aux.start, self.cluster_aux.end, name2=self.cluster_aux.name2, strand=strand)
+        self.cluster_aux.clear()
+        return ret     
+
+    except ValueError:
+        pass #discarding header
 
 def __calc_reg_write(self, region_file, count, calculated_region):
     if count > self.region_mintags:
@@ -153,7 +153,6 @@ def get_zscore(x, mean, sd):
         return float(x-mean)/sd
     else:
         return 0 #This points are weird anyway 
-    
 
 
 def read_interesting_regions(self, file_path):
@@ -289,8 +288,6 @@ def plot_enrichment(self, file_path):
                 subplot(212, axisbg="lightyellow")
                 axis([smallest_A*margin, biggest_A*margin, -biggest_M*margin, biggest_M*margin])
                 plot(A, M, 'k.', label=label_main)
-
-
                 if self.disable_significant_color:
                     significant_marker = 'ko'
                 else:
@@ -299,7 +296,6 @@ def plot_enrichment(self, file_path):
                 plot(A_significant, M_significant, significant_marker, label="%s (significant)"%label_main)
                 plot(A_medians, points, 'r--', label="Z-score (%s)"%self.zscore)            
                 plot(A_medians, minus_points, 'r--')
-
                 if self.interesting_regions:
                     interesting_label = label_main + ' (interesting)'
                     plot(interesting_A, interesting_M, 'H', label=interesting_label, color='#00EE00') # plotting "interesting" regions
@@ -322,11 +318,14 @@ def __matplotlibwarn(self):
     #FIXME move to utils.py or plotting module
     self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')    
 
+
 def __calc_M(signal_a, signal_b):
     return math.log(float(signal_a)/float(signal_b), 2)
 
+
 def __calc_A(signal_a, signal_b):
     return (math.log(float(signal_a), 2)+math.log(float(signal_b), 2))/2    
+
    
 def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1, file_a_reader=None, file_b_reader=None, replica_reader=None):
     tags_a = []
@@ -451,7 +450,6 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
                 if NOWRITE not in self.operations:
                     out_file.write("%s\n"%("\t".join([region_of_interest.write().rstrip("\n"), str(signal_a), str(signal_b), str(signal_background_1), str(signal_background_2), str(A), str(M), str(self.total_reads_a), str(self.total_reads_b), str(tags_a), str(tags_b),  str(A_prime), str(M_prime), str(total_reads_background_1), str(total_reads_background_2), str(numreads_background_1), str(numreads_background_2)])))
                 self.regions_analyzed_count += 1
-
 
     self.logger.debug("LEAVING _calculate_MA")
     if NOWRITE in self.operations:
@@ -621,7 +619,6 @@ def enrichment(self):
 
         quant_counts.flush()
         out_path = _calculate_MA(self, quant_counts.name, True, 1, 1, True) #recalculate with the new factor, using the counts again
-
         self._manage_temp_file(quant_counts.name)
 
     self.logger.info("%s regions analyzed."%self.regions_analyzed_count)
@@ -693,7 +690,6 @@ def calc_tmm_factor(self, file_counts, total_regions, replica):
       
     return factor
 
-
 def __load_enrichment_result(values_path):
     ret = []
     for line in open(values_path):
@@ -705,7 +701,6 @@ def __load_enrichment_result(values_path):
             pass
 
     return ret        
-
 
 def calculate_zscore(self, values_path): 
     num_regions = sum(1 for line in open(values_path))

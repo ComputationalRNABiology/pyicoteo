@@ -23,7 +23,7 @@ Converting a file from one format to another format. Currently supported formats
 
 experiment: Bed, Wiggle files (bed_wiggle), SAM, BAM, Eland, bedpk (Pyicos default compressed format), bedspk (Pyicos stranded compressed format)
 
-output: Bed, Wiggle files (bed_wiggle, variable_wiggle), SAM, BAM, Eland, bedpk (Pyicos default compressed format), bedspk (Pyicos stranded compressed format)
+output: Bed, Wiggle files (bed_wiggle, variable_wiggle), SAM, BAM, Eland, bedpk (Pyicos default compressed format)
 
 This operation is useful if you only want to convert your data to another format. Other operations already include a conversion if you specify different experiment and output formats.
 
@@ -33,7 +33,7 @@ Convert a bed file to a half-open variable wig file::
 
 Convert all pk files in a folder to bed wig files::
 
-    pyicos convert my_experiment_folder/ outputfolder/ -f pk -F bed_wig
+    pyicos convert my_experiment_folder/ outputfolder/ -F bed_wig
 
 
 remregions
@@ -153,8 +153,6 @@ This operation requires tag-like files (bed, eland, sam).
 Example::
 
     pyicos push my_experiment.bed my_experiment_pushed100.bed 100 -f bed -F bed
-
-
 
 
 Credit

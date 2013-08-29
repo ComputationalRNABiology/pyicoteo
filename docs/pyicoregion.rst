@@ -47,8 +47,6 @@ Pyicoregion arguments
         Due to a TSS being a single point, the arguments ``<add_start>`` and ``<add_end>`` specify the values added to the start and end of every TSS (taking into consideration the strand). For pyicoregion to work correctly, they must be non-negative integers. Also, if the strand is not specified, the regions will be treated as if they were positive.
 
 
-
-
 .. option:: --gff-file <gff_file_path>
 
     Used to specify the path of the GFF file containing the regions. This argument is mandatory for all operations involving regions.
@@ -59,6 +57,6 @@ Pyicoregion arguments
 Credit
 -------
 
-* Developers: Ferran Lloret, Juan González-Vallinas
+* Developer: Ferran Lloret
 * Unit and beta Testing: Juan González-Vallinas, Ferran Lloret
 * Supervision: Eduardo Eyras

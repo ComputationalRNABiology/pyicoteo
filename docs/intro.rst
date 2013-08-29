@@ -74,7 +74,7 @@ bedpk Column definition
 3) End coordinate
 4) Profile: This field summarizes the accumulation of reads per nucleotide of the cluster. The first number is the number of bases covered, while the second will be the number of reads in those bases. See the example above
 5) Height: The maximum height of the cluster. In this case, 3.
-6) Strand: if ALL reads that  are positive strand ``+``, if they are all negative ``-``. Otherwise ``.``
+6) Strand: if **all** reads are on the positive strand ``+``, negative strand ``-``. If there are reads from both strands, the symbol will be ``.``
 7) Summit: The position where the maximum height is found. The binding site is expected to be close to the summit.
 8) Area: The area covered by the cluster.
 9) p-value: The significance of the cluster calculated by the poisson operation based on peak heights or numbers of reads.
@@ -85,10 +85,13 @@ General and important flags
 
 -f or --input-format
 ^^^^^^^^^^^^^^^^^^^^^^^
-Format desired for the output. You can choose between eland, bed, bed_wig, bed_pk, sam, counts and custom. Depending of the tool used, so
+
+Format desired for the input. You can choose between eland, bed, bed_wig, bed_pk, sam, bam, counts and custom text file. Depending on the tool used, some formats will not be available. 
 
 -F or --output-format
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Format desired for the output. You can choose between eland, bed, bed_wig, bed_pk, sam, counts and custom text file. Depending on the tool used, some formats will not be available. 
 
 
 Disk usage flags
