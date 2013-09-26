@@ -329,6 +329,7 @@ class Turbomix:
 
     def _filter_file(self, file_path, temp_name, remove_temp, file_format, file_open):
         """Assumes sorted file. Extend, pushing and removal of duplicates go here"""
+        if self.logger: self.logger.debug("ENTER filter_file")
         if self.tempdir:
             td = self.tempdir[0]
         else:
@@ -645,7 +646,8 @@ class Turbomix:
 
     def remove_regions(self, cluster):
         region = Region(cluster.name, cluster.start, cluster.end)
-        if self.blacklist_reader.overlapping_clusters(region, overlap=EPSILON):
+        overlapping_blacklist = list(self.blacklist_reader.overlapping_clusters(region, overlap=EPSILON))
+        if overlapping_blacklist: 
             cluster.clear() 
 
         return cluster
