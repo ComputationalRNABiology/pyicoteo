@@ -644,8 +644,10 @@ class Turbomix:
         return cluster
 
     def remove_regions(self, cluster):
+        """Removes a region in the blacklist"""
         region = Region(cluster.name, cluster.start, cluster.end)
-        if self.blacklist_reader.overlapping_clusters(region, overlap=EPSILON):
+        blacklist_overlap = list(self.blacklist_reader.overlapping_clusters(region, overlap=EPSILON))
+        if blacklist_overlap:
             cluster.clear() 
 
         return cluster
