@@ -912,7 +912,7 @@ class ReadCluster(AbstractCore):
         if absolute > 0:
             threshold = absolute
         else:
-            threshold = int(round(self.max_height()*percentage))
+            threshold = int(round(self.max_height()*ratio))
         #print "THRESHOLD:", threshold
         self._subtrim(threshold, 0, True) #trim the left side of the cluster
         self._subtrim(threshold, -1, False) #trim the right side of the cluster
@@ -946,7 +946,7 @@ class ReadCluster(AbstractCore):
                         if absolute:
                             local_threshold = absolute
                         else:
-                            local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
+                            local_threshold = min(prev_height, prev_local_maxima)*(1-ratio)
                         if minimum_height < local_threshold: # split point found
                             split_points.append(minimum_pos)               
 
@@ -966,7 +966,7 @@ class ReadCluster(AbstractCore):
             if absolute:
                 local_threshold = absolute
             else:
-                local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
+                local_threshold = min(prev_height, prev_local_maxima)*(1-ratio)
             if minimum_height < local_threshold: # split point found
                 split_points.append(minimum_pos)    
 
