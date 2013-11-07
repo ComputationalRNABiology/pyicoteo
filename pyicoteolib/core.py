@@ -131,7 +131,6 @@ class ReaderFactory:
             return SamReader(format, half_open, cached)
         elif format == COUNTS:
             return None
-
         elif format == CUSTOM_FORMAT:
             return CustomReader(format, half_open, cached)
 
@@ -946,7 +945,7 @@ class ReadCluster(AbstractCore):
                         if absolute:
                             local_threshold = absolute
                         else:
-                            local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
+                            local_threshold = min(prev_height, prev_local_maxima)*(1-ratio)
                         if minimum_height < local_threshold: # split point found
                             split_points.append(minimum_pos)               
 
@@ -966,7 +965,7 @@ class ReadCluster(AbstractCore):
             if absolute:
                 local_threshold = absolute
             else:
-                local_threshold = min(prev_height, prev_local_maxima)*(1-percentage)
+                local_threshold = min(prev_height, prev_local_maxima)*(1-ratio)
             if minimum_height < local_threshold: # split point found
                 split_points.append(minimum_pos)    
 
@@ -1012,11 +1011,6 @@ class ReadCluster(AbstractCore):
 
     def absolute_split(self, threshold):
         """Returns the original cluster or several clusters if we find subclusters"""
-        if threshold is None:
-            threshold=float(self.max_height())*percentage
-            if threshold < 1: # or at least 1 nucleotide
-                threshold = 1
-
         new_cluster = self.copy_cluster()
         new_cluster.clear()
         new_cluster.start = self.start
@@ -1323,7 +1317,7 @@ class ReadCluster(AbstractCore):
             current_start, current_end, numduplicates = self._tag_cache.pop(0) # delete from tag cache while we transfer to _levels
             for i in range(0, numduplicates):     
                 if self.logger: 
-                    if len(self._tag_cache)>1000: 
+                    if len(self._tag_cache) > 1000: 
                         self.logger.debug("FLUSH TAG CACHE: smallest_end length: %s levels length: %s tag cache length: %s duplicate number: %s"%(len(array_ends), self.num_levels(), len(self._tag_cache), i+1))
                 while current_start > smallest_end and self._numends > 0:
                     self.append_level(smallest_end-previous_start+1, self._numends*self.normalize_factor)
@@ -1723,8 +1717,6 @@ class ReadRegion(AbstractCore):
         if clusterize:
             self.clusterize()
         if self.logger: self.logger.debug("ADDING: Done Clustering")
-
-
 
 
     def clusterize(self):

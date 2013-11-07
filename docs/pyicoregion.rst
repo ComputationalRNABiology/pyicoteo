@@ -3,9 +3,17 @@
 Pyicoregion
 ===========
 
-Pyicoregion is a Pyicoteo module for processing region files.
+Pyicoregion is a Pyicoteo module that reads GFF files and outputs common exploratory regions in genomic experiments, like intragenic or intergenic windows, exons, introns, TSS...
 
 It uses GFF files as specified in http://www.sanger.ac.uk/resources/software/gff/spec.html
+
+Examples::
+
+    #Using the last GENCODE annotation file, output exons as a SAM file.
+    pyicoregion --region-magic tss 1000 2000 -F sam --gff-file gencode.v11.bed
+
+    #Using the last GENCODE annotation file, output all regions around TSS 1000 bases upstream and 2000 bases downstream as a BED file.
+    pyicoregion --region-magic tss 1000 2000 -F bed --gff-file gencode.v11.bed
 
 
 Pyicoregion arguments

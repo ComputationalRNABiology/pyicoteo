@@ -9,7 +9,6 @@ from pyicoteolib.parser import pyicoclip, pyicoenrich, pyicoller, pyicoregion, p
 Sometimes it may be useful to have an ArgumentParser parse args other than those of sys.argv. 
 This can be accomplished by passing a list of strings to parse_args. This is useful for testing at the interactive prompt:
 
-
 >>> parser = argparse.ArgumentParser()
 >>> parser.add_argument(
 ...     'integers', metavar='int', type=int, choices=xrange(10),
@@ -53,11 +52,11 @@ class TestParser(unittest.TestCase):
 
     def test_pyicoenrich(self):
         parser = pyicoenrich.create_parser()
-        pyicoenrich.run_parser(parser, ("-reads %s %s -output %s/enrich_out -f sam --silent --pseudocount --mintags 0"%(TEST_SAM, TEST_SAM_CONTROL, RESULTS_DIR)).split())
+        pyicoenrich.run_parser(parser, ("-reads %s %s -output %s/enrich_out -f sam --silent --pseudocount --mintags 0 --overlap 1"%(TEST_SAM, TEST_SAM_CONTROL, RESULTS_DIR)).split())
 
     def test_pyicos(self):
         #TODO iterate sub-commands
-        parser = pyicos.create_parser()       
+        parser = pyicos.create_parser()
         sys.argv.append("subtract") #FIXME workaround, ideally pyicos parser should not use the sys library
         pyicos.run_parser(parser, ("subtract %s %s %s/subtract_out -f bed --silent"%(TEST_BED1, TEST_BED2, RESULTS_DIR)).split())
 

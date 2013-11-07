@@ -10,9 +10,6 @@ Download & Install
 
 .. _`Latest version`: https://github.com/RegulatoryGenomicsUPF/pyicoteo/tags
 
-
-You can also download older versions of Pyicos (up to 1.1b) from our `Old Sourceforge repository`_.
-
 .. _`Old Sourceforge repository`: http://sourceforge.net/projects/pyicos/ 
 
 

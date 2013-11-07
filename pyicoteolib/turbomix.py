@@ -23,7 +23,6 @@ from collections import defaultdict
 from datetime import datetime
 from tempfile import gettempdir
 
-#pyicoteo stuff
 from core import Cluster, Region, InvalidLine, InsufficientData, ConversionNotSupported
 from defaults import *
 import utils
@@ -53,7 +52,6 @@ class Turbomix:
     It has different switches that are activated by the list 'self.operations'.
 
     """
-
     def __init__(self, experiment_path, output_path, experiment_format=BED, output_format=PK, label=LABEL, 
                  open_experiment=OPEN_EXPERIMENT, open_output=OPEN_OUTPUT, debug = DEBUG, rounding=ROUNDING, tag_length = TAG_LENGTH, discarded_names = REMLABELS,
                  control_path = CONTROL, control_format = PK, open_control = OPEN_CONTROL, region_path = REGION, region_format = PK, 
@@ -148,7 +146,6 @@ class Turbomix:
         elif ENRICHMENT in self.operations and POISSON in self.operations:
             self.__icant("\nEnrichment and Poisson operations are not compatible")           
     
-        
     def _add_slash_to_path(self, path):
         return utils.add_slash_to_path(path)
 
@@ -400,7 +397,6 @@ class Turbomix:
             if self.control_format == BAM: 
                 self.control_format = SAM
 
-
     def decide_sort(self, experiment_path, control_path=None):
         """Decide if the files need to be sorted or not."""
         #FIXME refractor this, copy pasted code (warning, its not as easy as it seems)
@@ -459,8 +455,6 @@ class Turbomix:
                 self.region_preprocessor = utils.BigSort(self.region_format, self.open_region, None, 'region', logger=self.logger)
                 self.sorted_region_file = self.region_preprocessor.sort(self.region_path, None, utils.sorting_lambda(BED), self.tempdir)
                 self.sorted_region_path = self.sorted_region_file.name
-
-
 
     def operate(self, experiment_path, control_path=None, output_path=None):
         """Operate expects single paths, not directories. It's called from run() several times if the experiment for pyicoteo is a directory"""
@@ -554,7 +548,6 @@ class Turbomix:
             except AttributeError, OSError:
                 pass
 
-
     def _to_read_conversion(self, experiment, output):
         for line in experiment:
             try:
@@ -565,7 +558,6 @@ class Turbomix:
             except InsufficientData:
                 self.logger.warning('For this type of conversion (%s to %s) you need to specify the tag length with the --tag-length flag'%(self.experiment_format, self.output_format))
                 sys.exit(0)
-
 
     def _to_cluster_conversion(self, experiment, output):
         #load the first read
@@ -886,7 +878,6 @@ class Turbomix:
             except ValueError:
                 self.logger.debug("Discarding _region_from_sline %s"%'\t'.join(sline))
 
-
     def _save_figure(self, figure_name, width = None, height= None):
         #FIXME move to utils.py, maybe a separate plotting module
         if self.postscript:
@@ -911,7 +902,6 @@ class Turbomix:
             self.logger.info("%s figure saved to %s"%(figure_name, figure_path))
         clf()
         
-
     def modfdr(self):
         if self.logger: self.logger.info("Running modfdr filter with %s p-value threshold and %s repeats..."%(self.p_value, self.repeats))
         old_output = '%s/before_modfdr_%s'%(self._current_directory(), os.path.basename(self.current_output_path))
@@ -939,7 +929,6 @@ class Turbomix:
                     filtered_output.write(cluster.write_line())
 
         self._manage_temp_file(old_output)
-
 
     def strand_correlation(self):
         self.logger.info("Strand correlation analysis...")

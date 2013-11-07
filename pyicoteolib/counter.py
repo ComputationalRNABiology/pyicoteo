@@ -3,9 +3,9 @@ from tempfile import gettempdir
 
 from pyicoteolib.core import ReadRegion, ReadCluster  
 from pyicoteolib.regions import RegionWriter
-from pyicoteolib.utils import  SortedFileCountReader, BED, BigSort, EPSILON, sorting_lambda, get_logger, manage_temp_file
+from pyicoteolib.utils import  SortedFileCountReader, BED, BigSort, sorting_lambda, get_logger, manage_temp_file
 
-def count_all(paths, experiment_format, output_path, region_path, gff_file, region_magic, skip_sort=False, keep_temp=False, debug=False):
+def count_all(paths, experiment_format, output_path, region_path, gff_file, region_magic, skip_sort=False, keep_temp=False, debug=False, overlap=EPSILON):
     logger = get_logger("pyicount.log")
     #Get the region
     if not region_path:#region magic
@@ -42,7 +42,7 @@ def count_all(paths, experiment_format, output_path, region_path, gff_file, regi
         region = ReadRegion(c.name, c.start, c.end)
         counts = []
         for reader in sorted_readers:
-            counts.append(str(reader.get_overlaping_counts(region, overlap=EPSILON)))
+            counts.append(str(reader.get_overlaping_counts(region, overlap=overlap)))
 
         write_list = [c.name, str(c.start), str(c.end)]
         write_list.extend(counts)

@@ -140,7 +140,7 @@ def set_defaults(parser):
                         push_distance=PUSH_DIST, quant_norm=QUANT_NORM, parser_name=PARSER_NAME,
                         region_magic=REGION_MAGIC, gff_file=GFF_FILE, interesting_regions=INTERESTING_REGIONS, disable_significant_color=DISABLE_SIGNIFICANT,
                         f_custom_in=F_CUSTOM, custom_in_sep=CUSTOM_SEP, f_custom_out=F_CUSTOM, custom_out_sep=CUSTOM_SEP, galaxy_workarounds=GALAXY_WORKAROUNDS, 
-                        html_output=HTML_OUTPUT, experiments=None, no_duplicates=False, OVERLAP=EPSILON)
+                        html_output=HTML_OUTPUT, experiments=None, no_duplicates=False, overlap=EPSILON)
 
 
 def parse_validate_args(parser, test_args=None): #test_args for unit testing

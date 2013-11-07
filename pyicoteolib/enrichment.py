@@ -12,7 +12,6 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-
 import sys, os
 import math
 import random
@@ -98,7 +97,6 @@ def calculate_region_notstranded(self, dual_reader, region_file):
         calculated_region.end -= self.proximity
         __calc_reg_write(self, region_file, readcount, calculated_region)                         
 
-
 def calculate_region_stranded(self, dual_reader, region_file):
     temp_region_file = open(self.sorted_region_path, 'wb')
     region_plus = Region()
@@ -147,13 +145,11 @@ def calculate_region_stranded(self, dual_reader, region_file):
     for region in regions:
         region_file.write(region.write())  
    
-
 def get_zscore(x, mean, sd):    
     if sd > 0:
         return float(x-mean)/sd
     else:
         return 0 #This points are weird anyway 
-
 
 def read_interesting_regions(self, file_path):
     regs = []
@@ -164,8 +160,6 @@ def read_interesting_regions(self, file_path):
     except IOError as ioerror:
         self.logger.warning("Interesting regions file not found")
     return regs # memory inefficient if there's a large number of interesting regions
-
-
 
 def plot_enrichment(self, file_path):
     with warnings.catch_warnings():
@@ -318,14 +312,11 @@ def __matplotlibwarn(self):
     #FIXME move to utils.py or plotting module
     self.logger.warning('Pyicos can not find an installation of matplotlib, so no plot will be drawn. If you want to get a plot with the correlation values, install the matplotlib library.')    
 
-
 def __calc_M(signal_a, signal_b):
     return math.log(float(signal_a)/float(signal_b), 2)
 
-
 def __calc_A(signal_a, signal_b):
     return (math.log(float(signal_a), 2)+math.log(float(signal_b), 2))/2    
-
    
 def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1, file_a_reader=None, file_b_reader=None, replica_reader=None):
     tags_a = []
@@ -365,7 +356,7 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
             else:
                 self.logger.debug("Reading tags for %s ..."%region_of_interest)
                 if self.experiment_format == BAM:
-                    print self.overlap
+
                     tags_a = len(file_a_reader.get_overlaping_clusters(region_of_interest, overlap=self.overlap))
                     tags_b = len(file_b_reader.get_overlaping_clusters(region_of_interest, overlap=self.overlap))
                 else:
@@ -493,7 +484,6 @@ def _calculate_MA(self, region_path, read_counts, factor = 1, replica_factor = 1
 
         return out_file.name
 
-
 def _calculate_total_lengths(self):
     msg = "Calculating enrichment in regions"
     if self.counts_file: 
@@ -542,8 +532,6 @@ def _calculate_total_lengths(self):
         self.logger.info(msg)
 
     self.average_total_reads = (self.total_reads_a+self.total_reads_b)/2        
-
-
 
 def enrichment(self):
     file_a_reader = file_b_reader = replica_reader = None
@@ -630,10 +618,8 @@ def enrichment(self):
 
     return out_path
 
-
 def _sub_tmm(counts_a, counts_b, reads_a, reads_b):
     return (counts_a-reads_a)/(counts_a*reads_a) + (counts_b-reads_b)/(counts_b*reads_b)            
-
 
 def calc_tmm_factor(self, file_counts, total_regions, replica):
     if replica:
@@ -779,12 +765,10 @@ def calculate_zscore(self, values_path):
     self._manage_temp_file(old_file_path)
     return values_path
 
-
 def __sub_zscore(sdfold, entry, point):
     entry["mean"] = str(point[1])
     entry["sd"] = str(point[2])
     entry["zscore"] = str(get_zscore(float(entry["M"]), float(entry["mean"]), sdfold*float(entry["sd"])))
-
 
 def check_replica(self):
     #discard everything below the flag
@@ -820,7 +804,6 @@ def check_replica(self):
     plot(self.experiment_values, self.replica_values, '.')
 
     self._save_figure("check_replica")   
-
 
 def check_replica_correlation(self):
     "No usado, de momento" 
@@ -859,9 +842,3 @@ def check_replica_correlation(self):
     print correlations
     boxplot(correlations)
     self._save_figure("check_replica")    
-
-
-
-
-
-
