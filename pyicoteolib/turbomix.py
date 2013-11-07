@@ -376,7 +376,7 @@ class Turbomix:
             self.logger.info("Resorting %s after extension/push..."%temp_name)
             sorter = utils.BigSort(file_format, file_open, 0, 'fisort%s'%temp_name, logger=self.logger)
             old_path = new_file_path
-            sorted_new = sorter.sort(old_path, None, utils.sorting_lambda(file_format))
+            sorted_new = sorter.sort(old_path, None, utils.sorting_lambda(file_format), tempdirs=self.tempdir)
             new_file_path = sorted_new.name
             self._manage_temp_file(old_path)
 
