@@ -911,7 +911,7 @@ class ReadCluster(AbstractCore):
         if absolute > 0:
             threshold = absolute
         else:
-            threshold = int(round(self.max_height()*percentage))
+            threshold = int(round(self.max_height()*ratio))
         #print "THRESHOLD:", threshold
         self._subtrim(threshold, 0, True) #trim the left side of the cluster
         self._subtrim(threshold, -1, False) #trim the right side of the cluster
